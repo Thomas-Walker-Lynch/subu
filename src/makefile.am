@@ -1,0 +1,3 @@
+bin_PROGRAMS=subu-mk-0
+subu_mk_0_SOURCES=subu-mk-0.c
+

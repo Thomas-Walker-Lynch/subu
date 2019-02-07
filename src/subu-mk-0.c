@@ -35,8 +35,8 @@ setfacl -m d:u:masteru:rwX,u:masteru:rwX subu
 #include <unistd.h>
 #include <pwd.h>
 #include <string.h>
-
 #include <sys/stat.h>
+#include "config.h"
 
 
 #define DEBUG
@@ -112,9 +112,7 @@ int main(int argc, char **argv, char **env){
 
   //--------------------------------------------------------------------------------
   // we need to have a subu_uid and subu_gid to continue from here
-  size_t subu_land_len = subu_land + masteru_home_dir_len + subu_land_extension_len + subu_name_len;
-  
-  
+  size_t subu_land_len = masteru_home_dir_len + subu_land_extension_len + subu_name_len;
 
   // change to subu space
   if( seteuid(uid) == -1 || setegid(gid) == -1 ){ // we are root so this should never happen

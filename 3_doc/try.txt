@@ -1,0 +1,5 @@
+
+sudo_leak_script - demonstrates script injection through the pompt environement variable
+SUDO_USER - shows that userland scripts can trick other scripts into believing they are running under sudo.
+print_env.py - prints getuid, geteuid, some other info, and the value of each environment variable
+libuser - try out libuser

@@ -1,0 +1,19 @@
+
+Real uid is a poorly named term for the uid of the user who launched the
+process.  The uid that the process has been set to is the effective uid.  There
+is a third stored uid in a process's record.  Hence the uid being used by the
+OS will be set to one of these.
+
+Our subu-mk-0 program wants to create a subservient user to a master user.  The
+master user is known via the real uid.  The effective user will be that of root,
+as the script needs root privilege to run adduser.
+
+sudo resets the real uid, and there is no reliable approch then to create a subu-mk-0
+program run by sudo.  A setuid root program is needed.  Only compiled executables can
+be setuid root on linux.
+
+There is an environment variable given to programs run by sudo, $SUDO_USER. Sudo sets
+it, so if called from sudo then that works. It could be set by another user, even
+if that user is root or not.
+
+I will make a setuid C program.  Too bad, had written this in Python.

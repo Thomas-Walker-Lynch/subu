@@ -1,0 +1,7 @@
+#!/bin/bash
+# must be run under sudo
+#
+
+chown root /home/morpheus/src/subu/subu-mk-0 && \
+chmod u+rsx,u-w,g+rx-s /home/morpheus/src/subu/subu-mk-0
+

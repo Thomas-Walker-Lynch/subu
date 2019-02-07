@@ -1,0 +1,40 @@
+
+subu-mk-0
+
+  1. We have to make the subu for step 2 so that we will have subu_uid and subu_gid
+     to work with, but we delay this for as long as possible, as the program might
+     first bail due to other errors.
+
+  2. Then we add user access via setfacl to masteru's home directory and to
+     subu_land, so that we have permissions to make the home directory.
+
+  3. Then as subu we create the home directory. .. I wonder where the system
+     gets the umask for this?  Perhaps we should create the dir, and then change
+     the ownership instead?
+     
+  4. Still as subu, we add facls to our directory to give masteru access.
+
+finished, good part is that we never need to move back to root.
+
+setfacl -m u:subu:x masteru
+setfacl -m u:subu:x masteru/subu_land
+setfacl -m d:u:masteru:rwX,u:masteru:rwX subu
+
+
+using luseradd to make the subu is a circular problem because we need to setfacls
+to allow the creating of the home directory inside the masteru/subu_land, but
+to set facls we need the uid from luseradd.  So..
+   1. luseradd without creation of a home directory.  We can provide the path,
+      but can't create it.
+   2. get the uid, and set the facls
+   3. create the home directory
+
+Step 3 is a bit of a problem, because subu's don't have write permission for
+subu_land/
+
+.. or maybe not,  luseradd puts users in /home, but those users don't have
+write permissions there either, so I'll try and see what happens.
+
+given all the funky security stuff recently, I really need to call luseradd
+to get the user added.  Wish there was a C programming interface.  My gosh,
+python has one, and you can't if setuid root python programs.

@@ -1,0 +1,10 @@
+
+2019-02-05T21:10:02Z morpheus@manorhouse§~/src/subu§
+  need to check subu_name is a valid user name in subu-mk-0
+
+2019-02-05T23:14:40Z morpheus@manorhouse§~/src/subu§
+  error can cause subu-mk-0 to leave the creating of a subu
+  in an intermediate state.  Rather than bailing on some
+  of the errors we need to clean up instead.  Perhaps the
+  yet to be written subu-rm program will be resilent enough
+  to do more general cleanup.

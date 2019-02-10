@@ -99,7 +99,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_subu_mk_0_OBJECTS = subu-mk-0.$(OBJEXT)
+am_subu_mk_0_OBJECTS = subu-mk-0.$(OBJEXT) useradd-0.$(OBJEXT)
 subu_mk_0_OBJECTS = $(am_subu_mk_0_OBJECTS)
 subu_mk_0_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -117,7 +117,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/subu-mk-0.Po
+am__depfiles_remade = ./$(DEPDIR)/subu-mk-0.Po \
+	./$(DEPDIR)/useradd-0.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -243,7 +244,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-subu_mk_0_SOURCES = subu-mk-0.c
+subu_mk_0_SOURCES = \
+	subu-mk-0.c\
+	useradd-0.c	
+
 all: all-am
 
 .SUFFIXES:
@@ -331,6 +335,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subu-mk-0.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/useradd-0.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -480,6 +485,7 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/subu-mk-0.Po
+	-rm -f ./$(DEPDIR)/useradd-0.Po
 	-rm -f makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -526,6 +532,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/subu-mk-0.Po
+	-rm -f ./$(DEPDIR)/useradd-0.Po
 	-rm -f makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

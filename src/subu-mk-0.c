@@ -3,7 +3,8 @@
 
 */
 
-#include "subu-mk-0_fun.h"
+#include <stdio.h>
+#include "subu-mk-0.fi.h"
 
 int main(int argc, char **argv, char **env){
   char *command = argv[0];

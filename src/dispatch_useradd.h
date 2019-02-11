@@ -1,5 +1,5 @@
-#ifndef USERADD_FI_H
-#define USERADD_FI_H
+#ifndef DISPATCH_USERADD_H
+#define DISPATCH_USERADD_H
 
 #include <unistd.h>
 #include <pwd.h>
@@ -11,12 +11,12 @@
 #define USERADD_ERR_PWREC (3 << 16);
 
 // only use pw_record if error is zero
-struct useradd_ret{
+struct dispatch_useradd_ret{
   useradd_ret(error=USERADD_ERR_UNDEFINED,pwd=NULL):error(error),pwd(pwd){}
   int error;
   struct password *pw_record;// as per getpwnam man page do not free() this.
 };
-struct useradd_ret useradd(char **argv, char **envp);
+struct dispatch_useradd_ret useradd(char **argv, char **envp);
 
 #endif
 

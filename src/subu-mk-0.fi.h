@@ -1,8 +1,6 @@
 #ifndef SUBU_MK_0_H
 #define SUBU_MK_0_H
 
-#include "useradd.fi.h"
-
 #define ERR_ARG_CNT 1
 #define ERR_SETUID_ROOT 2
 #define ERR_BAD_MASTERU_HOME 3
@@ -13,6 +11,6 @@
 #define ERR_FAILED_USERADD 8
 
 
-struct uid_gid subu_mk_0(char *subu_name);
+struct uid_gid subu_mk_0(char *subuname);
 
 #endif

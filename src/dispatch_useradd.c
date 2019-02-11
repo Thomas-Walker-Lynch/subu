@@ -10,10 +10,10 @@ would be found there instead.
 #include <stdio.h>
 #include <errno.h>
 #include "local_common.h"
-#include "run.h"
+#include "dispatch_useradd.h"
 
 // we have a contract with the caller that argv[1] is always the subuname
-useradd_ret useradd(char **argv, char **envp){
+useradd_ret dispatch_useradd(char **argv, char **envp){
   run_err_init(run_err);
   if( !argv || !argv[0] || !argv[1]){
     fprintf(stderr,"useradd() needs a first argument as the name of the user to be made");

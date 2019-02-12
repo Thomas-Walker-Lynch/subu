@@ -1,5 +1,5 @@
-#ifndef DISPATCH_FI_H
-#define DISPATCH_FI_H
+#ifndef DISPATCH_LIB_H
+#define DISPATCH_LIB_H
 #include "local_common.h"
 
 int dispatch(char **argv, char **envp);

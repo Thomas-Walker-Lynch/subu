@@ -1,6 +1,7 @@
 #ifndef LOCAL_COMMON_H
 #define LOCAL_COMMON_H
 
+#include "config.h"
 #include <stdbool.h>
 
 #define DEBUG

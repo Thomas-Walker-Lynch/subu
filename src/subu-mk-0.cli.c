@@ -4,7 +4,7 @@
 */
 
 #include <stdio.h>
-#include "subu-mk-0.fi.h"
+#include "subu-mk-0.lib.h"
 
 int main(int argc, char **argv, char **env){
   char *command = argv[0];
@@ -12,6 +12,5 @@ int main(int argc, char **argv, char **env){
     fprintf(stderr, "usage: %s subu", command);
     return ERR_ARG_CNT;
   }
-  uid_gid ug = subu-mk-0(argv[1]);
-  return ug.error;
+  return subu_mk_0(argv[1]);
 }

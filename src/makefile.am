@@ -1,6 +1,10 @@
 bin_PROGRAMS=subu-mk-0
 subu_mk_0_SOURCES=\
-	subu-mk-0.c\
-	useradd-0.c	
+	subu-mk-0.cli.c\
+	subu-mk-0.lib.c\
+	dispatch.lib.c\
+	dispatch_useradd.lib.c
+
+
 
 

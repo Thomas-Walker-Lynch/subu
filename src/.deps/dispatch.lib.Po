@@ -46,7 +46,8 @@ dispatch.lib.o: dispatch.lib.c /usr/include/stdc-predef.h \
  /usr/include/linux/errno.h /usr/include/asm/errno.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /usr/include/bits/types/error_t.h local_common.h ../config.h \
- /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dispatch.lib.h
+ /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dbprintf.aux.h \
+ dispatch.lib.h
 
 /usr/include/stdc-predef.h:
 
@@ -227,5 +228,7 @@ local_common.h:
 ../config.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h:
+
+dbprintf.aux.h:
 
 dispatch.lib.h:

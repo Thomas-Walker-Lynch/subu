@@ -35,7 +35,7 @@ subu-mk-0.lib.o: subu-mk-0.lib.c /usr/include/stdc-predef.h \
  /usr/include/string.h /usr/include/strings.h /usr/include/sys/stat.h \
  /usr/include/bits/stat.h /usr/include/bits/statx.h dispatch.lib.h \
  local_common.h ../config.h \
- /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h \
+ /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dbprintf.aux.h \
  dispatch_useradd.lib.h subu-mk-0.lib.h
 
 /usr/include/stdc-predef.h:
@@ -173,6 +173,8 @@ local_common.h:
 ../config.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h:
+
+dbprintf.aux.h:
 
 dispatch_useradd.lib.h:
 

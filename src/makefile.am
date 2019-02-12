@@ -1,5 +1,6 @@
 bin_PROGRAMS=subu-mk-0
 subu_mk_0_SOURCES=\
+	dbprintf.aux.c\
 	subu-mk-0.cli.c\
 	subu-mk-0.lib.c\
 	dispatch.lib.c\

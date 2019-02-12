@@ -1,0 +1,24 @@
+2019-02-12T18:46:27Z user@host§~/subu_land/subu/try/useradd_probs§
+> ./user-mk temp6
+Checking we are running from a user and are setuid root.
+uid 49972, gid 49972, euid 0 egid 49972
+yes, uid is not zero, and euid is zero, so we are setuid to the root user.
+making the home dir path
+home dir path: "/home/temp6"
+dispatching useradd to create the user
+dispatching:
+arg: 0x7ffebf3f6800 /usr/sbin/useradd
+arg: 0x7ffebf3f6808 temp6
+arg: 0x7ffebf3f6810 -d
+arg: 0x7ffebf3f6818 /home/temp6
+
+sss_cache must be run as root
+useradd: sss_cache exited with status 1
+useradd: Failed to flush the sssd cache.
+sss_cache must be run as root
+useradd: sss_cache exited with status 1
+useradd: Failed to flush the sssd cache.
+mkdir(/home/temp6, 0x0700)
+user-mk: File exists
+
+2019-02-12T18:46:33Z user@host§~/subu_land/subu/try/useradd_probs§

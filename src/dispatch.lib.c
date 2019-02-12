@@ -37,6 +37,15 @@ int dispatch(char **argv, char **envp){
     fprintf(stderr, "argv[0] null. Null command passed into dispatch().\n");
     return -1;
   }
+  #ifdef DEBUG
+    dbprintf("dispatching:");
+    char **apt = argv;
+    while( apt ){
+      dbprintf(" %s",*apt);
+    apt++;
+    }
+    dbprintf("\n");
+  #endif
   char *command = argv[0];
   pid_t pid = fork();
   if( pid == -1 ){

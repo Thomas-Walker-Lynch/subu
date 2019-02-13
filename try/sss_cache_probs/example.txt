@@ -1,0 +1,12 @@
+> ./sss_cache
+Checking we are running from a user and are setuid root.
+uid 49972, gid 49972, euid 0 egid 49972
+yes, uid is not zero, and euid is zero, so we are setuid to the root user.
+dispatching sss_cache -U to clear users
+dispatching:
+arg: 0x7ffdbebdf6f0 /usr/sbin/sss_cache
+arg: 0x7ffdbebdf6f8 -U
+
+/usr/sbin/sss_cache must be run as root
+sss_cache failed
+

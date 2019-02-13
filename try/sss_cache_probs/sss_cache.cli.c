@@ -3,7 +3,7 @@
 */
 
 #include <stdio.h>
-#include "user-mk.lib.h"
+#include "sss_cache.lib.h"
 
 int main(int argc, char **argv, char **env){
   char *command = argv[0];

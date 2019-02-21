@@ -33,10 +33,10 @@ subu-mk-0.lib.o: subu-mk-0.lib.c /usr/include/stdc-predef.h \
  /usr/include/alloca.h /usr/include/bits/stdlib-bsearch.h \
  /usr/include/bits/stdlib-float.h /usr/include/pwd.h \
  /usr/include/string.h /usr/include/strings.h /usr/include/sys/stat.h \
- /usr/include/bits/stat.h /usr/include/bits/statx.h dispatch.lib.h \
- local_common.h ../config.h \
- /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dbprintf.aux.h \
- dispatch_useradd.lib.h subu-mk-0.lib.h
+ /usr/include/bits/stat.h /usr/include/bits/statx.h \
+ /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dispatch.lib.h \
+ local_common.h ../config.h dbprintf.aux.h dispatch_useradd.lib.h \
+ subu-mk-0.lib.h
 
 /usr/include/stdc-predef.h:
 
@@ -166,13 +166,13 @@ subu-mk-0.lib.o: subu-mk-0.lib.c /usr/include/stdc-predef.h \
 
 /usr/include/bits/statx.h:
 
+/usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h:
+
 dispatch.lib.h:
 
 local_common.h:
 
 ../config.h:
-
-/usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h:
 
 dbprintf.aux.h:
 

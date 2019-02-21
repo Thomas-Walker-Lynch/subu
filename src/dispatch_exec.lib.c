@@ -1,9 +1,14 @@
 /*
-fork/exec/wait a command
+ fork/execs/wait the command passed in argv[0];
+ Returns -1 upon failure.
 
-if the error values returned by the exec'd program
-are less than 1 << 16, then 
-
+ The wstatus returned from wait() might be either the error returned by exec
+ when it failed, or the return value from the command.  An arbitary command is
+ passed in, so we don't know what its return values might be. Consquently, we
+ have no way of multiplexing a unique exec error code with the command return
+ value within wstatus.  If the prorgrammer knows the return values of the
+ command passed in, and wants better behavior, he or she can spin a special
+ version of dispatch for that command.
 */
 
 // without this #define execvpe is undefined
@@ -16,29 +21,15 @@ are less than 1 << 16, then
 #include <stdio.h>
 #include <errno.h>
 #include "local_common.h"
-#include "dispatch.lib.h"
+#include "dispatch_exec.lib.h"
 
-
-
-/*
- Execs the command passed in argv[0];
- Returns -1 upon failure.
-
- The wstatus returned from wait() might be either the error we returned when
- exec failed, or the return value from the command.  An arbitary command is
- passed in, so we don't know what its return values might be. Consquently, we
- have no way of multiplexing a unique exec error code with the command return
- value within wstatus.  If the prorgrammer knows the return values of the command
- passed in, and wants better behavior, he or she can spin a special version of 
- dispatch for that command.
-*/
-int dispatch(char **argv, char **envp){
+int dispatch_exec(char **argv, char **envp){
   if( !argv || !argv[0] ){
     fprintf(stderr, "argv[0] null. Null command passed into dispatch().\n");
     return -1;
   }
   #ifdef DEBUG
-    dbprintf("dispatching:");
+    dbprintf("dispatching exec:");
     char **apt = argv;
     while( apt ){
       dbprintf(" %s",*apt);

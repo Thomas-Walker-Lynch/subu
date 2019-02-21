@@ -11,7 +11,8 @@
 #define ERR_FAILED_USERADD 8
 #define ERR_SETFACL 9
 #define ERR_MALLOC 10
-#define ERR_MK_SUBUHOME 11
+#define ERR_BUG_SSS 11
+#define ERR_MK_SUBUHOME 12
 
 int subu_mk_0(char *subuname);
 

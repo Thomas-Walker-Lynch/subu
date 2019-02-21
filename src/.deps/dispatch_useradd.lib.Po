@@ -33,7 +33,7 @@ dispatch_useradd.lib.o: dispatch_useradd.lib.c /usr/include/stdc-predef.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  local_common.h ../config.h \
  /usr/lib/gcc/x86_64-redhat-linux/8/include/stdbool.h dbprintf.aux.h \
- dispatch.lib.h dispatch_useradd.lib.h /usr/include/pwd.h
+ dispatch_exec.lib.h dispatch_useradd.lib.h /usr/include/pwd.h
 
 /usr/include/stdc-predef.h:
 
@@ -165,7 +165,7 @@ local_common.h:
 
 dbprintf.aux.h:
 
-dispatch.lib.h:
+dispatch_exec.lib.h:
 
 dispatch_useradd.lib.h:
 

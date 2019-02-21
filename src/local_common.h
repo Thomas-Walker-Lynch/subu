@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include "dbprintf.aux.h"
 
-#define DEBUG
+//#define DEBUG
 typedef unsigned int uint;
 
 #endif

@@ -24,8 +24,8 @@
 #include "local_common.h"
 #include "dispatch_f.lib.h"
 
-int dispatch_f(char *fname, int (*f)()){
-  char *perror_src = "displatch_f_as";
+int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
+  char *perror_src = "dispatch_f_as";
   #ifdef DEBUG
   dbprintf("%s %s\n", perror_src, fname);
   #endif
@@ -36,8 +36,8 @@ int dispatch_f(char *fname, int (*f)()){
     return ERR_FORK;
   }
   if( pid == 0 ){ // we are the child
-    int ret = (*f)();
-    return ret;
+    int status = (*f)(f_arg);
+    exit(status);
   }else{ // we are the parent
     int wstatus;
     waitpid(pid, &wstatus, 0);
@@ -45,8 +45,8 @@ int dispatch_f(char *fname, int (*f)()){
   }
 }
 
-int dispatch_f_euid_egid(char *fname, int (*f)(), uid_t euid, gid_t egid){
-  char *perror_src = "displatch_f_as";
+int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t euid, gid_t egid){
+  char *perror_src = "dispatch_f_as";
   #ifdef DEBUG
   dbprintf("%s %s %u %u\n", perror_src, fname, euid, egid);
   #endif
@@ -67,8 +67,8 @@ int dispatch_f_euid_egid(char *fname, int (*f)(), uid_t euid, gid_t egid){
       fprintf(stderr, "%s %s %u %u\n", perror_src, fname, euid, egid);
       return ERR_SETEGID;
     }
-    int ret = (*f)();
-    return ret;
+    int status = (*f)(f_arg);
+    exit(status);
   }else{ // we are the parent
     int wstatus;
     waitpid(pid, &wstatus, 0);

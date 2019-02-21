@@ -29,10 +29,10 @@ int dispatch_exec(char **argv, char **envp){
     return -1;
   }
   #ifdef DEBUG
-    dbprintf("dispatching exec:");
+    dbprintf("dispatching exec, args follow:\n");
     char **apt = argv;
-    while( apt ){
-      dbprintf(" %s",*apt);
+    while( *apt ){
+      dbprintf("\t%s",*apt);
     apt++;
     }
     dbprintf("\n");

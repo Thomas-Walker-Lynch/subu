@@ -3,14 +3,14 @@ subdirectories=src
 
 all :
 	$(foreach dir, $(subdirectories), \
-		if [ -f $(dir)/Makefile ]; then \
+		if [ -f $(dir)/makefile ]; then \
 			make -C $(dir) all && make -C $(dir) install; \
 		fi;\
 	)
 
 clean :
 	$(foreach dir, $(subdirectories), \
-		if [ -f ./$(dir)/Makefile ]; then \
+		if [ -f ./$(dir)/makefile ]; then \
 			make -C $(dir) clean; \
 		fi;\
 	)

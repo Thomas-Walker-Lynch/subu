@@ -1,0 +1,83 @@
+I.  If we allowed the subu_home directory to be put anywhere, this script could
+  be used by masteru gain access to any directory on the system.  Hence, we have
+  to add some constraints:
+
+    constraint 1) the subuhome directory must not already exist, not as a
+    directory or as any other type of object. 
+
+    constraint 2) masteru must already have privledges to reach access $(masteru_home)/subuland
+
+    constraint 3) subuhome may only be placed under the directory $(masteru_home)/subuland.
+
+    convention 4) only subuhome directories may be placed in $(masteru_home)/subuland.
+
+  -> without constraint 1), exploit 1
+
+    Suppose that a wily masteru was able to move an inaccessible directory that
+    he or she wanted access to and place it under $(masteru_home)/subuland.
+    Typically such directories are not moveable by wiley users in the first
+    place, but suppose the wily masteru found such a directory.
+
+    Alternatively suppose the wily masteru made a directory under
+    $(masteru_home)/subuland of his or her own, and placed an inaccessible file
+    or subdirectory inside of it.
+
+    Alternatively suppose that the wily masteru made $(masteru_home)/subuland a
+    hard link or a symlink to a directory that contained a subdirectory that
+    masteru did not have access to.
+
+    The the wiley masteru could then create a subu by the same name as the
+    directory he desired access to, and trick the foolish subu-mk-0 into giving
+    him or her access.
+
+  -> without constraint 2) exploit 2
+
+    Then the masteru could place subu directories in places he can not access.
+    The foolish subu-mk-0 program would then add 'x' acls to as to reach this
+    place.  The masteru could then change identity to the subu, (i.e. enter the
+    container), and then reach that place he or she could not reach before.
+
+  -> without constraint 3) exploit 3
+
+    If masteru looses x privlege to a place, subu might keep it, and then
+    exploit 2 would work despite the existence of constraint 2.  It would be
+    unusual that masteru not have x privledges to masteru_home.  Furthmore, we
+    decree that masteru has x privige to subuland.  Hence, exploit 3 can be
+    prevented by following this convention.
+
+  -> without convention 4) exploit 4
+
+
+II. the ownership flaw
+
+subu will own the files and directories that it makes.  The default acls are
+such that masteru will also have access to subu's file. This defines the master
+user / subservient user convention on the filesystem.
+
+However, because subu owns the files and directories, it can modify the
+acls. Thus a wily subu can lock the masteru out.
+
+Perhaps the master has a 'fix perms' script.  However, there is no enshrined
+relationship in the system between the masteru and the subu, so the system
+won't know for sure the subu belongs to the masteru, and thus can not allow
+masteru to change the supposed subu's permissions to give back access to masteru.
+
+Perhaps we propose that instead masteru owns the files and directories of subuhome,
+and subu is given access privilege through acls and default acls.  Indeed, then
+subu can't change the acls on these existing files.  However, if subu is allowed to
+own processes, then those processes might create files owned by the subu, and the subu
+can lock the master out from access to these new files.
+
+How about a variation.  Perhaps the subu shares the uid of the masteru, but has a different
+gid.  The subuhome then has the sticky bit set on the group access, so all files created
+remain the same gid.  subu process are masteru processes, however the gid of the process is
+that of the subu's.  Masteru can then control both the files and the processes, but in absence
+of this control, the subu has control.
+
+Then we don't make a new user when we make a subu, we make a new group. We then have to add
+utilities for 'logging into the subu' which goes to a different home directory based on the
+group being logged into.
+
+--->
+
+

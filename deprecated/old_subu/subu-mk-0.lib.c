@@ -1,19 +1,13 @@
 /*
-  Makes a new subu user. This routine creates the bindfs mount point under
-  subuland, creates the _s<number>  user, and adds the master / subu relation
-  to configuration file.
+  Makes a new subu user.
 
-  masteru is the user who ran this script. subu is a subservient user.  subuname
-  is passed as an argument, we get the materu name from getuid and /etc/passwd.
+  According to the man page, we are not allowed to free the memory allocated by getpwid().
+
+  masteru is the user who ran this script. subu is the user being created.
 
   subu-mk-0 is a setuid root script. 
 
-  sqllite3 is used to maintain the configuration file, which is currently /etc/subu.db
-
-  useradd is called to make the _s<number> user
-
-  Note, as per the man page, we are not allowed to free the memory allocated by getpwid().
-
+  see also 3_doc/subu-mk-0.txt
 
 */
 
@@ -44,40 +38,6 @@ typedef unsigned int uint;
  
 */
 #define BUG_SSS_CACHE_RUID 1
-  
-static uint max_subuname_len = 128;
-
-// a well formed subuname
-// returns the length of the subuname, or -1
-int allowed_subuname(char *subuname){
-  char *ch = token;
-  uint i = 0;
-  while(
-     *ch
-     &&
-     i < max_subuname_len
-     &&
-     ( ch >= 'a' && ch <= 'z'
-       ||
-       ch >= 'A' && ch <= 'Z'
-       ||
-       ch >= '0' && ch <= '9'
-       ||
-       ch == '_'
-       ||
-       ch == '.'
-       ||
-       ch == ' '
-       )
-  ){
-    ch++;
-    i++;
-  }
-  if( !*ch && i < max_len; )
-    return i;
-  else
-    return -1;
-}
 
 // will be called through dispatch_f_as masteru
 int masteru_makes_subuhome(void *arg){
@@ -89,98 +49,60 @@ int masteru_makes_subuhome(void *arg){
   return 0;
 }
 
-int subu_mk_0(char *subuname, char *config_file){
+int subu_mk_0(char *subuname){
 
   char *perror_src = "subu_mk_0";
-  
-  //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("Opening the configuration file, \"%s\"\n", config_file);
-  #endif
-  sqlite3 *db;
-  {
-    if( sqlite3_open(config_file, &db) ){
-      fprintf(stderr, "error exit, could not open config file, \"%s\"\n", file);
-      return ERR_CONFIG_FILE;
-    }
-  }
 
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
   dbprintf("Checking that we are running from a user and are setuid root.\n");
   #endif
-  uid_t masteru_uid;
-  gid_t masteru_gid;
-  uid_t set_euid;
-  gid_t set_egid;
-  {
-    masteru_uid = getuid();
-    masteru_gid = getgid();
-    set_euid = geteuid();
-    set_egid = getegid();
-    #ifdef DEBUG
-    dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
-    #endif
-    if( masteru_uid == 0 || set_euid != 0 ){
-      fprintf(stderr, "error exit, this program must be run setuid root from a user account\n");
-      sqlite3_close(db);
-      return ERR_SETUID_ROOT;
-    }
+  uid_t masteru_uid = getuid();
+  gid_t masteru_gid = getgid();
+  uid_t set_euid = geteuid();
+  gid_t set_egid = getegid();
+  #ifdef DEBUG
+  dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
+  #endif
+  if( masteru_uid == 0 || set_euid != 0 ){
+    fprintf(stderr, "error exit, this program must be run setuid root from a user account\n");
+    return ERR_SETUID_ROOT;
   }
 
   //--------------------------------------------------------------------------------
-  // The subuname is used as the directory mount point, and it appears in configuration
-  // file relations.
-  #ifdef DEBUG
-  dbprintf("creating subu by the name of \"%s\"\n", subuname);
-  #endif
-  size_t subuname_len;
-  {
-    // subuname will appear in our config file, so we constrain its form
-    subuname_len = allowed_subuname(subuname);
-    if( subuname_len == -1 ){
-      fprintf(stderr, "error exit, subuname is not in [ _.a-zA-Z0-9]* less than %u characters", max_subuname_len);
-      sqlite3_close(db);
-      return ERR_CONFIG_FILE;
-    }
-  }
-
-  //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("creation of required strings: masteru_name, masteru_home, subuland path, and subuhome path\n");
-  #endif
-
   char *masteru_name;
   size_t masteru_name_len;
+  // char *subuname was passed in as an argument
+  size_t subuname_len;
+  struct passwd *masteru_pw_record_pt;
+  {
+    #ifdef DEBUG
+    dbprintf("looking up masteru_name (i.e. uid %u) in /etc/passwd\n", masteru_uid);
+    #endif
+    // subuname is the first argument passed in
+    // verify that subuname is legal!  --> code goes here ...  
+    subuname_len = strlen(subuname);
+    masteru_pw_record_pt = getpwuid(masteru_uid);
+    masteru_name = masteru_pw_record_pt->pw_name;
+    masteru_name_len = strlen(masteru_name);
+  }
+  #ifdef DEBUG
+  dbprintf("subuname \"%s\" masteru_name: \"%s\"\n", subuname, masteru_name);
+  #endif
+
+  //--------------------------------------------------------------------------------
   char *masteru_home;
   size_t masteru_home_len;
   char *subuland;
   size_t subuland_len;
-  char *subuhome;
-  size_t subuhome_len;
   {
-    masteru_pw_record_pt = getpwuid(masteru_uid); // reading /etc/passwd
-    masteru_name = masteru_pw_record_pt->pw_name;
     #ifdef DEBUG
-    dbprintf("masteru_name \"%s\"\n", masteru_name);
+    dbprintf("building the subuland path\n");
     #endif
-    // The masteru_name will occur in our config file, so we constrain its form.
-    // The masteru_name is already a username so it might have, or might not
-    // have, already been filtered for form.
-    masteru_name_len = allowed_subuname(masteru_name);
-    if( masteru_name_len == -1 ){ 
-      fprintf(stderr, "error exit, masteru_name is not in [ _.a-zA-Z0-9]* less than %u characters", max_subuname_len);
-      sqlite3_close(db);
-      return ERR_CONFIG_FILE;
-    }
     masteru_home = masteru_pw_record_pt->pw_dir;
-    #ifdef DEBUG
-    dbprintf("masteru_home \"%s\"\n", masteru_home);
-    #endif
     masteru_home_len = strlen(masteru_home);
     if( masteru_home_len == 0 || masteru_home[0] == '(' ){
       fprintf(stderr,"error exit, %s has no home directory\n", masteru_name);
-      sqlite3_close(db);
       return ERR_BAD_MASTERU_HOME;
     }
     char *subuland_extension = "/subuland/";
@@ -188,38 +110,46 @@ int subu_mk_0(char *subuname, char *config_file){
     subuland = (char *)malloc( masteru_home_len + subuland_extension_len + 1 );
     strcpy(subuland, masteru_home);
     strcpy(subuland + masteru_home_len, subuland_extension);
-    #ifdef DEBUG
-    dbprintf("subuland \"%s\"\n", subuland);
-    #endif
     subuland_len = masteru_home_len + subuland_extension_len;
+  }
+  #ifdef DEBUG
+  dbprintf("masteru_home: \"%s\"\n", masteru_home);
+  dbprintf("The path to subuland: \"%s\".\n", subuland);
+  #endif
+
+  //--------------------------------------------------------------------------------
+  char *subuhome;
+  size_t subuhome_len;
+  {
+    #ifdef DEBUG
+    dbprintf("making the path for subuhome\n");
+    #endif
     subuhome_len = subuland_len + subuname_len;
     subuhome = (char *)malloc(subuhome_len + 1);
     if( !subuhome ){
       perror(perror_src);
       free(subuland);
-      sqlite3_close(db);
       return ERR_MALLOC;
     }
     strcpy (subuhome, subuland);
     strcpy (subuhome + subuland_len, subuname);
-    #ifdef DEBUG
-    dbprintf("subuhome \"%s\"\n", subuhome);
-    #endif
   }
+  #ifdef DEBUG
+  dbprintf("subuhome: \"%s\"\n", subuhome);
+  #endif
 
   //--------------------------------------------------------------------------------
   // By having masteru create the subuhome, we know that masteru has rights to 
-  // to access this directory. This will be the mount point for bindfs
+  // to access this directory.
   {
     #ifdef DEBUG
     dbprintf("as masteru, making the directory \"%s\"\n", subuhome);
     #endif
     struct stat st;
     if( stat(subuhome, &st) != -1 ){
-      fprintf(stderr, "error exit, a file system object already exists at subuhome\n");
+      fprintf(stderr, "error exit, a file system object already exists at the subu home directory path\n");
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_MK_SUBUHOME;
     }
     int ret = dispatch_f_euid_egid
@@ -234,7 +164,6 @@ int subu_mk_0(char *subuname, char *config_file){
       fprintf(stderr, "error exit, masteru could not make \"%s\"\n", subuhome);
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_FAILED_MKDIR_SUBU;
     }
   }
@@ -242,17 +171,18 @@ int subu_mk_0(char *subuname, char *config_file){
   dbprintf("masteru made directory \"%s\"\n", subuhome);
   #endif
 
-  //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("synthesize the subu user name\n");
-  #endif
-  char *subu_username;
-  {
-  }  
-
   /*--------------------------------------------------------------------------------
     Make the subservient user, i.e. the subu
 
+    Ok to specify the new home directory in useradd, because it doesn't make it.
+    From the man page:
+
+           -d, --home-dir HOME_DIR The new user will be created using HOME_DIR
+           as the value for the user's login directory. ... The directory HOME_DIR
+           does not have to exist but will not be created if it is missing.
+
+  Actually Fedora 29's 'useradd' is making the directory even when -d  is specified.
+  Adding the -M option suppresses it.
   */
   {
     #ifdef DEBUG
@@ -266,7 +196,6 @@ int subu_mk_0(char *subuname, char *config_file){
         perror(perror_src);
         free(subuland);
         free(subuhome);
-        sqlite3_close(db);
         return ERR_BUG_SSS;
       }
     #endif
@@ -286,7 +215,6 @@ int subu_mk_0(char *subuname, char *config_file){
       fprintf(stderr, "error exit, %u useradd failed\n", ret.error);
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_FAILED_USERADD;
     }
     #ifdef DEBUG
@@ -343,7 +271,6 @@ int subu_mk_0(char *subuname, char *config_file){
       fprintf(stderr, "error exit, while setting acls for subuhome, \"%s\" \n", subuhome);
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_SETFACL;
     }
     // 2.1 x acls on subuland
@@ -356,7 +283,6 @@ int subu_mk_0(char *subuname, char *config_file){
       fprintf(stderr, "error exit, failed to give subuname x acl on subuland.\n");
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_SETFACL;
     }
     // 2.2 x acls on masteru_home
@@ -366,7 +292,6 @@ int subu_mk_0(char *subuname, char *config_file){
       fprintf(stderr, "error exit, failed to give subuname x acl on masteru_home.\n");
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_SETFACL;
     }
     // 3. give subu ownership of subuhome
@@ -405,7 +330,6 @@ int subu_mk_0(char *subuname, char *config_file){
          );
       free(subuland);
       free(subuhome);
-      sqlite3_close(db);
       return ERR_SETFACL;
     }
     #ifdef DEBUG
@@ -418,6 +342,5 @@ int subu_mk_0(char *subuname, char *config_file){
   #endif
   free(subuland);
   free(subuhome);
-  sqlite3_close(db);
   return 0;
 }

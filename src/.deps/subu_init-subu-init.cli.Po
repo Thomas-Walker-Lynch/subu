@@ -1,0 +1,11 @@
+subu_init-subu-init.cli.o: subu-init.cli.c /usr/include/stdc-predef.h \
+ subu-init.cli.h /usr/include/sqlite3.h \
+ /usr/lib/gcc/x86_64-redhat-linux/8/include/stdarg.h
+
+/usr/include/stdc-predef.h:
+
+subu-init.cli.h:
+
+/usr/include/sqlite3.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/8/include/stdarg.h:

@@ -1,0 +1,16 @@
+
+This worked to force the include to be part of the interface:
+
+#if INTERFACE
+#include <sqlite3.h>
+#endif
+
+But this did not:
+
+#if INTERFACE
+  #include <sqlite3.h>
+#endif
+
+makeheaders looks to be sensitive to indentation
+
+

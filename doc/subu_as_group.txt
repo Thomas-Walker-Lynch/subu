@@ -1,0 +1,22 @@
+
+note the 'ownerhips flaw' in subu-mk-0.txt.   Could groups help with this?
+
+Suppose that instead of creating the subu as a separate user, it is created as a group.  Masteru then has a
+number of separate groups.  To run a process as the subu, the uid is set to the masteru, and the gid is set
+to the subu. .. but then the process would be able to modify anything owned by masteru
+
+suppose subu belongs to masteru's group .. then all subus are the same and can write each other's data.
+
+suppose masteru belongs to subu's group .. subu is still its own unique user, so it can change group permissions
+on files it makes and lock masteru out.
+
+suppose there is a unique third party, the mediator. Both masteru and subu belong to its group.  A 
+processes running as subu can only create files in directories that have mediator group permissions.  subu still
+owns the files and directories it creates, so ..
+
+suppose the group sticky bit is set.  The subu must belong to the group to write anything in the directories.
+Anything it writes are owned by the group.  Suppose masteru is also in the this group.  Though a mean subu
+could not take away the group ownership, it could 
+
+
+

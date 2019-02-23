@@ -10,14 +10,16 @@ starting point for subu numbering.
 currently a unit converted to base 10 will always fit in a 21 bit buffer.
 
 */
+#include "subu-config.lib.h"
 
 #if INTERFACE
 #include <sqlite3.h>
 #define ERR_CONFIG_FILE -1
 #endif
+
 #include <stdio.h>
 #include <string.h>
-#include "subu-config.lib.h"
+#include <stdlib.h>
 
 //char config_file[] = "/etc/subu.db";
 char config_file[] = "subu.db";
@@ -48,8 +50,8 @@ int schema(sqlite3 *db, uint max_subu_number){
   return sqlite3_exec(db, sql, NULL, NULL, NULL);
 }
 
-int subu_number(sqlite3 *db, uint &subu_number){
-  subu_number = 0;
+int subu_number(sqlite3 *db, uint **subu_number){
+  *subu_number = 0;
   char *sql = 
     "BEGIN TRANSACTION;"
     "UPDATE Key_Int SET value = value + 1 WHERE key = 'max_subu_number';"
@@ -60,9 +62,6 @@ int subu_number(sqlite3 *db, uint &subu_number){
   sqlite3_stmt *stmt;
   ret = sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL);
   if( ret != SQLITE_OK ){
-    free(subuland);
-    free(subuhome);
-    sqlite3_close(db);
     return ERR_CONFIG_FILE;
   }      
   sqlite3_stmt *res;

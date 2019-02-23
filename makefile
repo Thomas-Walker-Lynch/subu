@@ -1,4 +1,5 @@
-subdirectories=$(shell /usr/bin/find . -maxdepth 1 -printf "%f " | sed y/\./\ /)
+#subdirectories=$(shell /usr/bin/find . -maxdepth 1 -printf "%f " | sed y/\./\ /)
+subdirectories=src
 
 all :
 	$(foreach dir, $(subdirectories), \

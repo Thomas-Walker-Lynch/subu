@@ -1,0 +1,19 @@
+common.lib.o: common.lib.c
+dispatch_useradd.lib.o: dispatch_useradd.lib.c dispatch_useradd.lib.h
+subu-mk-0.lib.o: subu-mk-0.lib.c subu-mk-0.lib.h
+subu-config.lib.o: subu-config.lib.c subu-config.lib.h
+dispatch_exec.lib.o: dispatch_exec.lib.c dispatch_exec.lib.h
+dbprintf.lib.o: dbprintf.lib.c dbprintf.lib.h
+dispatch_f.lib.o: dispatch_f.lib.c dispatch_f.lib.h
+subu-number.cli.o: subu-number.cli.c subu-number.cli.h
+subu-mk-0.cli.o: subu-mk-0.cli.c subu-mk-0.lib.h
+subu-init.cli.o: subu-init.cli.c subu-init.cli.h
+
+subu-init : subu-init.cli.o . /libsubu.a
+	g++ -o subu-init subu-init.cli.o -L. -lsubu
+
+subu-mk-0 : subu-mk-0.cli.o . /libsubu.a
+	g++ -o subu-mk-0 subu-mk-0.cli.o -L. -lsubu
+
+subu-number : subu-number.cli.o . /libsubu.a
+	g++ -o subu-number subu-number.cli.o -L. -lsubu

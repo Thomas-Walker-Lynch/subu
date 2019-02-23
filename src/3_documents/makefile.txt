@@ -1,0 +1,91 @@
+these are the comments from my RT makefile:
+
+#
+# 2010 11 20 TWL Created
+# 2011 05 26 TWL Modified to generalize
+# 2012 02 23 NLS Add ECHO variable to use on different environnement
+#                corrected setup macro --> add include directory in the path to copy
+#                corrected install macro --> change the name of installed library : lib$(LIB)$(LIBSUFFIX)
+#                changed DOC_DIR directory name to 5_documents
+# 2012 02 23 TWL removed LIB variable which is now set from the command line so
+#                so that all source dirs can use the same makefile
+# 2012 02 23 TWL added target make dist_clean which also deletes the 2_makefile_deps file
+# 2012 04 11 AWW added creation of temporary disk before each test is run 
+# 2012 06 05 TWL moved tests and try .cc files to directories. caused rtmake tests to
+#                dist_clean and make deps
+#
+#
+#----------------------------------------------------------------------------
+#      use this makefile to compile and test the code:
+#
+#               for a first time run, or for regression use the following:
+#
+#                   $ make setup  # makes the directories, though should already exist
+#                   $ make regress 
+#
+#               the usual development workflow makes use of these:
+#
+#                   $ make deps              # only when needed, for example if headers includes change or new files introduced
+#                   $ cd tests; make deps    # only when needed
+#                   $ make lib               # this makes the local library
+#                   $ make tests             # this updates tests and compiles
+#                   $ make clean             # deletes the .o files and library to force a recompile
+#                   $ cd 1_tests; make clean
+#
+#               for a release of a component
+# 
+#                   $ make regress
+#                   $ make install  # this will only work if all the tests in 1_tests are passing 
+#
+#               before a checkin
+# 
+#                   $ make dist_clean # will also clean the tests and try directories
+#
+#               .lib.cc c++ files taken as source of object files for local build library
+#               .exl.cc c++ files taken to have main calls and are linked against local build libary
+#               .ex.cc  c++ files taken to have main calls and are not linked against the local build library
+#               there are no rules for other files in this makefile
+#
+#      about dependencies
+#               The makefile has no way of knowing if an edit changed the dependencies.  Often they do not
+#               and it would be unwieldy to make the deps every time.  Hence *the programmer* must delete
+#               the deps file if he has made any changes that change the dependencies.
+#
+#               The makefile will make the 2_makefile_deps if the file is missing.
+# 
+#
+#      about testing
+#  
+#                the name of the directory you run make in is taken to also be: the name of the library,
+#                the name of the main include file (with a .h added), and the name of the include directory
+#                where the individual headers are found. It is called LIB
+#
+#	         test programs are kept in a subdirectory called 1_tests, and are either .exl.cc, ex.cc,
+#                .sh files. When 'make tests' target is invoked they are all run. Test executables return 0
+#                if the test fails, non-zero otherwise.  
+#
+#                to remove a test from the pool move it into the subdirectory in 1_tests, 9_broken,
+#                5_more_tests of 5_scratch.  broken tests are things that are known but must be fixed
+#                before a release.  5_more_tests are tests being worked on.  5_scratch is stuff that is
+#                probably going to be deleted.  if there is a 5_deprecated, that is for good stuff but it
+#                is no longer used for some reason or other.
+#
+#                There is a standard source code template and a
+#                messaging convention.  Also, the names, by convention,are test_xxxx_ where xxx is a
+#                hexadecimal series nummber.  If all the test executables pass the file 1_TESTS_PASSED is
+#                left in the directory.  Otherwise the file 1_TESTS_FAILED is left in the directory.
+#
+#     about release directory
+#
+#               this is set in the ApplicationBase variable by rt_init
+#
+#               after the tests pass stuff might be copied to the release directory using
+# 
+#                  make install
+#
+#               the release directory must have these subdirectories:  
+#
+#                  bin documents include src
+#
+#
+#

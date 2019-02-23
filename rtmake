@@ -1,4 +1,0 @@
-#!/bin/sh
-
-make --no-print-directory -f $RT_BASE/bin/source_local_makefile $@
-

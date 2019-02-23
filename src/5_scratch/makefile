@@ -1,7 +1,3 @@
-# Copyright 2011 (C) Reasoning Technology Ltd. All Rights Reserved
-#
-# 2010 11 20 TWL Created
-# 2019 02 24 TWL modified for subu project and placed under MIT license
 
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
@@ -16,28 +12,21 @@ ECHO= echo
 SHELL=/bin/bash
 SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
-CFLAGS=-std=c11 -fPIC -I. -ggdb -DDEBUG
+CFLAGS="-std=c11 -fPIC -I. -ggdb -DDEBUG"
 LIB="libsubu.a"
 LIBPATH="." #no trailing slash
 LINKFLAGS="-L. -lsubu"
 
-#these are the source files that exist
 SOURCES_LIB= $(wildcard *.lib.c)
 SOURCES_CLI= $(wildcard *.cli.c)
 SOURCES= $(SOURCES_LIB) $(SOURCES_CLI)
 
-#these are the object files to be made
 OBJECTS_LIB= $(patsubst %.c, %.o, $(SOURCES_LIB))
 OBJECTS_CLI= $(patsubst %.c, %.o, $(SOURCES_CLI))
 OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
 
-#these are the header files that exist, makeheaders will want to see them
-HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
-
 # sort causes compiles to go in lexical order by file name, this is used to order the tests e.g.
 EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
-
-all: version deps lib execs
 
 version:
 	@echo '---- make $@:------------------------------------------------------------'
@@ -67,16 +56,15 @@ setup:
 deps:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	makeheaders $(SOURCES) $(HFILES)
 	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 2_makefile_deps
 	for i in $(EXECS) ; do\
-           $(ECHO) >> 2_makefile_deps;\
-           $(ECHO) "$$i : $$i.cli.o $(LIBPATH)/$(LIB)" >> 2_makefile_deps;\
-           $(ECHO) "	$(CXX) -o $$i $$i.cli.o $(LINKFLAGS)" >> 2_makefile_deps;\
-        done
+	   echo >> 2_makefile_deps;\
+	   $(ECHO) "$$i : $$i.cli.o" >> 2_makefile_deps;\
+	   $(ECHO) "	$(CC) -o $$i $$i.cli.o" >> 2_makefile_deps;\
+	done
 	@echo '______end make $@_____'
 
-lib: 
+lib: clear_test_flags
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	if [ ! -e 2_makefile_deps ]; then make deps; fi # the user must delete 2_makefile_deps if deps change!
@@ -86,16 +74,25 @@ lib:
 sub_lib: $(LIB)
 
 
+$(LIBPATH)/$(LIB):
+	@if [ "$(LIBPATH)" != "$(APPLICATION_BASE)" ]; then \
+	  echo "LIBPATH: " "$(LIBPATH)";\
+	  echo "$APPLICATION_BASE: " "$(APPLICATION_BASE)";\
+	  echo "The library path is not the same as the application base so don't know how to make it.";\
+        fi
+	[ "$(LIBPATH)" == "$(APPLICATION_BASE)" ]
+	cd $(APPLICATION_BASE); make lib
+
 execs: $(LIBPATH)/$(LIB)
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	if [ ! -e 2_makefile_deps ]; then make deps; fi
 	make sub_execs
+	# for i in $(EXEC_OBJECTS); do rm $$i; done
 	@echo '______end make $@_____'
 
 sub_execs: $(EXECS)
 
-#not ready yet
 install: all
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
@@ -107,19 +104,20 @@ install: all
 	if [ -d $(APPLICATION) ]; then cp $(APPLICATION)/*.h $(RT_BASE)/include/$(APPLICATION); fi
 	@echo '______end make $@_____'
 
+# "make lib" "make execs" now cleans up the .o files afterward, so clean should not be needed often
+# clean works on the current working directory, dist_clean also  descends into 1_tests and 1_try
+#
 clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	for i in $(wildcard *~); do mv $$i $(SCRATCHDIR); done
-	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
-	for i in $(HFILES); do mv $$i 5_scratch; done # just in case someone wrote a header file
+	for i in $(wildcard *.lib.o) $(wildcard *.exl.o) $(wildcard *.ex.o); do rm $$i; done 
 	if [ -f 2_makefile_deps ]; then rm 2_makefile_deps; fi
-	if [ -f $(LIB) ]; then rm $(LIB); fi
-	for i in $(EXECS); do if [ -e $$i ]; then rm $$i; fi; done 
+	if [ -f $(LIB) ]; then mv $(LIB) 5_scratch; fi
+	for i in $(EXEC_WL) $(EXEC); do if [ -e $$i ]; then rm $$i; fi; done 
 	@echo '______end make $@_____'
 
 
-# not ready ...
 # dist_clean is used to clean thing up before doing a checkin,  hg add should be safe after a dist_clean
 # dist_clean will recurse into the include directory = $(APPLICATION), tests, and try if they are present 
 # 
@@ -137,10 +135,14 @@ dist_clean:
 
 # recipe for making object files:
 #
-%.o : %.c
+%.o : %.cc
 	$(CC) $(CFLAGS) -c $<
 
 
 #
-$(LIB) : $(OBJECTS_LIB)
-	ar rcs $(LIB) $(OBJECTS_LIB)
+$(LIB) : $(LIB_OBJECTS)
+	ar rcs $(LIB) $(LIB_OBJECTS)
+#	for i in $(LIB_OBJECTS); do rm $$i; done
+ 
+
+

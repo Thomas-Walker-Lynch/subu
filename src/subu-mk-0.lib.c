@@ -16,6 +16,7 @@
 
 
 */
+#include "subu-mk-0.lib.h"
 
 // without this #define we get the warning: implicit declaration of function ‘seteuid’/‘setegid’
 #define _GNU_SOURCE   
@@ -30,12 +31,19 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <stdbool.h>
-#include "dispatch_f.lib.h"
-#include "dispatch_exec.lib.h"
-#include "dispatch_useradd.lib.h"
-#include "subu-mk-0.lib.h"
 
-typedef unsigned int uint;
+#if INTERFACE
+#define ERR_SUBU_MK_0_CONFIG_FILE 1
+#define ERR_SUBU_MK_0_SETUID_ROOT 2
+#define ERR_SUBU_MK_0_BAD_MASTERU_HOME 3
+#define ERR_SUBU_MK_0_MALLOC 4
+#define ERR_SUBU_MK_0_MK_SUBUHOME 5
+#define ERR_SUBU_MK_0_FAILED_MKDIR_SUBU 6
+#define ERR_SUBU_MK_0_BUG_SSS 7
+#define ERR_SUBU_MK_0_FAILED_USERADD 8
+#define ERR_SUBU_MK_0_SETFACL 9
+#endif
+
 
 /*
   Fedora 29's sss_cache is checking the inherited uid instead of the effective
@@ -50,30 +58,30 @@ static uint max_subuname_len = 128;
 // a well formed subuname
 // returns the length of the subuname, or -1
 int allowed_subuname(char *subuname){
-  char *ch = token;
+  char *ch = subuname;
   uint i = 0;
   while(
      *ch
      &&
      i < max_subuname_len
      &&
-     ( ch >= 'a' && ch <= 'z'
+     ( *ch >= 'a' && *ch <= 'z'
        ||
-       ch >= 'A' && ch <= 'Z'
+       *ch >= 'A' && *ch <= 'Z'
        ||
-       ch >= '0' && ch <= '9'
+       *ch >= '0' && *ch <= '9'
        ||
-       ch == '_'
+       *ch == '_'
        ||
-       ch == '.'
+       *ch == '.'
        ||
-       ch == ' '
+       *ch == ' '
        )
   ){
     ch++;
     i++;
   }
-  if( !*ch && i < max_len; )
+  if( !*ch && i < max_subuname_len )
     return i;
   else
     return -1;
@@ -100,8 +108,8 @@ int subu_mk_0(char *subuname, char *config_file){
   sqlite3 *db;
   {
     if( sqlite3_open(config_file, &db) ){
-      fprintf(stderr, "error exit, could not open config file, \"%s\"\n", file);
-      return ERR_CONFIG_FILE;
+      fprintf(stderr, "error exit, could not open config file, \"%s\"\n", config_file);
+      return ERR_SUBU_MK_0_CONFIG_FILE;
     }
   }
 
@@ -124,7 +132,7 @@ int subu_mk_0(char *subuname, char *config_file){
     if( masteru_uid == 0 || set_euid != 0 ){
       fprintf(stderr, "error exit, this program must be run setuid root from a user account\n");
       sqlite3_close(db);
-      return ERR_SETUID_ROOT;
+      return ERR_SUBU_MK_0_SETUID_ROOT;
     }
   }
 
@@ -141,7 +149,7 @@ int subu_mk_0(char *subuname, char *config_file){
     if( subuname_len == -1 ){
       fprintf(stderr, "error exit, subuname is not in [ _.a-zA-Z0-9]* less than %u characters", max_subuname_len);
       sqlite3_close(db);
-      return ERR_CONFIG_FILE;
+      return ERR_SUBU_MK_0_CONFIG_FILE;
     }
   }
 
@@ -159,7 +167,7 @@ int subu_mk_0(char *subuname, char *config_file){
   char *subuhome;
   size_t subuhome_len;
   {
-    masteru_pw_record_pt = getpwuid(masteru_uid); // reading /etc/passwd
+    struct passwd *masteru_pw_record_pt = getpwuid(masteru_uid); // reading /etc/passwd
     masteru_name = masteru_pw_record_pt->pw_name;
     #ifdef DEBUG
     dbprintf("masteru_name \"%s\"\n", masteru_name);
@@ -171,7 +179,7 @@ int subu_mk_0(char *subuname, char *config_file){
     if( masteru_name_len == -1 ){ 
       fprintf(stderr, "error exit, masteru_name is not in [ _.a-zA-Z0-9]* less than %u characters", max_subuname_len);
       sqlite3_close(db);
-      return ERR_CONFIG_FILE;
+      return ERR_SUBU_MK_0_CONFIG_FILE;
     }
     masteru_home = masteru_pw_record_pt->pw_dir;
     #ifdef DEBUG
@@ -181,7 +189,7 @@ int subu_mk_0(char *subuname, char *config_file){
     if( masteru_home_len == 0 || masteru_home[0] == '(' ){
       fprintf(stderr,"error exit, %s has no home directory\n", masteru_name);
       sqlite3_close(db);
-      return ERR_BAD_MASTERU_HOME;
+      return ERR_SUBU_MK_0_BAD_MASTERU_HOME;
     }
     char *subuland_extension = "/subuland/";
     size_t subuland_extension_len = strlen(subuland_extension);
@@ -198,7 +206,7 @@ int subu_mk_0(char *subuname, char *config_file){
       perror(perror_src);
       free(subuland);
       sqlite3_close(db);
-      return ERR_MALLOC;
+      return ERR_SUBU_MK_0_MALLOC;
     }
     strcpy (subuhome, subuland);
     strcpy (subuhome + subuland_len, subuname);
@@ -220,7 +228,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_MK_SUBUHOME;
+      return ERR_SUBU_MK_0_MK_SUBUHOME;
     }
     int ret = dispatch_f_euid_egid
       (
@@ -235,7 +243,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_FAILED_MKDIR_SUBU;
+      return ERR_SUBU_MK_0_FAILED_MKDIR_SUBU;
     }
   }
   #ifdef DEBUG
@@ -267,7 +275,7 @@ int subu_mk_0(char *subuname, char *config_file){
         free(subuland);
         free(subuhome);
         sqlite3_close(db);
-        return ERR_BUG_SSS;
+        return ERR_SUBU_MK_0_BUG_SSS;
       }
     #endif
     char *command = "/usr/sbin/useradd";
@@ -287,7 +295,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_FAILED_USERADD;
+      return ERR_SUBU_MK_0_FAILED_USERADD;
     }
     #ifdef DEBUG
     dbprintf("useradd finished\n");
@@ -344,7 +352,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_SETFACL;
+      return ERR_SUBU_MK_0_SETFACL;
     }
     // 2.1 x acls on subuland
     // setfacl -m u:subuname:x subuland
@@ -357,7 +365,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_SETFACL;
+      return ERR_SUBU_MK_0_SETFACL;
     }
     // 2.2 x acls on masteru_home
     // setfacl -m u:subuname:x masteru_home
@@ -367,7 +375,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_SETFACL;
+      return ERR_SUBU_MK_0_SETFACL;
     }
     // 3. give subu ownership of subuhome
     
@@ -406,7 +414,7 @@ int subu_mk_0(char *subuname, char *config_file){
       free(subuland);
       free(subuhome);
       sqlite3_close(db);
-      return ERR_SETFACL;
+      return ERR_SUBU_MK_0_SETFACL;
     }
     #ifdef DEBUG
     dbprintf("masteru now has default access\n");

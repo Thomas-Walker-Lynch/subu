@@ -10,18 +10,19 @@
  command passed in, and wants better behavior, he or she can spin a special
  version of dispatch for that command.
 */
+#include "dispatch_exec.lib.h"
 
 // without this #define execvpe is undefined
 #define _GNU_SOURCE   
+
 #include <sys/types.h>
 #include <unistd.h>
-
 #include <wait.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include "local_common.h"
-#include "dispatch_exec.lib.h"
+
+
 
 int dispatch_exec(char **argv, char **envp){
   if( !argv || !argv[0] ){

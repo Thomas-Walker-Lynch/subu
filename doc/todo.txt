@@ -1,23 +1,2 @@
 
 
-2019-02-05T23:14:40Z morpheus@manorhouse§~/src/subu§
-  error can cause subu-mk-0 to leave the creating of a subu
-  in an intermediate state.  Rather than bailing on some
-  of the errors we need to clean up instead.  Perhaps the
-  yet to be written subu-rm program will be resilent enough
-  to do more general cleanup.
-
-2019-02-21T22:02:15Z morpheus@manorhouse§~/src/subu§
-  subu-mk-0 only gives x privs via setfacl to subu on masteru home and on
-  subuland.  Hence a subu can not run subu-mk-0 and be guaranteed access to the
-  subu's newly made subu.  I.e. cd might not work for recurisve subu.
-
-  The easy fix would be to use perms instead of facls, and give all home
-  directories other 'x' privs.  Another fix would be to take apart the subu
-  home path, and make sure that all sub paths have 'x'.
-
-  For now, I'm just leaving it to one layer.
-
-2019-02-23T18:56:31Z morpheus@manorhouse§~/subu_land/subu/src§
-  need to modify subu-init to take a configuration file name argument
-  might want to add arguments to other subu commands also

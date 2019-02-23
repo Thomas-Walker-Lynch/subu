@@ -1,7 +1,8 @@
 
+#include "dbprintf.lib.h"
+
 #include <stdarg.h>
 #include <stdio.h>
-#include "dbprintf.aux.h"
 
 int dbprintf(const char *format, ...){
   va_list args;

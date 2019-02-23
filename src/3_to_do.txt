@@ -1,0 +1,10 @@
+2019-02-05T23:14:40Z morpheus@manorhouse§~/src/subu§
+  error can cause subu-mk-0 to leave the creating of a subu in an intermediate
+  state.  Rather than bailing on some of the errors we need to clean up instead.
+  Perhaps the yet to be written subu-rm program will be resilent enough to do
+  more general cleanup.
+
+2019-02-23T18:56:31Z morpheus@manorhouse§~/subu_land/subu/src§
+  need to modify subu-init to take a configuration file name argument instead of
+  using a global variabel value.  might want to add arguments to other subu
+  commands also

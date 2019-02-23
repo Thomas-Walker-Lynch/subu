@@ -1,17 +1,28 @@
 /*
-There is no C library interface to useradd(8), but if there were, these functions
+There is no C library interface to useradd(8), but if there were, this function
 would be found there instead.
 
 */
+#include "dispatch_useradd.lib.h"
 
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
-#include "local_common.h"
-#include "dispatch_exec.lib.h"
-#include "dispatch_useradd.lib.h"
+
+#if INTERFACE
+#include <sys/types.h>
+#include <pwd.h>
+#define ERR_DISPATCH_USERADD_ARGC 1
+#define ERR_DISPATCH_USERADD_DISPATCH 2
+#define ERR_DISPATCH_USERADD_PWREC 3
+struct dispatch_useradd_ret_t{
+  uint error;
+  struct passwd *pw_record;  
+};
+#endif
+
 
 // we have a contract with the caller that argv[1] is always the subuname
 struct dispatch_useradd_ret_t dispatch_useradd(char **argv, char **envp){
@@ -19,7 +30,7 @@ struct dispatch_useradd_ret_t dispatch_useradd(char **argv, char **envp){
   {
     if( !argv || !argv[0] || !argv[1]){
       fprintf(stderr,"useradd() needs a first argument as the name of the user to be made");
-      ret.error = DISPATCH_USERADD_ERR_ARGC;
+      ret.error = ERR_DISPATCH_USERADD_ARGC;
       ret.pw_record = NULL;
       return ret;
     }
@@ -29,7 +40,7 @@ struct dispatch_useradd_ret_t dispatch_useradd(char **argv, char **envp){
       subu_name = argv[1];
       if( dispatch_exec(argv, envp) == -1 ){
         fprintf(stderr,"%s failed\n", argv[0]);
-        ret.error = DISPATCH_USERADD_ERR_DISPATCH;
+        ret.error = ERR_DISPATCH_USERADD_DISPATCH;
         ret.pw_record = NULL;
         return ret;
       }}
@@ -46,7 +57,7 @@ struct dispatch_useradd_ret_t dispatch_useradd(char **argv, char **envp){
         count++;
       }
       if( !pw_record ){
-        ret.error = DISPATCH_USERADD_ERR_PWREC;
+        ret.error = ERR_DISPATCH_USERADD_PWREC;
         ret.pw_record = NULL;
         return ret;
       }

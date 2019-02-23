@@ -11,18 +11,17 @@
  version of dispatch for that command.
 */
 
+#include "dispatch_f.lib.h"
+
 // without this #define execvpe is undefined
 #define _GNU_SOURCE   
 
 #include <sys/types.h>
 #include <unistd.h>
-
 #include <wait.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include "local_common.h"
-#include "dispatch_f.lib.h"
 
 int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
   char *perror_src = "dispatch_f_as";

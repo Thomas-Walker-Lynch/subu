@@ -1,0 +1,27 @@
+This time making each main definition have the same prototype.  Still end up with multiple main declarations,
+it is just that they agree.
+
+> rm *.h
+> makeheaders *.c
+> cat command1.c
+#include "command1.h"
+#include <stdio.h>
+int main(int argc, char **argv){
+  printf("command1 %d\n", f());
+  return 0;
+}
+> cat command1.h
+/* This file was automatically generated.  Do not edit! */
+#undef INTERFACE
+int f();
+int main(int argc,char **argv);
+int main(int argc,char **argv);
+> cat command2.c
+#include "command2.h"
+#include <stdio.h>
+int main(int argc, char **argv){
+  printf("command2 %d\n", f() + argc);
+  return 0;
+}
+> gcc -o command1 command1.c just_fun.c
+>  .. worked

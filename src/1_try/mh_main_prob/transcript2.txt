@@ -1,0 +1,20 @@
+Making each main call static so it won't be in the header.  gcc can't find main.
+
+> cat command1.c
+#include "command1.h"
+#include <stdio.h>
+static int main(){
+  printf("command1 %d\n", f());
+  return 0;
+}
+> cat command2.c
+#include "command2.h"
+#include <stdio.h>
+static int main(int argc, char **argv){
+  printf("command2 %d\n", f() + argc);
+  return 0;
+}
+> gcc -o command1 command1.c just_fun.c
+/usr/bin/ld: /usr/lib/gcc/x86_64-redhat-linux/8/../../../../lib64/crt1.o: in function `_start':
+(.text+0x24): undefined reference to `main'
+collect2: error: ld returned 1 exit status

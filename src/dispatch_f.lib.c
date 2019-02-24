@@ -10,14 +10,21 @@
  command passed in, and wants better behavior, he or she can spin a special
  version of dispatch for that command.
 */
+#define _GNU_SOURCE
 
 #include "dispatch_f.lib.h"
+// we need the declaration for uid_t etc.
+#if INTERFACE
+#include <sys/types.h>
+#include <unistd.h>
+#define ERR_DISPATCH_F_FORK 1
+#define ERR_DISPATCH_F_SETEUID 2
+#define ERR_DISPATCH_F_SETEGID 3
+#endif
 
 // without this #define execvpe is undefined
 #define _GNU_SOURCE   
 
-#include <sys/types.h>
-#include <unistd.h>
 #include <wait.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,7 +39,7 @@ int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
   if( pid == -1 ){
     perror(perror_src);
     fprintf(stderr, "%s %s\n", perror_src, fname);
-    return ERR_FORK;
+    return ERR_DISPATCH_F_FORK;
   }
   if( pid == 0 ){ // we are the child
     int status = (*f)(f_arg);
@@ -53,18 +60,18 @@ int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t eu
   if( pid == -1 ){
     perror(perror_src);
     fprintf(stderr, "%s %s %u %u\n", perror_src, fname, euid, egid);
-    return ERR_FORK;
+    return ERR_DISPATCH_F_FORK;
   }
   if( pid == 0 ){ // we are the child
     if( seteuid(euid) == -1 ){
       perror(perror_src);
       fprintf(stderr, "%s %s %u %u\n", perror_src, fname, euid, egid);
-      return ERR_SETEUID;
+      return ERR_DISPATCH_F_SETEUID;
     }
     if( setegid(egid) == -1 ){
       perror(perror_src);
       fprintf(stderr, "%s %s %u %u\n", perror_src, fname, euid, egid);
-      return ERR_SETEGID;
+      return ERR_DISPATCH_F_SETEGID;
     }
     int status = (*f)(f_arg);
     exit(status);

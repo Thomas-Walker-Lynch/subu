@@ -1,0 +1,36 @@
+Various commmand files each with its own main for testing a library.  makeheaders gets confused and puts all the
+declarations in the headers, leading to a failure.
+
+
+> ls
+command1.c  command2.c	just_fun.c
+> cat just_fun.c
+#include "just_fun.h"
+int f(){
+  return 5;
+}
+> cat command1.c
+#include "command1.h"
+#include <stdio.h>
+int main(){
+  printf("command1 %d\n", f());
+  return 0;
+}
+> cat command2.c
+#include "command2.h"
+#include <stdio.h>
+int main(int argc, char **argv){
+  printf("command2 %d\n", f() + argc);
+  return 0;
+}
+> makeheaders *.c
+> gcc -o command1 command1.c
+command1.c: In function ‘main’:
+command1.c:3:1: error: number of arguments doesn’t match prototype
+ int main(){
+ ^~~
+In file included from command1.c:1:
+command1.h:5:5: error: prototype declaration
+ int main(int argc,char **argv);
+     ^~~~
+> 

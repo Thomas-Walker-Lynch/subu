@@ -16,10 +16,9 @@ ECHO= echo
 SHELL=/bin/bash
 SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
-CFLAGS=-std=c11 -fPIC -I. -ggdb -DDEBUG
+CFLAGS=-std=c11 -fPIC -I. -ggdb -DDEBUG -Werror
 LIB="libsubu.a"
-LIBPATH="." #no trailing slash
-LINKFLAGS="-L. -lsubu"
+LINKFLAGS=-L. -lsubu  -lsqlite3
 
 #these are the source files that exist
 SOURCES_LIB= $(wildcard *.lib.c)
@@ -46,7 +45,6 @@ version:
 	@echo "CC: " $(CC)
 	@echo "CFLAGS: " $(CFLAGS)
 	@echo "LIB: " $(LIB)
-	@echo "LIBPATH: " $(LIBPATH)
 	@echo "LINKFLAGS: " $(LINKFLAGS)
 	@echo '______end make $@_____'
 
@@ -71,7 +69,7 @@ deps:
 	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 2_makefile_deps
 	for i in $(EXECS) ; do\
            $(ECHO) >> 2_makefile_deps;\
-           $(ECHO) "$$i : $$i.cli.o $(LIBPATH)/$(LIB)" >> 2_makefile_deps;\
+           $(ECHO) "$$i : $$i.cli.o $(LIB)" >> 2_makefile_deps;\
            $(ECHO) "	$(CXX) -o $$i $$i.cli.o $(LINKFLAGS)" >> 2_makefile_deps;\
         done
 	@echo '______end make $@_____'
@@ -86,7 +84,7 @@ lib:
 sub_lib: $(LIB)
 
 
-execs: $(LIBPATH)/$(LIB)
+execs: $(LIB)
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	if [ ! -e 2_makefile_deps ]; then make deps; fi
@@ -110,6 +108,7 @@ install: all
 clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
+	if [ -f subu.db ]; then rm subu.db; fi
 	for i in $(wildcard *~); do mv $$i $(SCRATCHDIR); done
 	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
 	for i in $(HFILES); do mv $$i 5_scratch; done # just in case someone wrote a header file

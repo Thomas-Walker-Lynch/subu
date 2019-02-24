@@ -50,28 +50,30 @@ int schema(sqlite3 *db, uint max_subu_number){
   return sqlite3_exec(db, sql, NULL, NULL, NULL);
 }
 
-int subu_number(sqlite3 *db, uint **subu_number){
+static uint count = 0;
+
+static int callback(void *NotUsed, int argc, char **argv, char **col_name){
+    int i;
+    printf("count: %u\n", count++);
+    for(i=0; i<argc; i++){
+      printf("%s = %s\n", col_name[i], argv[i] ? argv[i] : "NULL");
+    }
+    printf("\n");
+    return 0;
+  }
+
+int subu_number(sqlite3 *db, uint *subu_number){
   *subu_number = 0;
   char *sql = 
     "BEGIN TRANSACTION;"
     "UPDATE Key_Int SET value = value + 1 WHERE key = 'max_subu_number';"
     "SELECT value FROM Key_Int WHERE key = 'max_subu_number';"
     "COMMIT;";
-  size_t sql_len = strlen(sql);
   int ret;
-  sqlite3_stmt *stmt;
-  ret = sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL);
-  if( ret != SQLITE_OK ){
-    return ERR_CONFIG_FILE;
-  }      
-  sqlite3_stmt *res;
-  rc = sqlite3_step(res);
-  if( rc == SQLITE_ROW ){
-    printf("%u\n", sqlite3_column_int(res, NULL));
+  char *errmsg;
+  ret = sqlite3_exec(db, sql, callback, NULL, &errmsg);
+  if( errmsg ){
+    printf("exec failed: %s\n", errmsg);
+    sqlite3_free(errmsg);
   }
-  rc = sqlite3_step(res);
-  if( rc == SQLITE_ROW ){
-    printf("%u\n", sqlite3_column_int(res, NULL));
-  }
-  sqlite3_finalize(res);
 }

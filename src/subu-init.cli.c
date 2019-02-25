@@ -5,7 +5,7 @@ This command initializes the configuration file.
 #include "subu-init.cli.h"
 #include <stdio.h>
 
-int main(int argc, char **argv, char **envp){
+int main(){
   sqlite3 *db;
   if(
      sqlite3_open(config_file, &db)

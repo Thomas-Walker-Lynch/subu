@@ -5,7 +5,3 @@
 typedef unsigned int uint;
 int schema(sqlite3 *db,uint max_subu_number);
 extern char config_file[];
-extern char config_file[];
-int main(int argc,char **argv,char **envp);
-int main(int argc,char **argv,char **envp);
-int main(int argc,char **argv,char **envp);

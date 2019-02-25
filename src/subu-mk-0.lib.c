@@ -33,6 +33,7 @@
 #include <stdbool.h>
 
 #if INTERFACE
+#include <sqlite3.h>
 #define ERR_SUBU_MK_0_ARG_CNT 1
 #define ERR_SUBU_MK_0_CONFIG_FILE 2
 #define ERR_SUBU_MK_0_SETUID_ROOT 3

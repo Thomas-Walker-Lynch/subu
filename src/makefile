@@ -16,7 +16,8 @@ ECHO= echo
 SHELL=/bin/bash
 SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
-CFLAGS=-std=c11 -fPIC -I. -ggdb -DDEBUG -Werror
+#CFLAGS=-std=c11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
+CFLAGS=-std=c11 -fPIC -I. -Werror
 LIB="libsubu.a"
 LINKFLAGS=-L. -lsubu  -lsqlite3
 
@@ -66,6 +67,7 @@ deps:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	makeheaders $(SOURCES) $(HFILES)
+	sed -i '/^ *int *main *(.*)/d' *.h
 	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 2_makefile_deps
 	for i in $(EXECS) ; do\
            $(ECHO) >> 2_makefile_deps;\

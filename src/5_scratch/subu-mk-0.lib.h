@@ -13,9 +13,8 @@ struct dispatch_useradd_ret_t dispatch_useradd(char **argv,char **envp);
 #include <unistd.h>
 int dispatch_f_euid_egid(char *fname,int(*f)(void *arg),void *f_arg,uid_t euid,gid_t egid);
 int dbprintf(const char *format,...);
+extern char config_file[];
 #include <sqlite3.h>
-extern char config_file[];
-extern char config_file[];
 int subu_mk_0(char *subuname,char *config_file);
 int masteru_makes_subuhome(void *arg);
 int allowed_subuname(char *subuname);

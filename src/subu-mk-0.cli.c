@@ -5,10 +5,7 @@
 #include "subu-mk-0.lib.h"
 #include <stdio.h>
 
-//  char *config_file = "/etc/subu.db";
-char config_file[] = "subu.db";
-
-int main(int argc, char **argv, char **envp){
+int main(int argc, char **argv){
   char *command = argv[0];
   if( argc != 2 ){
     fprintf(stderr, "usage: %s subu", command);

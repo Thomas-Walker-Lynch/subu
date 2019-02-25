@@ -21,9 +21,6 @@ currently a unit converted to base 10 will always fit in a 21 bit buffer.
 #include <string.h>
 #include <stdlib.h>
 
-//char config_file[] = "/etc/subu.db";
-char config_file[] = "subu.db";
-
 int schema(sqlite3 *db, uint max_subu_number){
   char max_subu_number_string[32];
   uint max_subu_number_string_len = snprintf(max_subu_number_string, 32, "%u", max_subu_number);
@@ -50,19 +47,14 @@ int schema(sqlite3 *db, uint max_subu_number){
   return sqlite3_exec(db, sql, NULL, NULL, NULL);
 }
 
-static uint count = 0;
-
-static int callback(void *NotUsed, int argc, char **argv, char **col_name){
-    int i;
-    printf("count: %u\n", count++);
-    for(i=0; i<argc; i++){
-      printf("%s = %s\n", col_name[i], argv[i] ? argv[i] : "NULL");
-    }
-    printf("\n");
+static int subu_number_extract(void *n, int colcnt, char **colvals, char **colnames){
+  if(colcnt >= 1){
+    sscanf(colvals[0], "%u", n);
     return 0;
   }
-
-int subu_number(sqlite3 *db, uint *subu_number){
+  return -1;
+}
+int subu_number_get(sqlite3 *db, uint *subu_number){
   *subu_number = 0;
   char *sql = 
     "BEGIN TRANSACTION;"
@@ -71,9 +63,10 @@ int subu_number(sqlite3 *db, uint *subu_number){
     "COMMIT;";
   int ret;
   char *errmsg;
-  ret = sqlite3_exec(db, sql, callback, NULL, &errmsg);
+  ret = sqlite3_exec(db, sql, subu_number_extract, subu_number, &errmsg);
   if( errmsg ){
-    printf("exec failed: %s\n", errmsg);
+    printf("exec failed when accessing max_subu_number: %s\n", errmsg);
     sqlite3_free(errmsg);
   }
+  return ret;
 }

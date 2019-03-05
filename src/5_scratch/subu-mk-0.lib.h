@@ -3,23 +3,17 @@
 #include <sqlite3.h>
 int subu_put_masteru_subu(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
 #include <sys/types.h>
-#include <pwd.h>
-typedef struct dispatch_useradd_ret_t dispatch_useradd_ret_t;
-typedef unsigned int uint;
-struct dispatch_useradd_ret_t {
-  uint error;
-  struct passwd *pw_record;  
-};
-struct dispatch_useradd_ret_t dispatch_useradd(char **argv,char **envp);
-#define BUG_SSS_CACHE_RUID 1
 #include <unistd.h>
-typedef struct dispatch_f_ctx dispatch_f_ctx;
-dispatch_f_ctx *dispatch_f_euid_egid(char *fname,int(*f)(void *arg),void *f_arg,uid_t euid,gid_t egid);
-struct dispatch_f_ctx {
-  char *dispatcher; // name of the dispatch function (currently "dispatch_f" or "dispatch_f_euid_egid")
+typedef struct dispatch_ctx dispatch_ctx;
+dispatch_ctx *dispatch_exec(char **argv,char **envp);
+#define BUG_SSS_CACHE_RUID 1
+void dispatch_f_mess(struct dispatch_ctx *ctxp);
+#define ERR_DISPATCH -1024
+dispatch_ctx *dispatch_f_euid_egid(char *fname,int(*f)(void *arg),void *f_arg,uid_t euid,gid_t egid);
+struct dispatch_ctx {
+  char *dispatcher; // name of the dispatch function ("dispatch_f", "dispatch_f_euid_egid", etc.)
   char *dispatchee; // name of the function being dispatched
-  int err;
-  int status; // return value from the function
+  int err; // error code as listed below, or status returned from dispatchee
 };
 int subu_number_get(sqlite3 *db,char **nsp,char **errmsg);
 int dbprintf(const char *format,...);
@@ -27,6 +21,7 @@ int dbprintf(const char *format,...);
 #include <errno.h>
 typedef struct subu_mk_0_ctx subu_mk_0_ctx;
 struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db,char *subuname);
+typedef unsigned int uint;
 extern uint subuhome_perms;
 void subu_mk_0_mess(struct subu_mk_0_ctx *ctxp);
 void subu_mk_0_ctx_free(struct subu_mk_0_ctx *ctxp);

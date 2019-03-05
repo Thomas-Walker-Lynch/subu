@@ -305,7 +305,7 @@ struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
       ctxp->err = ERR_SUBU_MK_0_SUBUHOME_EXISTS;
       return ctxp;
     }
-    struct dispatch_f_ctx *dfr = dispatch_f_euid_egid
+    dispatch_ctx *dfr = dispatch_f_euid_egid
       (
        "masteru_makes_subuhome", 
        masteru_makes_subuhome, 
@@ -313,7 +313,13 @@ struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
        masteru_uid, 
        masteru_gid
        );
-    if( dfr->err < 0 || dfr->err == ERR_SUBU_MK_0_MKDIR_SUBUHOME ){
+    if( dfr->err <= ERR_DISPATCH || dfr->err == ERR_SUBU_MK_0_MKDIR_SUBUHOME ){
+      #ifdef DEBUG
+      if( dfr->err == ERR_SUBU_MK_0_MKDIR_SUBUHOME )
+        perror("mkdir");
+      else
+        dispatch_f_mess(dfr);
+      #endif
       ctxp->err = ERR_SUBU_MK_0_MKDIR_SUBUHOME;
       return ctxp;
     }
@@ -344,9 +350,14 @@ struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     argv[2] = (char *) NULL;
     char *envp[1];
     envp[0] = (char *) NULL;
-    struct dispatch_useradd_ret_t ret;
-    ret = dispatch_useradd(argv, envp);
-    if(ret.error){
+    dispatch_ctx *dfr = dispatch_exec(argv, envp);
+    if( dfr->err != 0 ){
+      #ifdef DEBUG
+      if( dfr->err <= ERR_DISPATCH )
+        dispatch_f_mess(dfr);
+      else
+        perror("useradd");
+      #endif
       ctxp->err = ERR_SUBU_MK_0_FAILED_USERADD;
       return ctxp;
     }

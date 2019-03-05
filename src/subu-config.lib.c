@@ -65,13 +65,13 @@ static char *subu_number_sql =
   "COMMIT;";
 int subu_number_get(sqlite3 *db, char **nsp, char **errmsg){
   int ret;
-  ret = sqlite3_exec(db, sql, subu_number_extract, (void *)nsp, errmsg);
+  ret = sqlite3_exec(db, subu_number_sql, subu_number_extract, (void *)nsp, errmsg);
   return ret;
 }
 
 //--------------------------------------------------------------------------------
 int subu_put_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
-  char *sql = "INSERT INTO Master_Subu (?1, ?2, ?3);";
+  char *sql = "INSERT INTO Master_Subu VALUES (?1, ?2, ?3);";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL);

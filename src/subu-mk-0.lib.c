@@ -1,16 +1,22 @@
 /*
-  Makes a new subu user. This routine creates the bindfs mount point under
-  subuland, creates the _s<number>  user, and adds the master / subu relation
-  to configuration file.
+  subu-mk-0 makes a new subu user. The '-0' signifies it is a low level program,
+  and probably will not be called directly.
 
-  masteru is the user who ran this script. subu is a subservient user.  subuname
-  is passed as an argument, we get the materu name from getuid and /etc/passwd.
+  masteru is the user who ran this script. subu is a subservient user to be
+  created.  subuname is passed as an argument. The masteru name comes from
+  getuid and /etc/passwd.
+
+  subu-mk-0 synthesizes a new user with the name s<number>, enters the
+  relationship between masteru, subu, and s<number> in the config file, and it
+  makes a bindfs mount point for the s<number> user under masteru's 'subuland'
+  directory.
 
   subu-mk-0 is a setuid root script. 
 
-  sqllite3 is used to maintain the configuration file, which is currently /etc/subu.db
+  sqllite3 is used to maintain the configuration file, which is currently compiled
+  in as /etc/subu.db, (or just subu.db for testing).
 
-  useradd is called to make the _s<number> user
+  useradd is called to make the s<number> user
 
   Note, as per the man page, we are not allowed to free the memory allocated by getpwid().
 
@@ -24,84 +30,22 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <stdbool.h>
-
-
-/*
-  Fedora 29's sss_cache is checking the inherited uid instead of the effective
-  uid, so setuid root scripts will fail when calling sss_cache. Fedora 29's
-  'useradd'  calls sss_cache.
- 
-*/
-#define BUG_SSS_CACHE_RUID 1
-  
-// a well formed subuname
-// wonder if it makes sense to add a length limit ...
-// returns the length of the subuname, or -1
-int allowed_subuname(char *subuname, size_t &subuname_len){
-  char *ch = subuname;
-  uint i = 0;
-  while(
-     *ch
-     &&
-     ( *ch >= 'a' && *ch <= 'z'
-       ||
-       *ch >= 'A' && *ch <= 'Z'
-       ||
-       *ch >= '0' && *ch <= '9'
-       ||
-       *ch == '-'
-       ||
-       *ch == '_'
-       ||
-       *ch == '.'
-       ||
-       *ch == ' '
-       )
-  ){
-    ch++;
-    i++;
-  }
-  if( !*ch ){
-    subuname_len = i;
-    return 0;
-  }else
-    return -1;
-}
-
-struct subu_mk_0_ctx{
-  char *name;
-  char *subuland;
-  char *subuhome;
-  char *subu_username;
-  char *aux;
-  uint err;
-};
-ctxp *subu_mk_0_ctx_mk(){
-  ctxp = malloc(sizeof(subu_mk_0_ctx));
-  ctxp->name = "subu_mk_0";
-  ctxp->subuland = 0;
-  ctxp->subuhome = 0;
-  ctxp->subu_username = 0;
-  ctxp->free_aux = false;
-  ctxp->aux = 0;
-}
-void subu_mk_0_ctx_free(subu_mk_0_ctx ctxp){
-  free(ctxp->subuland);
-  free(ctxp->subuhome);
-  free(ctxp->subu_username);
-  if(ctxp->free_aux) free(ctxp->aux);
-  free ctxp;
-}
 
 #if INTERFACE
+#include <stdbool.h>
+#include <errno.h>
 #include <sqlite3.h>
+#endif
+
+//--------------------------------------------------------------------------------
+// an instance is subu_mk_0_ctx is returned by subu_mk_0
+//
+#if INTERFACE
 #define ERR_SUBU_MK_0_MKDIR_SUBUHOME 1
 #define ERR_SUBU_MK_0_SUBUNAME_MALFORMED 2
 #define ERR_SUBU_MK_0_SETUID_ROOT 3
@@ -111,9 +55,34 @@ void subu_mk_0_ctx_free(subu_mk_0_ctx ctxp){
 #define ERR_SUBU_MK_0_SUBUHOME_EXISTS 7
 #define ERR_SUBU_MK_0_BUG_SSS 8
 #define ERR_SUBU_MK_0_FAILED_USERADD 9
-#define 
+
+struct subu_mk_0_ctx{
+  char *name;
+  char *subuland;
+  char *subuhome;
+  char *subu_username;
+  bool free_aux;
+  char *aux;
+  uint err;
+};
 #endif
-// must be called before any system calls, or perror() will be messed up
+struct subu_mk_0_ctx *subu_mk_0_ctx_mk(){
+  struct subu_mk_0_ctx *ctxp = malloc(sizeof(struct subu_mk_0_ctx));
+  ctxp->name = "subu_mk_0";
+  ctxp->subuland = 0;
+  ctxp->subuhome = 0;
+  ctxp->subu_username = 0;
+  ctxp->free_aux = false;
+  ctxp->aux = 0;
+}
+void subu_mk_0_ctx_free(struct subu_mk_0_ctx *ctxp){
+  free(ctxp->subuland);
+  free(ctxp->subuhome);
+  free(ctxp->subu_username);
+  if(ctxp->free_aux) free(ctxp->aux);
+  free(ctxp);
+}
+// must be called before any system calls, otherwise perror() will be messed up
 void subu_mk_0_mess(struct subu_mk_0_ctx *ctxp){
   switch(ctxp->err){
   case 0: return;
@@ -121,60 +90,101 @@ void subu_mk_0_mess(struct subu_mk_0_ctx *ctxp){
     fprintf(stderr, "masteru could not make subuhome, \"%s\"", ctxp->subuhome);
     break;
   case ERR_SUBU_MK_0_SUBUNAME_MALFORMED:
-    fprintf(stderr, "subuname, \"%s\" is not in [ _.\-a-zA-Z0-9]*", ctxp->aux);
+    fprintf(stderr, "subuname, \"%s\" is not in [ _.-a-zA-Z0-9]*", ctxp->aux);
     break;
   case ERR_SUBU_MK_0_SETUID_ROOT:
     fprintf(stderr, "This program must be run setuid root from a user account.");
     break;
   case ERR_SUBU_MK_0_MASTERU_HOMELESS:
-    char *masteru_name = aux; // this should not be freed
-    fprintf(stderr,"Masteru, \"%s\", has no home directory", masteru_name);
+    fprintf(stderr,"Masteru, \"%s\", has no home directory", ctxp->aux);
     break;
-  case ERR_SUBU_MK_0_MALLOC 
+  case ERR_SUBU_MK_0_MALLOC:
     perror(ctxp->name);
-    break;
-  case ERR_SUBU_MK_0_CONFIG_FILE
+  break;
+  case ERR_SUBU_MK_0_CONFIG_FILE:
     fprintf(stderr, "config file error: %s", ctxp->aux);
-    break;
-  case ERR_SUBU_MK_0_SUBUHOME_EXISTS
+  break;
+  case ERR_SUBU_MK_0_SUBUHOME_EXISTS:
     fprintf(stderr, "a file system object already exists at subuhome, \"%s\"\n", ctxp->subuhome);
-    break;
-  case ERR_SUBU_MK_0_BUG_SSS 
+  break;
+  case ERR_SUBU_MK_0_BUG_SSS:
     perror(ctxp->name);
-    break;
-  case ERR_SUBU_MK_0_FAILED_USERADD 
+  break;
+  case ERR_SUBU_MK_0_FAILED_USERADD:
     fprintf(stderr, "%u useradd failed\n", ctxp->subu_username);
-    break;
+  break;
   default:
+    fprintf(stderr, "unknown error code %d\n", ctxp->err);
   }
   fputc('\n', stderr);
 }
 
-// will be called through dispatch_f_as masteru
-static uint masteru_makes_subuhome(void *arg){
+
+//--------------------------------------------------------------------------------
+// a well formed subuname
+// returns the length of the subuname, or -1
+//
+static int allowed_subuname(char *subuname, size_t *subuname_len){
+  char *ch = subuname;
+  size_t i = 0;
+  while(
+        *ch
+        &&
+        ( *ch >= 'a' && *ch <= 'z'
+          ||
+          *ch >= 'A' && *ch <= 'Z'
+          ||
+          *ch >= '0' && *ch <= '9'
+          ||
+          *ch == '-'
+          ||
+          *ch == '_'
+          ||
+          *ch == '.'
+          ||
+          *ch == ' '
+          )
+        ){
+    ch++;
+    i++;
+  }
+  if( !*ch ){
+    *subuname_len = i;
+    return 0;
+  }else
+    return -1;
+}
+
+//--------------------------------------------------------------------------------
+// dispatched functions
+//
+// the making of subuhome is dispatched to its own process so as to give it its own uid/gid
+static int masteru_makes_subuhome(void *arg){
   char *subuhome = (char *) arg;
-  if( mkdir( subuhome, 0700 ) == -1 ){
+  if( mkdir( subuhome, subuhome_perms ) == -1 ){ // find subuhome perms in common
     perror("masteru_makes_subuhome");
     return ERR_SUBU_MK_0_MKDIR_SUBUHOME;
   }
   return 0;
 }
 
-subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
+//--------------------------------------------------------------------------------
+//  the public call point
+struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
 
-  subu_mk_0_ctx *ctxp = subu_mk_0_ctx_mk();
+  struct subu_mk_0_ctx *ctxp = subu_mk_0_ctx_mk();
 
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
-  dbprintf("Checking that subuname is well formed, counting its length.\n");
+  dbprintf("Checking that subuname is well formed and finding its length\n");
   #endif
   size_t subuname_len;
   {
-    int ret = allowed_subuname(subuname, subuname_len);
+    int ret = allowed_subuname(subuname, &subuname_len);
     if( ret == -1 ){
-      ctxp->err = ERR_SUBU_MK_0_SUBU_MALFORMED;
+      ctxp->err = ERR_SUBU_MK_0_SUBUNAME_MALFORMED;
       ctxp->aux = subuname;
-      return ctxp
+      return ctxp;
     }}
   
   //--------------------------------------------------------------------------------
@@ -201,7 +211,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
 
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
-  dbprintf("creation of required strings and recording their lengths\n");
+  dbprintf("strings masteru_name and masteru_home\n");
   #endif
 
   char *masteru_name;
@@ -217,6 +227,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     dbprintf("masteru_name \"%s\" %zu\n", masteru_name, masteru_name_len);
     #endif
     masteru_home = masteru_pw_record_pt->pw_dir;
+    masteru_home_len = strlen(masteru_home);
     #ifdef DEBUG
     dbprintf("masteru_home \"%s\" %zu\n", masteru_home, masteru_home_len);
     #endif
@@ -243,12 +254,12 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
 
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
-  dbprintf("generate the subu_username, set the subuhome\n");
+  dbprintf("strings subu_username and subuhome\n");
   #endif
   size_t subu_username_len;
   size_t subuhome_len;
   {
-    char *ns=0;
+    char *ns=0; // 'ns'  Number as String
     char *mess=0;
     if( subu_number_get( db, &ns, &mess ) != SQLITE_OK ){
       ctxp->err = ERR_SUBU_MK_0_CONFIG_FILE;
@@ -256,7 +267,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
       ctxp->free_aux = true;
       return ctxp;
     }
-    ns_len = strlen(ns);
+    size_t ns_len = strlen(ns);
     ctxp->subu_username = malloc(1 + ns_len + 1);
     if( !ctxp->subu_username ){
       ctxp->err = ERR_SUBU_MK_0_MALLOC;
@@ -269,15 +280,14 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     dbprintf("subu_username \"%s\" %zu\n", ctxp->subu_username, subu_username_len);
     #endif
 
-    subuhome_len = subuland_len + subu_username_len; 
+    subuhome_len = subuland_len + subuname_len; 
     ctxp->subuhome = (char *)malloc(subuhome_len + 1);
     if( !ctxp->subuhome ){
       ctxp->err = ERR_SUBU_MK_0_MALLOC;
       return ctxp;
     }
     strcpy (ctxp->subuhome, ctxp->subuland);
-    strcpy (ctxp->subuhome + subuland_len, subu_username_len);
-    subuhome_len = subuland_land_len + subu_username_len;
+    strcpy (ctxp->subuhome + subuland_len, subuname);
     #ifdef DEBUG
     dbprintf("subuhome \"%s\" %zu\n", ctxp->subuhome, subuhome_len);
     #endif
@@ -295,7 +305,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
       ctxp->err = ERR_SUBU_MK_0_SUBUHOME_EXISTS;
       return ctxp;
     }
-    int ret = dispatch_f_euid_egid
+    struct dispatch_f_ctx *dfr = dispatch_f_euid_egid
       (
        "masteru_makes_subuhome", 
        masteru_makes_subuhome, 
@@ -303,7 +313,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
        masteru_uid, 
        masteru_gid
        );
-    if( ret < 0 || ret == ERR_SUBU_MK_0_MKDIR_SUBUHOME ){
+    if( dfr->err < 0 || dfr->err == ERR_SUBU_MK_0_MKDIR_SUBUHOME ){
       ctxp->err = ERR_SUBU_MK_0_MKDIR_SUBUHOME;
       return ctxp;
     }
@@ -312,13 +322,11 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
   dbprintf("masteru made directory \"%s\"\n", ctxp->subuhome);
   #endif
 
-  /*--------------------------------------------------------------------------------
-    Make the subservient user account, i.e. the subu
-
-  */
+  //--------------------------------------------------------------------------------
+  //  Make the subservient user account, i.e. the subu
   {
     #ifdef DEBUG
-      dbprintf("making subu \"%s\ as user \"%s\"\n", subuname, ctxp->subu_username);
+      dbprintf("making subu \"%s\" as user \"%s\"\n", subuname, ctxp->subu_username);
     #endif
     #if BUG_SSS_CACHE_RUID
       #ifdef DEBUG
@@ -332,7 +340,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     char *command = "/usr/sbin/useradd";
     char *argv[3];
     argv[0] = command;
-    argv[1] = subu_username;
+    argv[1] = ctxp->subu_username;
     argv[2] = (char *) NULL;
     char *envp[1];
     envp[0] = (char *) NULL;
@@ -343,7 +351,7 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
       return ctxp;
     }
     #ifdef DEBUG
-    dbprintf("added user \"%s\"\n", subu_username);
+    dbprintf("added user \"%s\"\n", ctxp->subu_username);
     #endif
   }  
   
@@ -352,8 +360,8 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
   dbprintf("setting the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_put_masteru_subu(db, masteru_name, subuname, subu_username);
-    if( rc != SQLITE_DONE ){
+    int ret = subu_put_masteru_subu(db, masteru_name, subuname, ctxp->subu_username);
+    if( ret != SQLITE_DONE ){
       ctxp->err = ERR_SUBU_MK_0_CONFIG_FILE;
       ctxp->aux = "insert of masteru subu relation failed";
       return ctxp;
@@ -363,5 +371,6 @@ subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
   #ifdef DEBUG
   dbprintf("finished subu-mk-0(%s)\n", subuname);
   #endif
-  RETURN_SUBU_MK_0(0);
+  ctxp->err = 0;
+  return ctxp;
 }

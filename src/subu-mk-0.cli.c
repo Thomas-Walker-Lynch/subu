@@ -2,8 +2,11 @@
   subu-mk-0 command
 
 */
-#include "subu-mk-0.lib.h"
+#include "subu-mk-0.cli.h"
 #include <stdio.h>
+
+#define ERR_SUBU_MK_0_ARG_CNT 1
+#define ERR_SUBU_CONFIG_FILE 2
 
 int main(int argc, char **argv){
   char *command = argv[0];
@@ -18,10 +21,10 @@ int main(int argc, char **argv){
   ret = sqlite3_open_v2(config_file, &db, SQLITE_OPEN_READWRITE, NULL);
   if( ret != SQLITE_OK ){
     fprintf(stderr, "error exit, could not open configuration file\n");
-    return ERR_CONFIG_FILE;
+    return ERR_SUBU_CONFIG_FILE;
   }
 
-  subu_mk_0_ctx *ctxp = subu_mk_0(sqlite3 *db, subuname);
+  struct subu_mk_0_ctx *ctxp = subu_mk_0(db, subuname);
   subu_mk_0_mess(ctxp);
   int err = ctxp->err;
   subu_mk_0_ctx_free(ctxp);

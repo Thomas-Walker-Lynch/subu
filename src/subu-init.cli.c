@@ -7,16 +7,16 @@ This command initializes the configuration file.
 
 int main(){
   sqlite3 *db;
-  if(
-     sqlite3_open(config_file, &db)
-     ||
-     schema(db, 10)
-  ){
-    fprintf(stderr, "error exit, could not build schema\n");
+  if( sqlite3_open_v2(config_file, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK ){
+    fprintf(stderr, "error exit, could not open configuration file\n");
     return ERR_CONFIG_FILE;
   }
-  if( sqlite3_close(db) ){
-    fprintf(stderr, "error exit, strange, we could not close the db\n");
+  if( schema(db, first_max_subu_number) != SQLITE_OK ){
+    fprintf(stderr, "error exit, opened config file but could not build scheme\n");
+    return ERR_CONFIG_FILE;
+  }
+  if( sqlite3_close(db) != SQLITE_OK ){
+    fprintf(stderr, "error exit, could not close the db\n");
     return ERR_CONFIG_FILE;
   }    
   return 0;

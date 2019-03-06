@@ -47,14 +47,15 @@
 //
 #if INTERFACE
 #define ERR_SUBU_MK_0_MKDIR_SUBUHOME 1
-#define ERR_SUBU_MK_0_SUBUNAME_MALFORMED 2
-#define ERR_SUBU_MK_0_SETUID_ROOT 3
-#define ERR_SUBU_MK_0_MASTERU_HOMELESS 4
-#define ERR_SUBU_MK_0_MALLOC 5
-#define ERR_SUBU_MK_0_CONFIG_FILE 6
-#define ERR_SUBU_MK_0_SUBUHOME_EXISTS 7
-#define ERR_SUBU_MK_0_BUG_SSS 8
-#define ERR_SUBU_MK_0_FAILED_USERADD 9
+#define ERR_SUBU_MK_0_RMDIR_SUBUHOME 2
+#define ERR_SUBU_MK_0_SUBUNAME_MALFORMED 3
+#define ERR_SUBU_MK_0_SETUID_ROOT 4
+#define ERR_SUBU_MK_0_MASTERU_HOMELESS 5
+#define ERR_SUBU_MK_0_MALLOC 6
+#define ERR_SUBU_MK_0_CONFIG_FILE 7
+#define ERR_SUBU_MK_0_SUBUHOME_EXISTS 8
+#define ERR_SUBU_MK_0_BUG_SSS 9
+#define ERR_SUBU_MK_0_FAILED_USERADD 10
 
 struct subu_mk_0_ctx{
   char *name;
@@ -159,11 +160,19 @@ static int allowed_subuname(char *subuname, size_t *subuname_len){
 // dispatched functions
 //
 // the making of subuhome is dispatched to its own process so as to give it its own uid/gid
-static int masteru_makes_subuhome(void *arg){
+static int masteru_mkdir_subuhome(void *arg){
   char *subuhome = (char *) arg;
   if( mkdir( subuhome, subuhome_perms ) == -1 ){ // find subuhome perms in common
-    perror("masteru_makes_subuhome");
+    perror("masteru_mkdir_subuhome");
     return ERR_SUBU_MK_0_MKDIR_SUBUHOME;
+  }
+  return 0;
+}
+static int masteru_rmdir_subuhome(void *arg){
+  char *subuhome = (char *) arg;
+  if( rmdir( subuhome ) == -1 ){ // find subuhome perms in common
+    perror("masteru_rmdir_subuhome");
+    return ERR_SUBU_MK_0_RMDIR_SUBUHOME;
   }
   return 0;
 }
@@ -307,8 +316,8 @@ struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     }
     dispatch_ctx *dfr = dispatch_f_euid_egid
       (
-       "masteru_makes_subuhome", 
-       masteru_makes_subuhome, 
+       "masteru_mkdir_subuhome", 
+       masteru_mkdir_subuhome, 
        (void *)ctxp->subuhome,
        masteru_uid, 
        masteru_gid
@@ -352,11 +361,27 @@ struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db, char *subuname){
     envp[0] = (char *) NULL;
     dispatch_ctx *dfr = dispatch_exec(argv, envp);
     if( dfr->err != 0 ){
-      #ifdef DEBUG
+      #ifdef DEBUG 
       if( dfr->err <= ERR_DISPATCH )
         dispatch_f_mess(dfr);
       else
         perror("useradd");
+      #endif
+      // go back and remove the directory we made in subuland
+      dispatch_ctx *dfr = dispatch_f_euid_egid
+        (
+         "masteru_rmdir_subuhome", 
+         masteru_rmdir_subuhome, 
+         (void *)ctxp->subuhome,
+         masteru_uid, 
+         masteru_gid
+         );
+      #ifdef DEBUG
+        if( dfr->err <= ERR_DISPATCH || dfr->err == ERR_SUBU_MK_0_RMDIR_SUBUHOME )
+          if( dfr->err == ERR_SUBU_MK_0_RMDIR_SUBUHOME )
+            perror("rmdir");
+          else
+            dispatch_f_mess(dfr);
       #endif
       ctxp->err = ERR_SUBU_MK_0_FAILED_USERADD;
       return ctxp;

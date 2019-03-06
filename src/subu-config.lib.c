@@ -14,7 +14,7 @@ currently a unit converted to base 10 will always fit in a 21 bit buffer.
 
 #if INTERFACE
 #include <sqlite3.h>
-#define ERR_CONFIG_FILE -1
+#define ERR_CONFIG_FILE 1
 #endif
 
 #include <stdio.h>

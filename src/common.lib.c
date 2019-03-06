@@ -16,3 +16,4 @@ typedef unsigned int uint;
 //  char *config_file = "/etc/subu.db";
 char config_file[] = "subu.db";
 uint subuhome_perms = 0700;
+uint first_max_subu_number = 114;

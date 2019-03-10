@@ -3,18 +3,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <sqlite3.h>
-typedef struct subu_mk_0_ctx subu_mk_0_ctx;
-void subu_mk_0_ctx_free(struct subu_mk_0_ctx *ctxp);
-void subu_mk_0_mess(struct subu_mk_0_ctx *ctxp);
-struct subu_mk_0_ctx *subu_mk_0(sqlite3 *db,char *subuname);
-typedef unsigned int uint;
-struct subu_mk_0_ctx {
-  char *name;
-  char *subuland;
-  char *subuhome;
-  char *subu_username;
-  bool free_aux;
-  char *aux;
-  uint err;
-};
-extern char config_file[];
+void subu_err(char *fname,int err,char *mess);
+int subu_mk_0(char **mess,sqlite3 *db,char *subuname);
+#define SUBU_ERR_CONFIG_FILE 8
+extern char Config_File[];
+#define SUBU_ERR_ARG_CNT 2

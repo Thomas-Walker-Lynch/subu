@@ -16,6 +16,7 @@ struct dispatch_ctx {
   int err; // error code as listed below, or status returned from dispatchee
 };
 int subu_number_get(sqlite3 *db,char **nsp,char **errmsg);
+extern char subuland_extension[];
 int dbprintf(const char *format,...);
 #include <stdbool.h>
 #include <errno.h>

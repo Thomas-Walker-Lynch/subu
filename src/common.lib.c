@@ -13,7 +13,8 @@ typedef unsigned int uint;
 #define BUG_SSS_CACHE_RUID 1
 #endif
 
-//  char *config_file = "/etc/subu.db";
-char config_file[] = "subu.db";
-uint subuhome_perms = 0700;
-uint first_max_subu_number = 114;
+//  char *Config_File = "/etc/subu.db";
+char Config_File[] = "subu.db";
+uint Subuhome_Perms = 0700;
+uint First_Max_Subu_number = 114;
+char Subuland_Extension[] = "/subuland/";

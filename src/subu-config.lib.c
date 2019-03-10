@@ -49,36 +49,97 @@ int schema(sqlite3 *db, uint max_subu_number){
 }
 
 //--------------------------------------------------------------------------------
+
+// the call back for subu_number_next, note also 3_doc/sqlite3.txt 
 static int subu_number_extract(void *nsp, int colcnt, char **colvals, char **colnames){
   if(colcnt >= 1){
-    char *buf = (char *)malloc(strlen(colvals[0]) + 1);
-    strcpy( buf, colvals[0] );
-    *(char **)nsp = buf;
+    *(char **)nsp = strdup( colvals[0] );
     return 0;
   }
   return -1;
 }
-static char *subu_number_sql = 
-  "BEGIN TRANSACTION;"
-  "UPDATE Key_Int SET value = value + 1 WHERE key = 'max_subu_number';"
-  "SELECT value FROM Key_Int WHERE key = 'max_subu_number';"
-  "COMMIT;";
-int subu_number_get(sqlite3 *db, char **nsp, char **errmsg){
-  int ret;
-  ret = sqlite3_exec(db, subu_number_sql, subu_number_extract, (void *)nsp, errmsg);
-  return ret;
+int subu_number_next(sqlite3 *db, char **nsp, char **mess){
+  char *sql = 
+    "BEGIN TRANSACTION;"
+    "UPDATE Key_Int SET value = value + 1 WHERE key = 'max_subu_number';"
+    "SELECT value FROM Key_Int WHERE key = 'max_subu_number';"
+    "COMMIT;";
+  int rc = sqlite3_exec(db, sql, subu_number_extract, (void *)nsp, mess);
+  return rc;
 }
+int subu_number_get(sqlite3 *db, int *n){
+  char *sql = "SELECT value FROM Key_Int WHERE key = 'max_subu_number';"
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  int rc = sqlite3_step(stmt);
+  if( rc == SQLITE_ROW ){
+    *n = sqlite3_column_int(stmt,0);
+  }else{
+    sqlite3_finalize(stmt);
+    return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
+  }
+  rc = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
+  return rc;
+}
+int subu_number_set(sqlite3 *db, int n){
+  char *sql = "UPDATE Key_Int SET value = ?1 WHERE key = 'max_subu_number';"
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  sqlite3_bind_int(stmt, 1, n);
+  int rc = sqlite3_step(stmt);
+  return rc;
+}
+
 
 //--------------------------------------------------------------------------------
 int subu_put_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
   char *sql = "INSERT INTO Master_Subu VALUES (?1, ?2, ?3);";
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, subuname, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 3, subu_username, -1, SQLITE_STATIC);
+  int rc = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
+  return rc;
+}
+
+//--------------------------------------------------------------------------------
+int subu_get_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
+  char *sql = "SELECT subu_username FROM Master_Subu WHERE masteru_name = ?1 AND subuname = ?2;";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL);
+  int rc;
+  rc = sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL); 
+  if( rc != SQLITE_OK ) return rc;
   sqlite3_bind_text(stmt, 1, masteru_name, strlen(masteru_name), SQLITE_STATIC);
   sqlite3_bind_text(stmt, 2, subuname, strlen(subuname), SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 3, subu_username, strlen(subu_username), SQLITE_STATIC);
-  int rc = sqlite3_step(stmt);
+  rc = sqlite3_step(stmt);
+  if( rc == SQLITE_ROW ){
+    const char *username = sqlite3_column_text(stmt, 0);
+    *subu_username = strdup(username);
+  }else{
+    sqlite3_finalize(stmt);
+    return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
+  }
+  rc = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
+  return rc;
+}
+
+//--------------------------------------------------------------------------------
+int subu_rm_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
+  char *sql = "DELETE FROM Master_Subu WHERE masteru_name = ?1 AND subuname = ?2 AND subu_username = ?3;";
+  size_t sql_len = strlen(sql);
+  sqlite3_stmt *stmt;
+  int rc;
+  rc = sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL); 
+  if( rc != SQLITE_OK ) return rc;
+  sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, subuname, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 3, sub_username, -1, SQLITE_STATIC);
+  rc = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
   return rc;
 }

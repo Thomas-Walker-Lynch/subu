@@ -1,6 +1,7 @@
 /* This file was automatically generated.  Do not edit! */
 #undef INTERFACE
 #include <sqlite3.h>
+int subu_get_masteru_subu(sqlite3 *db,char *masteru_name,char *subuname,char **subu_username);
 int subu_put_masteru_subu(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
 int subu_number_get(sqlite3 *db,char **nsp,char **errmsg);
 typedef unsigned int uint;

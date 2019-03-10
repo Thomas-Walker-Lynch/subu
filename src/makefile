@@ -16,8 +16,8 @@ ECHO= echo
 SHELL=/bin/bash
 SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
-#CFLAGS=-std=c11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
-CFLAGS=-std=c11 -fPIC -I. -Werror
+CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
+#CFLAGS=-std=gnu11 -fPIC -I. -Werror
 LIB="libsubu.a"
 LINKFLAGS=-L. -lsubu  -lsqlite3
 
@@ -37,7 +37,7 @@ HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
 # sort causes compiles to go in lexical order by file name, this is used to order the tests e.g.
 EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
 
-all: version deps lib execs
+all: version deps libs execs
 
 version:
 	@echo '---- make $@:------------------------------------------------------------'
@@ -76,14 +76,14 @@ deps:
         done
 	@echo '______end make $@_____'
 
-lib: 
+libs: 
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e 2_makefile_deps ]; then make deps; fi # the user must delete 2_makefile_deps if deps change!
-	make sub_lib
+	if [ ! -e 2_makefile_deps ]; then make deps; fi
+	make sub_libs
 	@echo '______end make $@_____'
 
-sub_lib: $(LIB)
+sub_libs: $(LIB)
 
 
 execs: $(LIB)

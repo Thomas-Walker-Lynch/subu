@@ -11,7 +11,7 @@ int main(){
     fprintf(stderr, "error exit, could not open configuration file \"%s\"\n", Config_File);
     return ERR_CONFIG_FILE;
   }
-  if( schema(db, First_Max_Subu_number) != SQLITE_OK ){
+  if( subudb_schema(db, First_Max_Subu_number) != SQLITE_OK ){
     fprintf(stderr, "error exit, opened config file but could not build scheme\n");
     return ERR_CONFIG_FILE;
   }

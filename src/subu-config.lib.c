@@ -22,14 +22,14 @@ currently a unit converted to base 10 will always fit in a 21 bit buffer.
 #include <stdlib.h>
 
 //--------------------------------------------------------------------------------
-int schema(sqlite3 *db, uint max_subu_number){
+int subudb_schema(sqlite3 *db, uint max_subu_number){
   char max_subu_number_string[32];
   uint max_subu_number_string_len = snprintf(max_subu_number_string, 32, "%u", max_subu_number);
   if( max_subu_number_string_len >= 32 ){
     fprintf(stderr, "error exit, max_subu_number too big to deal with\n");
     return ERR_CONFIG_FILE;
   }
-  char sql1[] = "CREATE TABLE Master_Subu(masteru_name TEXT, subuname TEXT, subu_username TEXT); ";
+  char sql1[] = "CREATE TABLE Masteru_Subu(masteru_name TEXT, subuname TEXT, subu_username TEXT); ";
   char sql2[] = "CREATE TABLE Key_Int(key TEXT, value INT); ";
 
   char sql3_1[] = "INSERT INTO Key_Int VALUES( 'max_subu_number', ";
@@ -94,8 +94,9 @@ int subu_number_set(sqlite3 *db, int n){
 
 
 //--------------------------------------------------------------------------------
-int subu_put_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
-  char *sql = "INSERT INTO Master_Subu VALUES (?1, ?2, ?3);";
+// put relation into Masteru_Subu table
+int subu_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
+  char *sql = "INSERT INTO Masteru_Subu VALUES (?1, ?2, ?3);";
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
@@ -107,8 +108,8 @@ int subu_put_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char 
 }
 
 //--------------------------------------------------------------------------------
-int subu_get_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
-  char *sql = "SELECT subu_username FROM Master_Subu WHERE masteru_name = ?1 AND subuname = ?2;";
+int subu_Masteru_Subu_get(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
+  char *sql = "SELECT subu_username FROM Masteru_Subu WHERE masteru_name = ?1 AND subuname = ?2;";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
   int rc;
@@ -130,8 +131,8 @@ int subu_get_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char 
 }
 
 //--------------------------------------------------------------------------------
-int subu_rm_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
-  char *sql = "DELETE FROM Master_Subu WHERE masteru_name = ?1 AND subuname = ?2 AND subu_username = ?3;";
+int subu_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
+  char *sql = "DELETE FROM Masteru_Subu WHERE masteru_name = ?1 AND subuname = ?2 AND subu_username = ?3;";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
   int rc;

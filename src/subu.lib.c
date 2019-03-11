@@ -393,7 +393,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("setting the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_put_masteru_subu(db, masteru_name, subuname, subu_username);
+    int ret = subu_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
     if( ret != SQLITE_DONE ){
       if(mess)*mess = strdup("insert of masteru subu relation failed");
       RETURN(SUBU_ERR_CONFIG_FILE);
@@ -458,7 +458,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("looking up subu_username given masteru_name/subuname\n");
   #endif
   {
-    int sgret = subu_get_masteru_subu(db, masteru_name, subuname, &subu_username);
+    int sgret = subu_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
     if( sgret != SQLITE_DONE ){
       if(mess) *mess = strdup("subu requested for removal not found under this masteru in config file");
       ret = SUBU_ERR_CONFIG_SUBU_NOT_FOUND;
@@ -474,7 +474,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("remove the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_rm_masteru_subu(db, masteru_name, subuname, subu_username);
+    int ret = subu_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
     if( ret != SQLITE_DONE ){
       if(mess)*mess = strdup("removal of masteru subu relation failed");
       RETURN(SUBU_ERR_CONFIG_FILE);

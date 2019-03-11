@@ -1,1 +1,0 @@
-1. in subu.lib.c append cascading rmdir failure mess to useradd failure mess

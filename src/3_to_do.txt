@@ -1,10 +1,19 @@
-2019-02-05T23:14:40Z morpheus@manorhouse§~/src/subu§
+2019-02-05T23:14:40Z
   error can cause subu-mk-0 to leave the creating of a subu in an intermediate
   state.  Rather than bailing on some of the errors we need to clean up instead.
   Perhaps the yet to be written subu-rm program will be resilent enough to do
   more general cleanup.
 
-2019-02-23T18:56:31Z morpheus@manorhouse§~/subu_land/subu/src§
+2019-02-23T18:56:31Z
   need to modify subu-init to take a configuration file name argument instead of
   using a global variabel value.  might want to add arguments to other subu
   commands also
+
+2019-03-11T13:48:03Z
+  in subu.lib.c append cascading rmdir failure mess to useradd failure mess
+
+2019-03-11T13:48:03Z
+  want to add subu-type to masteru_subu(),  I imagine there will be static,
+  permanent, and temporary subu types.
+
+

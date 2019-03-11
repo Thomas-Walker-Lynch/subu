@@ -474,11 +474,10 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("remove the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_rm_masteru_subu(db, masteru_name, subuname, ctxp->subu_username);
+    int ret = subu_rm_masteru_subu(db, masteru_name, subuname, subu_username);
     if( ret != SQLITE_DONE ){
-      ctxp->err = SUBU_ERR_RM_0_CONFIG_FILE;
-      ctxp->aux = "insert of masteru subu relation failed";
-      return ctxp;
+      if(mess)*mess = strdup("removal of masteru subu relation failed");
+      RETURN(SUBU_ERR_CONFIG_FILE);
     }
   }
 
@@ -490,7 +489,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     #ifdef DEBUG
     dbprintf("as masteru, removing the directory \"%s\"\n", subuhome);
     #endif
-    int dispatch_err_rmdir = dispatch_f_euid_egid
+    int dispatch_err = dispatch_f_euid_egid
       (
        "masteru_rmdir_subuhome", 
        masteru_rmdir_subuhome, 
@@ -518,7 +517,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
         dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
       if( setuid(0) == -1 ){
-        ret = SUBU_ERR_RM_0_BUG_SSS;
+        ret = SUBU_ERR_BUG_SSS;
         RETURN(ret);
       }
     #endif
@@ -543,9 +542,8 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   }  
 
   #ifdef DEBUG
-  dbprintf("finished subu-mk-0(%s)\n", subuname);
+  dbprintf("finished subu-rm-0(%s)\n", subuname);
   #endif
-  ctxp->err = 0;
-  return ctxp;
+  RETURN(0);
 }
-#endif
+

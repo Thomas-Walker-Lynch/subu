@@ -68,7 +68,7 @@ int subu_number_next(sqlite3 *db, char **nsp, char **mess){
   return rc;
 }
 int subu_number_get(sqlite3 *db, int *n){
-  char *sql = "SELECT value FROM Key_Int WHERE key = 'max_subu_number';"
+  char *sql = "SELECT value FROM Key_Int WHERE key = 'max_subu_number';";
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   int rc = sqlite3_step(stmt);
@@ -83,11 +83,12 @@ int subu_number_get(sqlite3 *db, int *n){
   return rc;
 }
 int subu_number_set(sqlite3 *db, int n){
-  char *sql = "UPDATE Key_Int SET value = ?1 WHERE key = 'max_subu_number';"
+  char *sql = "UPDATE Key_Int SET value = ?1 WHERE key = 'max_subu_number';";
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   sqlite3_bind_int(stmt, 1, n);
   int rc = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
   return rc;
 }
 
@@ -138,7 +139,7 @@ int subu_rm_masteru_subu(sqlite3 *db, char *masteru_name, char *subuname, char *
   if( rc != SQLITE_OK ) return rc;
   sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 2, subuname, -1, SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 3, sub_username, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 3, subu_username, -1, SQLITE_STATIC);
   rc = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
   return rc;

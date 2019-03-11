@@ -5,6 +5,7 @@ Set or get a new maximum subu number. Currently doesn't do the setting part.
 #include "subu-number.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 int main(int argc, char **argv){
 
@@ -24,7 +25,7 @@ int main(int argc, char **argv){
 
   // then arg[1] holds a number to set the max to
   if(argc == 2){ 
-    long int i = strlol(argc[1], NULL, 10);
+    long int i = strtol(argv[1], NULL, 10);
     if( i < 0 ){
       fprintf(stderr, "n must be positive\n");
       sqlite3_close(db);
@@ -40,16 +41,17 @@ int main(int argc, char **argv){
   }
 
   // read and print the current max
-  char *n;
+  int n;
   rc = subu_number_get(db, &n);
   if( rc == SQLITE_DONE ){
-    printf("%s\n", n);
+    printf("%d\n", n);
   }else{
     sqlite3_close(db);
     return SUBU_ERR_CONFIG_FILE;
   }
-  if( sqlite3_close(db) != SQLITE_OK ){
-    fprintf(stderr, "error exit, strange, we could not close the configuration file\n");
+  rc = sqlite3_close(db);
+  if( rc != SQLITE_OK ){
+    fprintf(stderr, "when closing db, %s\n", sqlite3_errmsg(db));
     return SUBU_ERR_CONFIG_FILE;
   }    
   return 0;

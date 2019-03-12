@@ -16,4 +16,14 @@
   want to add subu-type to masteru_subu(),  I imagine there will be static,
   permanent, and temporary subu types.
 
+2019-03-12T18:35:06Z
+  the masteru subu relation should contain the uid of the masteru as
+  well as the backup type for the subu:  git, rdiff, rsync, none.
+  and the persisitance fo the subu: indefinite, session.
+  seems that operations need to be logged, in case the db is lost
+  the transcript can be played back.  It should also be possible
+  to co-opt an existing user as a subu, though, would require
+  sudo privs.
+
+
 

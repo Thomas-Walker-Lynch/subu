@@ -100,7 +100,7 @@ char *userdel_mess(int err){
 #define SUBU_ERR_BUG_SSS 10
 #define SUBU_ERR_FAILED_USERADD 11
 #define SUBU_ERR_FAILED_USERDEL 12
-#define SUBU_ERR_CONFIG_SUBU_NOT_FOUND 13
+#define SUBU_ERR_SUBU_NOT_FOUND 13
 #define SUBU_ERR_N 14
 #endif
 
@@ -211,7 +211,7 @@ static int masteru_rmdir_subuhome(void *arg){
 static int mk_subu_user(char **mess, sqlite3 *db, char *masteru_name, int n, char **subu_username){
   size_t len = 0;
   FILE* name_stream = open_memstream(subu_username, &len);
-  fprintf(name_stream, "s%x", n);
+  fprintf(name_stream, "s%d", n);
   fclose(name_stream);
   return 0;
 }
@@ -434,17 +434,14 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   if(mess)*mess = 0;
 
   //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("Check that subuname is well formed and find its length\n");
-  #endif
   size_t subuname_len;
   rc = allowed_subuname(mess, subuname, &subuname_len);
   if(rc) return rc;
+  #ifdef DEBUG
+  dbprintf("subuname is well formed\n");
+  #endif
   
   //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("Check that we are running from a user and are setuid root.\n");
-  #endif
   uid_t masteru_uid;
   gid_t masteru_gid;
   uid_t set_euid;
@@ -462,10 +459,6 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
   //--------------------------------------------------------------------------------
   // various strings that we will need
-  #ifdef DEBUG
-  dbprintf("building strings.\n");
-  #endif
-  char *subu_username = 0;
   char *masteru_name = 0;
   char *masteru_home = 0;
   char *subuland = 0;
@@ -478,37 +471,50 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     mk_subuhome(subuland, subuname, &subuhome)
     ;
   if(rc) RETURN(rc);
-
   #ifdef DEBUG
-  dbprintf("looking up subu_username given masteru_name/subuname\n");
-  #endif
-  {
-    int sgret = subudb_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
-    if( sgret != SQLITE_DONE ){
-      if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
-      rc = SUBU_ERR_CONFIG_SUBU_NOT_FOUND;
-      RETURN(rc);
-    }
-  }
-  #ifdef DEBUG
-  printf("subu_username: %s\n", subu_username);  
+  dbprintf("masteru_home, subuhome: \"%s\", \"%s\"\n", masteru_home, subuhome);
   #endif
 
   //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("remove the masteru_name, subuname, subu_username relation\n");
-  #endif
-  {
-    int rc = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
-    if( rc != SQLITE_DONE ){
-      if(mess)*mess = strdup("removal of masteru subu relation failed");
-      RETURN(SUBU_ERR_DB_FILE);
-    }
+  // removal from db
+
+  db_begin(db);
+
+  char *subu_username = 0;
+  rc = subudb_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
+  if( rc != SQLITE_OK ){
+    if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
+    rc = SUBU_ERR_SUBU_NOT_FOUND;
+    db_rollback();
+    RETURN(rc);
   }
+  #ifdef DEBUG
+  printf("subu_username: \"%s\"\n", subu_username);  
+  #endif
+
+  rc = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
+  if( rc != SQLITE_OK ){
+    if(mess)*mess = strdup("removal of masteru subu relation failed");
+    db_rollback();
+    RETURN(SUBU_ERR_DB_FILE);
+  }
+  #ifdef DEBUG
+  dbprintf("removed the masteru_name, subuname, subu_username relation\n");
+  #endif
+  
+  rc = db_commit(db);
+  if( rc != SQLITE_OK ){
+    if(mess)*mess = strdup("removal of masteru subu relation in unknown state, exiting");
+    RETURN(SUBU_ERR_DB_FILE);
+  }
+  
+  // even after removing the last masteru subu relation, we still do not remove
+  // the max subu count. Hence, a masteru will keep such for a life time.
+
 
   //--------------------------------------------------------------------------------
   // Only masteru can remove directories from masteru/subuland, so we switch to 
-  // masteru's uid for performing the rmdir.
+  // masteru's uid to perform the rmdir.
   //
   {
     #ifdef DEBUG

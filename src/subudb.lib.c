@@ -118,7 +118,7 @@ int subudb_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, cha
 }
 
 //--------------------------------------------------------------------------------
-int subudb_Masteru_Subu_get(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
+int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
   char *sql = "SELECT subu_username FROM Masteru_Subu WHERE masteru_name = ?1 AND subuname = ?2;";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
@@ -139,6 +139,81 @@ int subudb_Masteru_Subu_get(sqlite3 *db, char *masteru_name, char *subuname, cha
   sqlite3_finalize(stmt);
   return rc;
 }
+
+//--------------------------------------------------------------------------------
+
+// generic array expander
+static void expand(void **base, void **pt, size_t *s){
+  size_t offset = ((unsigned char *)*pt - (unsigned char *)*base);
+  size_t new_s = *s << 1;
+  void *new_base = malloc( new_s );
+  memcpy( new_base, *base, offset + 1);
+  free(base);
+  *base = new_base;
+  *pt = new_base + offset;
+  s = new_s;
+}
+static bool off_alloc(void *base, void *pt, size_t s){
+  return pt == base + s;
+}
+
+// we return and array of subudb_subu_info
+struct subudb_subu_info{
+  char *subuname;
+  char *subu_username;
+};
+static void subu_info_alloc(subudb_subu_info **base, size_t *s){
+  *s = 4 * sizeof(subudb_subu_info);
+  *base = malloc(s)
+}
+static void subu_info_free(subudb_subu_info *base, subu_db_subu_info *end_pt){
+  subudb_subu_info *pt = base;
+  while( pt != end_pt ){
+    pt->free(subuname);
+    pt->free(subu_username);
+  pt++;
+  }
+  free(base);  
+}
+
+int subudb_Masteru_Subu_get_subu_info
+(
+ sqlite3 *db,
+ char *masteru_name,
+ subudb_subu_info **si,
+ subudb_subu_info **si_end
+){
+  char *sql = "SELECT subuname, subu_username"
+              "FROM Masteru_Subu"
+              "WHERE masteru_name = ?1;";
+  size_t sql_len = strlen(sql);
+  sqlite3_stmt *stmt;
+  int rc;
+  rc = sqlite3_prepare_v2(db, sql, sql_len, &stmt, NULL); 
+  if( rc != SQLITE_OK ) return rc;
+  sqlite3_bind_text(stmt, 1, masteru_name, strlen(masteru_name), SQLITE_STATIC);
+
+  size_t subu_info_size;
+  subudb_subu_info *subu_info;
+  subu_info_alloc(&subu_info, &subu_info_size);
+  subudb_subu_info *pt = subu_info;
+  rc = sqlite3_step(stmt);
+  while( rc == SQLITE_ROW ){
+    if( off_alloc(subu_info, pt) ) expand(&subu_info, &pt, &subu_info_size);
+    pt->subuname = strdup(sqlite3_column_text(stmt, 0));
+    pt->subu_username = strdup(sqlite3_column_text(stmt, 1));
+  rc = sqlite3_step(stmt);
+  pt++;
+  }
+  sqlite3_finalize(stmt);
+  if( rc != SQLITE_DONE ){
+    return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
+  }
+  *si = subu_info;
+  *si_end = pt;
+  return SQLTIE_OK;
+}
+
 
 //--------------------------------------------------------------------------------
 int subudb_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){

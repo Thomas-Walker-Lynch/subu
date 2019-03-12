@@ -481,7 +481,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   db_begin(db);
 
   char *subu_username = 0;
-  rc = subudb_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
+  rc = subudb_Masteru_Subu_get_subu_username(db, masteru_name, subuname, &subu_username);
   if( rc != SQLITE_OK ){
     if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
     rc = SUBU_ERR_SUBU_NOT_FOUND;
@@ -578,3 +578,178 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   RETURN(0);
 }
 
+#if 0
+//================================================================================
+// identifies masteru, the bindfs maps each subu_user's home to its mount point
+// in subuland.
+int subu_bind(char **mess, char *subu_user_home, char *subuhome){
+    char *command = "/usr/bin/bindfs";
+    char *argv[3];
+    argv[0] = command;
+    argv[1] = subu_username;
+    argv[2] = (char *) NULL;
+    char *envp[1];
+    envp[0] = (char *) NULL;
+    int dispatch_err = dispatch_exec(argv, envp);
+    if( dispatch_err != 0 ){
+      #ifdef DEBUG 
+      dispatch_f_mess("dispatch_exec", dispatch_err, command);
+      #endif
+      if(mess)*mess = userdel_mess(dispatch_err);
+      RETURN(SUBU_ERR_FAILED_USERDEL);
+    }
+    #ifdef DEBUG
+    dbprintf("deleted user \"%s\"\n", subu_username);
+    #endif
+}
+int subu_bind_all(char **mess, sqlite3 *db, char *subuname){
+
+  int rc;
+  if(mess)*mess = 0;
+
+  //--------------------------------------------------------------------------------
+  size_t subuname_len;
+  rc = allowed_subuname(mess, subuname, &subuname_len);
+  if(rc) return rc;
+  #ifdef DEBUG
+  dbprintf("subuname is well formed\n");
+  #endif
+  
+  //--------------------------------------------------------------------------------
+  uid_t masteru_uid;
+  gid_t masteru_gid;
+  uid_t set_euid;
+  gid_t set_egid;
+  {
+    masteru_uid = getuid();
+    masteru_gid = getgid();
+    set_euid = geteuid();
+    set_egid = getegid();
+    #ifdef DEBUG
+    dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
+    #endif
+    if( masteru_uid == 0 || set_euid != 0 ) return SUBU_ERR_SETUID_ROOT;
+  }
+
+  //--------------------------------------------------------------------------------
+  // various strings that we will need
+  char *masteru_name = 0;
+  char *masteru_home = 0;
+  char *subuland = 0;
+  char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
+  rc =
+    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+    ||
+    mk_subuland(masteru_home, &subuland)
+    ||
+    mk_subuhome(subuland, subuname, &subuhome)
+    ;
+  if(rc) RETURN(rc);
+  #ifdef DEBUG
+  dbprintf("masteru_home, subuhome: \"%s\", \"%s\"\n", masteru_home, subuhome);
+  #endif
+
+  //--------------------------------------------------------------------------------
+  // removal from db
+
+  db_begin(db);
+
+  char *subu_username = 0;
+  rc = subudb_Masteru_Subu_get_subu_username(db, masteru_name, subuname, &subu_username);
+  if( rc != SQLITE_OK ){
+    if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
+    rc = SUBU_ERR_SUBU_NOT_FOUND;
+    db_rollback();
+    RETURN(rc);
+  }
+  #ifdef DEBUG
+  printf("subu_username: \"%s\"\n", subu_username);  
+  #endif
+
+  rc = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
+  if( rc != SQLITE_OK ){
+    if(mess)*mess = strdup("removal of masteru subu relation failed");
+    db_rollback();
+    RETURN(SUBU_ERR_DB_FILE);
+  }
+  #ifdef DEBUG
+  dbprintf("removed the masteru_name, subuname, subu_username relation\n");
+  #endif
+  
+  rc = db_commit(db);
+  if( rc != SQLITE_OK ){
+    if(mess)*mess = strdup("removal of masteru subu relation in unknown state, exiting");
+    RETURN(SUBU_ERR_DB_FILE);
+  }
+  
+  // even after removing the last masteru subu relation, we still do not remove
+  // the max subu count. Hence, a masteru will keep such for a life time.
+
+
+  //--------------------------------------------------------------------------------
+  // Only masteru can remove directories from masteru/subuland, so we switch to 
+  // masteru's uid to perform the rmdir.
+  //
+  {
+    #ifdef DEBUG
+    dbprintf("as masteru, removing the directory \"%s\"\n", subuhome);
+    #endif
+    int dispatch_err = dispatch_f_euid_egid
+      (
+       "masteru_rmdir_subuhome", 
+       masteru_rmdir_subuhome, 
+       (void *)subuhome,
+       masteru_uid, 
+       masteru_gid
+       );
+    if( dispatch_err <= ERR_DISPATCH || dispatch_err == SUBU_ERR_RMDIR_SUBUHOME ){
+      #ifdef DEBUG
+      dispatch_f_mess("dispatch_f_euid_egid", dispatch_err, "masteru_rmdir_subuhome");
+      #endif
+      if(mess)*mess = strdup(subuhome);
+      RETURN(SUBU_ERR_RMDIR_SUBUHOME);
+    }
+  }
+
+  //--------------------------------------------------------------------------------
+  //  Delete the subservient user account
+  {
+    #ifdef DEBUG
+    dbprintf("deleting user \"%s\"\n", subu_username);
+    #endif
+    #if BUG_SSS_CACHE_RUID
+      #ifdef DEBUG
+        dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
+      #endif
+      if( setuid(0) == -1 ){
+        rc = SUBU_ERR_BUG_SSS;
+        RETURN(rc);
+      }
+    #endif
+    char *command = "/usr/sbin/userdel";
+    char *argv[3];
+    argv[0] = command;
+    argv[1] = subu_username;
+    argv[2] = (char *) NULL;
+    char *envp[1];
+    envp[0] = (char *) NULL;
+    int dispatch_err = dispatch_exec(argv, envp);
+    if( dispatch_err != 0 ){
+      #ifdef DEBUG 
+      dispatch_f_mess("dispatch_exec", dispatch_err, command);
+      #endif
+      if(mess)*mess = userdel_mess(dispatch_err);
+      RETURN(SUBU_ERR_FAILED_USERDEL);
+    }
+    #ifdef DEBUG
+    dbprintf("deleted user \"%s\"\n", subu_username);
+    #endif
+  }  
+
+  #ifdef DEBUG
+  dbprintf("finished subu-rm-0(%s)\n", subuname);
+  #endif
+  RETURN(0);
+}
+
+#endif

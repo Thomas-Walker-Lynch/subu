@@ -1,6 +1,6 @@
 /*
 get the username from the db file
-for testing subudb_Masteru_Subu_get_user
+for testing subudb_Masteru_Subu_get_subu_username
 
 */
 #include "subudb-rel-get.cli.h"
@@ -26,9 +26,9 @@ int main(int argc, char **argv){
   char *subuname = argv[2];
   char *subu_username;
 
-  int ret = subudb_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
+  int ret = subudb_Masteru_Subu_get_subu_username(db, masteru_name, subuname, &subu_username);
   if( ret != SQLITE_DONE ){
-    fprintf(stderr, "subudb_Masteru_Subu_get indicates failure by returning %d\n",ret);
+    fprintf(stderr, "subudb_Masteru_Subu_get_subu_username indicates failure by returning %d\n",ret);
     fprintf(stderr, "sqlite3 issues message, %s\n", sqlite3_errmsg(db));
     return SUBU_ERR_DB_FILE;
   }

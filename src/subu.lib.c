@@ -1,5 +1,5 @@
 /*
-  sqllite3 is used to maintain the configuration file, which is currently compiled
+  sqllite3 is used to maintain the db file, which is currently compiled
   in as /etc/subu.db, (or just subu.db for testing).
 
   masteru is the user who ran this script. The masteru name comes from getuid
@@ -9,11 +9,11 @@
 
   subu-mk-0 synthesizes a new user user name s<number>, calls useradd to creat
   the new uswer account, and enters the relationship between masteru, subu, and
-  s<number> in the config file.  It is this relation in the config file that
+  s<number> in the db file.  It is this relation in the db file that
   associates the subuname with the s<number> user.
 
   subu-rm-0 uses userdel to delete the related s<number> user account.  It
-  then removes the relaton from the config file.
+  then removes the relaton from the db file.
 
   subu-mk-0 and subu-rm-0 are setuid root scripts.  
 
@@ -86,7 +86,6 @@ char *userdel_mess(int err){
 
 
 //--------------------------------------------------------------------------------
-// an instance is subu_mk_0_ctx is returned by subu_mk_0
 //
 #if INTERFACE
 #define SUBU_ERR_ARG_CNT 1
@@ -96,7 +95,7 @@ char *userdel_mess(int err){
 #define SUBU_ERR_RMDIR_SUBUHOME 5
 #define SUBU_ERR_SUBUNAME_MALFORMED 6
 #define SUBU_ERR_MASTERU_HOMELESS 7
-#define SUBU_ERR_CONFIG_FILE 8
+#define SUBU_ERR_DB_FILE 8
 #define SUBU_ERR_SUBUHOME_EXISTS 9
 #define SUBU_ERR_BUG_SSS 10
 #define SUBU_ERR_FAILED_USERADD 11
@@ -121,8 +120,8 @@ void subu_err(char *fname, int err, char *mess){
   case SUBU_ERR_MALLOC:
     perror(fname);
     break;
-  case SUBU_ERR_CONFIG_FILE:
-    fprintf(stderr, "config file error: %s", Config_File); // Config_File is in common
+  case SUBU_ERR_DB_FILE:
+    fprintf(stderr, "db file error: %s", DB_File); // DB_File is in common
     break;
   case SUBU_ERR_MASTERU_HOMELESS:
     fprintf(stderr,"Masteru, \"%s\", has no home directory", mess);
@@ -209,14 +208,11 @@ static int masteru_rmdir_subuhome(void *arg){
 //--------------------------------------------------------------------------------
 // build strings 
 //
-static int mk_subu_user(sqlite3 *db, char **mess, char **subu_username){
-  char *ns=0; // 'ns'  Number as String
-  if( subu_number_next( db, &ns, mess ) != SQLITE_OK ) return SUBU_ERR_CONFIG_FILE;
-  size_t ns_len = strlen(ns);
-  *subu_username = malloc(1 + ns_len + 1); // the first 1 is for the "s" prefix
-  if( !*subu_username ) SUBU_ERR_MALLOC;
-  strcpy(*subu_username, "s");
-  strcpy(*subu_username + 1, ns);
+static int mk_subu_user(char **mess, sqlite3 *db, char *masteru_name, int n, char **subu_username){
+  size_t len = 0;
+  FILE* name_stream = open_memstream(subu_username, &len);
+  fprintf(name_stream, "s%x", n);
+  fclose(name_stream);
   return 0;
 }
 
@@ -264,21 +260,18 @@ static int mk_subuhome(char *subuland, char *subuname, char **subuhome){
 //===============================================================================
 int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
 
-  int ret;
+  int rc;
   if(mess)*mess = 0;
 
   //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("Check that subuname is well formed and find its length\n");
-  #endif
   size_t subuname_len;
-  ret = allowed_subuname(mess, subuname, &subuname_len);
-  if(ret) return ret;
+  rc = allowed_subuname(mess, subuname, &subuname_len);
+  if(rc) return rc;
+  #ifdef DEBUG
+  dbprintf("subuname is well formed\n");
+  #endif
 
   //--------------------------------------------------------------------------------
-  #ifdef DEBUG
-  dbprintf("Check that we are running from a user and are setuid root.\n");
-  #endif
   uid_t masteru_uid;
   gid_t masteru_gid;
   uid_t set_euid;
@@ -295,30 +288,59 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   }
 
   //--------------------------------------------------------------------------------
-  // various strings that we will need
-  char *subu_username = 0;
+  // lookup the masteru name
   char *masteru_name = 0;
   char *masteru_home = 0;
+  rc = mk_masteru_name(masteru_uid, &masteru_name, &masteru_home);
+  if(rc) return rc;
+  #ifdef DEBUG
+  dbprintf("masteru_name: \"%s\"\n", masteru_name);
+  #endif
+
+  db_begin(db);
+  int n;
+  rc = subudb_number_get(db, masteru_name, &n);
+  if( rc == SQLITE_OK ){
+    n++;
+    rc = subudb_number_set(db, masteru_name, n);
+    if( rc != SQLITE_OK ){
+      db_rollback(db);
+      return SUBU_ERR_DB_FILE;
+    }
+  }else{ // perhaps this masteru's first subu, so we will try init
+    n = First_Max_Subunumber;
+    rc = subudb_number_init(db, masteru_name, n);
+    if( rc != SQLITE_OK ){
+      db_rollback(db);
+      return SUBU_ERR_DB_FILE;
+    }
+  }
+  db_commit(db);
+  #ifdef DEBUG
+  dbprintf("masteru max subunumber: %d\n", n);
+  #endif
+
+  //--------------------------------------------------------------------------------
+  // subu details
+  char *subu_username = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
-  ret =
-    mk_subu_user(db, mess,  &subu_username)
-    ||
-    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+  rc =
+    mk_subu_user(mess, db, masteru_name, n, &subu_username)
     ||
     mk_subuland(masteru_home, &subuland)
     ||
     mk_subuhome(subuland, subuname, &subuhome)
     ;
-  if(ret) RETURN(ret);
+  if(rc) RETURN(rc);
+  #ifdef DEBUG
+  dbprintf("subu_username, subuland, subuhome: \"%s\"\"%s\"\"%s\"\n", subu_username, subuland, subuhome);
+  #endif
 
   //--------------------------------------------------------------------------------
   // By having masteru create the subuhome, we know that masteru has rights to 
   // to access this directory. This will be the mount point for bindfs
   {
-    #ifdef DEBUG
-    dbprintf("as masteru, making the directory \"%s\"\n", subuhome);
-    #endif
     struct stat st;
     if( stat(subuhome, &st) != -1 ){
       if(mess)*mess = strdup(subuhome);
@@ -341,7 +363,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     }
   }
   #ifdef DEBUG
-  dbprintf("masteru made directory \"%s\"\n", subuhome);
+  dbprintf("made directory \"%s\"\n", subuhome);
   #endif
 
   //--------------------------------------------------------------------------------
@@ -393,10 +415,10 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("setting the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
-    if( ret != SQLITE_DONE ){
+    int rc = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
+    if( rc != SQLITE_DONE ){
       if(mess)*mess = strdup("insert of masteru subu relation failed");
-      RETURN(SUBU_ERR_CONFIG_FILE);
+      RETURN(SUBU_ERR_DB_FILE);
     }
   }
   #ifdef DEBUG
@@ -408,7 +430,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
 //================================================================================
 int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
-  int ret;
+  int rc;
   if(mess)*mess = 0;
 
   //--------------------------------------------------------------------------------
@@ -416,8 +438,8 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   dbprintf("Check that subuname is well formed and find its length\n");
   #endif
   size_t subuname_len;
-  ret = allowed_subuname(mess, subuname, &subuname_len);
-  if(ret) return ret;
+  rc = allowed_subuname(mess, subuname, &subuname_len);
+  if(rc) return rc;
   
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
@@ -440,44 +462,47 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
   //--------------------------------------------------------------------------------
   // various strings that we will need
+  #ifdef DEBUG
+  dbprintf("building strings.\n");
+  #endif
   char *subu_username = 0;
   char *masteru_name = 0;
   char *masteru_home = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
-  ret =
+  rc =
     mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
     ||
     mk_subuland(masteru_home, &subuland)
     ||
     mk_subuhome(subuland, subuname, &subuhome)
     ;
-  if(ret) RETURN(ret);
+  if(rc) RETURN(rc);
 
   #ifdef DEBUG
   dbprintf("looking up subu_username given masteru_name/subuname\n");
   #endif
   {
-    int sgret = subu_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
+    int sgret = subudb_Masteru_Subu_get(db, masteru_name, subuname, &subu_username);
     if( sgret != SQLITE_DONE ){
-      if(mess) *mess = strdup("subu requested for removal not found under this masteru in config file");
-      ret = SUBU_ERR_CONFIG_SUBU_NOT_FOUND;
-      RETURN(ret);
+      if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
+      rc = SUBU_ERR_CONFIG_SUBU_NOT_FOUND;
+      RETURN(rc);
     }
-    #ifdef DEBUG
-    printf("subu_username: %s\n", subu_username);  
-    #endif
   }
+  #ifdef DEBUG
+  printf("subu_username: %s\n", subu_username);  
+  #endif
 
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
   dbprintf("remove the masteru_name, subuname, subu_username relation\n");
   #endif
   {
-    int ret = subu_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
-    if( ret != SQLITE_DONE ){
+    int rc = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
+    if( rc != SQLITE_DONE ){
       if(mess)*mess = strdup("removal of masteru subu relation failed");
-      RETURN(SUBU_ERR_CONFIG_FILE);
+      RETURN(SUBU_ERR_DB_FILE);
     }
   }
 
@@ -517,8 +542,8 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
         dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
       if( setuid(0) == -1 ){
-        ret = SUBU_ERR_BUG_SSS;
-        RETURN(ret);
+        rc = SUBU_ERR_BUG_SSS;
+        RETURN(rc);
       }
     #endif
     char *command = "/usr/sbin/userdel";

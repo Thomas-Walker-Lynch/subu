@@ -14,19 +14,29 @@ int main(int argc, char **argv){
   }
   char *subuname = argv[1];
 
+  int rc;
   sqlite3 *db;
-  {
-    int ret = sqlite3_open_v2(Config_File, &db, SQLITE_OPEN_READWRITE, NULL);
-    if( ret != SQLITE_OK ){
-      fprintf(stderr, "error exit, could not open configuration file \"%s\"\n", Config_File);
-      return SUBU_ERR_CONFIG_FILE;
-    }}
-
-  {
-    char *mess;
-    int ret = subu_mk_0(&mess, db, subuname);
-    subu_err("subu_mk_0", ret, mess);
-    free(mess);
-    return ret;
+  rc = sqlite3_open_v2(DB_File, &db, SQLITE_OPEN_READWRITE, NULL);
+  if( rc != SQLITE_OK ){
+    fprintf(stderr, "error exit, could not open db file\n");
+    sqlite3_close(db);
+    return SUBU_ERR_DB_FILE;
   }
+
+  char *mess;
+  rc = subu_mk_0(&mess, db, subuname);
+  if( rc ){
+    subu_err("subu_mk_0", rc, mess);
+    free(mess);
+    sqlite3_close(db);
+    return rc;
+  }
+
+  rc = sqlite3_close(db);
+  if( rc != SQLITE_OK ){
+    fprintf(stderr, "when closing db, %s\n", sqlite3_errmsg(db));
+    return SUBU_ERR_DB_FILE;
+  }    
+  return 0;
+
 }

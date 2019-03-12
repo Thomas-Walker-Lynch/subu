@@ -1,5 +1,5 @@
 
-#include "common.lib.h"
+#include "subu-common.lib.h"
 
 #if INTERFACE
 typedef unsigned int uint;
@@ -13,8 +13,8 @@ typedef unsigned int uint;
 #define BUG_SSS_CACHE_RUID 1
 #endif
 
-//  char *Config_File = "/etc/subu.db";
-char Config_File[] = "subu.db";
+//  char *DB_File = "/etc/subudb";
+char DB_File[] = "subudb";
 uint Subuhome_Perms = 0700;
-uint First_Max_Subu_number = 114;
+uint First_Max_Subunumber = 114;
 char Subuland_Extension[] = "/subuland/";

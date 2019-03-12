@@ -2,7 +2,7 @@
   subu-mk-0 command
 
 */
-#include "subu-mk-0.cli.h"
+#include "subu-rm-0.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,16 +16,16 @@ int main(int argc, char **argv){
 
   sqlite3 *db;
   {
-    int ret = sqlite3_open_v2(Config_File, &db, SQLITE_OPEN_READWRITE, NULL);
+    int ret = sqlite3_open_v2(DB_File, &db, SQLITE_OPEN_READWRITE, NULL);
     if( ret != SQLITE_OK ){
-      fprintf(stderr, "error exit, could not open configuration file \"%s\"\n", Config_File);
-      return SUBU_ERR_CONFIG_FILE;
+      fprintf(stderr, "error exit, could not open db file \"%s\"\n", DB_File);
+      return SUBU_ERR_DB_FILE;
     }}
 
   {
-    char *mess;
-    int ret = subu_mk_0(&mess, db, subuname);
-    subu_err("subu_mk_0", ret, mess);
+    char *mess=0;
+    int ret = subu_rm_0(&mess, db, subuname);
+    subu_err("subu_rm_0", ret, mess);
     free(mess);
     return ret;
   }

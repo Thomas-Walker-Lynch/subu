@@ -1,0 +1,57 @@
+
+~ is the project directory
+
+
+--------------------------------------------------------------------------------
+~/tools
+
+Some tools are normally installed on the system.  Others are local.  Local tools
+are typically standard tools that have been customized for the project or are
+unusual to the project.
+
+  ~/tools/bin is for the executables of locally used tools.
+  ~/tools/lib is locally used libraries. 
+  ~/tools/doc is for collected docs on tools 
+
+typically a developer will want ~/tools/bin in his search path
+
+--------------------------------------------------------------------------------
+~/staged
+
+These are make file build targets. They represent either intermediate or
+finished executables and libraries.  When a project has multiple src
+directories and they use each other's work product for the builds, the
+items in the staged area are those that are used by each src directory.
+
+Typically the install target copies material in the staging area to
+system locations.
+
+--------------------------------------------------------------------------------
+~/src
+
+The prefixed numbered directories are overhead for building the src code.
+
+src/1_tests  these are programs that typically must pass before the compiled
+code may be staged.  Tests typically make use of the library in 2_lib and
+the header files in 2_include.
+
+src/1_try a free area for the programmer to try things out. For example when
+learning a language. Programs and code left in this directory might be interesting
+to newcomers.
+
+src/2_bin these are cli executables that have been created by the makefile
+and will be staged after testing
+
+src/2_include  interface header files to be released with the lib. These might
+be different from the build header files found in the src dir.
+
+src/2_lib holds libraries being tested. Currently each src directory only
+builds one library.
+
+3_documents  these are for developers working on src. A user manual might
+be under development.
+
+
+
+
+

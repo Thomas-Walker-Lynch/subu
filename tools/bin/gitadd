@@ -1,5 +1,5 @@
 #!/bin/bash
 set -x
-make clean
+make dist_clean
 git add "$@"
 

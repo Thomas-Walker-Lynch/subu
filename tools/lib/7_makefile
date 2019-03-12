@@ -18,8 +18,8 @@ SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LIB="libsubu.a"
-LINKFLAGS=-L. -lsubu  -lsqlite3
+LIB="2_lib/libsubu.a"
+LINKFLAGS=-L2_lib -lsubu -lsqlite3
 
 #these are the source files that exist
 SOURCES_LIB= $(wildcard *.lib.c)
@@ -37,7 +37,7 @@ HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
 # sort causes compiles to go in lexical order by file name, this is used to order the tests e.g.
 EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
 
-all: version deps libs execs
+all: version deps lib execs
 
 version:
 	@echo '---- make $@:------------------------------------------------------------'
@@ -57,9 +57,11 @@ setup:
 	if [ ! -e 1_tests ]; then mkdir 1_tests; fi
 	if [ ! -e 1_try ]; then mkdir 1_try; fi
 	if [ ! -e 2_bin ]; then mkdir 2_bin; fi
-	if [ ! -e 3_documents ]; then mkdir 3_documents; fi
-	if [ ! -e 3_to_do.txt ]; then touch 3_to_do.txt; fi
+	if [ ! -e 2_lib ]; then mkdir 2_lib; fi
+	if [ ! -e 2_doc ]; then mkdir 2_doc; fi
+	if [ ! -e 2_include ]; then mkdir 2_include; fi
 	if [ ! -e 5_deprecated ]; then mkdir 5_deprecated; fi
+	if [ ! -e 5_scratch ]; then mkdir 5_scratch; fi
 	@echo '______end make $@_____'
 
 
@@ -68,32 +70,36 @@ deps:
 	@echo `pwd`'>' 
 	makeheaders $(SOURCES) $(HFILES)
 	sed -i '/^ *int *main *(.*)/d' *.h
-	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 2_makefile_deps
+	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 7_makefile_deps
 	for i in $(EXECS) ; do\
-           $(ECHO) >> 2_makefile_deps;\
-           $(ECHO) "$$i : $$i.cli.o $(LIB)" >> 2_makefile_deps;\
-           $(ECHO) "	$(CXX) -o $$i $$i.cli.o $(LINKFLAGS)" >> 2_makefile_deps;\
+           $(ECHO) >> 7_makefile_deps;\
+           $(ECHO) "2_bin/$$i : $$i.cli.o $(LIB)" >> 7_makefile_deps;\
+           $(ECHO) "	$(CXX) -o 2_bin/$$i $$i.cli.o $(LINKFLAGS)" >> 7_makefile_deps;\
         done
 	@echo '______end make $@_____'
 
-libs: 
+lib: 
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e 2_makefile_deps ]; then make deps; fi
-	make sub_libs
+	if [ ! -e 7_makefile_deps ]; then make deps; fi
+	make sub_lib
 	@echo '______end make $@_____'
 
-sub_libs: $(LIB)
+sub_lib: $(LIB)
 
 
 execs: $(LIB)
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e 2_makefile_deps ]; then make deps; fi
+	if [ ! -e 7_makefile_deps ]; then make deps; fi
 	make sub_execs
+	@echo '-> sudo 2_bin/setuid_root.sh subu-mk-0 subu-rm-0'
+	cat 2_bin/setuid_root.sh 	
+	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} == y ]
+	sudo 2_bin/setuid_root.sh subu-mk-0 subu-rm-0
 	@echo '______end make $@_____'
 
-sub_execs: $(EXECS)
+sub_execs: $(patsubst %,  2_bin/%, $(EXECS))
 
 #not ready yet
 install: all
@@ -110,13 +116,11 @@ install: all
 clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ -f subu.db ]; then rm subu.db; fi
+	if [ -f subudb ]; then rm subudb; fi
 	for i in $(wildcard *~); do mv $$i $(SCRATCHDIR); done
 	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
 	for i in $(HFILES); do mv $$i 5_scratch; done # just in case someone wrote a header file
-	if [ -f 2_makefile_deps ]; then rm 2_makefile_deps; fi
-	if [ -f $(LIB) ]; then rm $(LIB); fi
-	for i in $(EXECS); do if [ -e $$i ]; then rm $$i; fi; done 
+	if [ -f 7_makefile_deps ]; then rm 7_makefile_deps; fi
 	@echo '______end make $@_____'
 
 
@@ -129,18 +133,23 @@ dist_clean:
 	@echo `pwd`'>' 
 	make clean
 	if [ -d $(APPLICATION) ]; then cd $(APPLICATION); make clean; fi
-	if [ -d 1_tests ]; then cd 1_tests; make clean; fi
-	if [ -d 1_try ] ; then cd 1_try; make clean; fi
+	if [ -f $(LIB) ]; then rm $(LIB); fi
+	for i in $(EXECS); do if [ -e 2_bin/$$i ]; then rm 2_bin/$$i; fi; done 
+	if [ -d 1_tests ]; then cd 1_tests; make dist_clean; fi
+	if [ -d 1_try ] ; then cd 1_try; make dist_clean; fi
 	@echo '______end make $@_____'
 
+# not written yet
+# copies stuff from the src dir to the stage dirs
+# stage:
 
--include 2_makefile_deps
+
+-include 7_makefile_deps
 
 # recipe for making object files:
 #
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
-
 
 #
 $(LIB) : $(OBJECTS_LIB)

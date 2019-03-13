@@ -25,5 +25,7 @@
   to co-opt an existing user as a subu, though, would require
   sudo privs.
 
-
+  need to add messages for subu errors I've added to the end of
+  the list in subu.lib.c
+  
 

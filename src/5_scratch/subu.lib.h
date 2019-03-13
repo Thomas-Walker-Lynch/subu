@@ -1,10 +1,11 @@
 /* This file was automatically generated.  Do not edit! */
 #undef INTERFACE
-#include <sqlite3.h>
-int subudb_Masteru_Subu_rm(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
-int subudb_Masteru_Subu_get_subu_username(sqlite3 *db,char *masteru_name,char *subuname,char **subu_username);
 #include <stdbool.h>
 #include <errno.h>
+#include <sqlite3.h>
+int subu_bind(char **mess,char *masteru_name,char *subu_username,char *subuhome);
+int subudb_Masteru_Subu_rm(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
+int subudb_Masteru_Subu_get_subu_username(sqlite3 *db,char *masteru_name,char *subuname,char **subu_username);
 int subu_rm_0(char **mess,sqlite3 *db,char *subuname);
 int subudb_Masteru_Subu_put(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
 #include <sys/types.h>
@@ -26,6 +27,7 @@ typedef unsigned int uint;
 extern uint Subuhome_Perms;
 extern char DB_File[];
 void subu_err(char *fname,int err,char *mess);
+#define SUBU_ERR_BIND 15
 #define SUBU_ERR_N 14
 #define SUBU_ERR_SUBU_NOT_FOUND 13
 #define SUBU_ERR_FAILED_USERDEL 12
@@ -33,7 +35,7 @@ void subu_err(char *fname,int err,char *mess);
 #define SUBU_ERR_BUG_SSS 10
 #define SUBU_ERR_SUBUHOME_EXISTS 9
 #define SUBU_ERR_DB_FILE 8
-#define SUBU_ERR_MASTERU_HOMELESS 7
+#define SUBU_ERR_HOMELESS 7
 #define SUBU_ERR_SUBUNAME_MALFORMED 6
 #define SUBU_ERR_RMDIR_SUBUHOME 5
 #define SUBU_ERR_MKDIR_SUBUHOME 4

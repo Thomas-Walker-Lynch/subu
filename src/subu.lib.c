@@ -94,7 +94,7 @@ char *userdel_mess(int err){
 #define SUBU_ERR_MKDIR_SUBUHOME 4
 #define SUBU_ERR_RMDIR_SUBUHOME 5
 #define SUBU_ERR_SUBUNAME_MALFORMED 6
-#define SUBU_ERR_MASTERU_HOMELESS 7
+#define SUBU_ERR_HOMELESS 7
 #define SUBU_ERR_DB_FILE 8
 #define SUBU_ERR_SUBUHOME_EXISTS 9
 #define SUBU_ERR_BUG_SSS 10
@@ -102,6 +102,7 @@ char *userdel_mess(int err){
 #define SUBU_ERR_FAILED_USERDEL 12
 #define SUBU_ERR_SUBU_NOT_FOUND 13
 #define SUBU_ERR_N 14
+#define SUBU_ERR_BIND 15
 #endif
 
 void subu_err(char *fname, int err, char *mess){
@@ -124,7 +125,7 @@ void subu_err(char *fname, int err, char *mess){
     fprintf(stderr, "error on %s", DB_File); // DB_File is in common
     fprintf(stderr, ": %s", mess);
     break;
-  case SUBU_ERR_MASTERU_HOMELESS:
+  case SUBU_ERR_HOMELESS:
     fprintf(stderr,"Masteru, \"%s\", has no home directory", mess);
     break;
   case SUBU_ERR_SUBUNAME_MALFORMED:
@@ -231,11 +232,18 @@ static int mk_subu_username(char **mess, sqlite3 *db, char **subu_username){
 
 // man page says that getpwuid strings may not be freed, I don't know how long until they
 // are overwritten, so I just make my own copies that can be freed
-static int mk_masteru_name(uid_t masteru_uid, char **masteru_name, char **masteru_home ){
-  struct passwd *masteru_pw_record_pt = getpwuid(masteru_uid); // reading /etc/passwd
-  *masteru_name = strdup(masteru_pw_record_pt->pw_name);
-  *masteru_home = strdup(masteru_pw_record_pt->pw_dir);
-  if( !masteru_home || !masteru_home[0] || (*masteru_home)[0] == '(' ) return SUBU_ERR_MASTERU_HOMELESS;
+static int uid_to_name_and_home(uid_t uid, char **name, char **home ){
+  struct passwd *pw_record_pt = getpwuid(uid); // reading /etc/passwd
+  *name = strdup(pw_record_pt->pw_name);
+  *home = strdup(pw_record_pt->pw_dir);
+  if( !home || !home[0] || (*home)[0] == '(' ) return SUBU_ERR_HOMELESS;
+  return 0;
+}
+
+static int username_to_home(char *name, char **home ){
+  struct passwd *pw_record_pt = getpwnam(name); // reading /etc/passwd
+  *home = strdup(pw_record_pt->pw_dir);
+  if( !home || !home[0] || (*home)[0] == '(' ) return SUBU_ERR_HOMELESS;
   return 0;
 }
 
@@ -307,7 +315,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
   rc =
-    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+    uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
     mk_subu_username(mess, db, &subu_username)
     ||
@@ -448,7 +456,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
   char *subu_username = 0;
   rc =
-    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+    uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
     mk_subuland(masteru_home, &subuland)
     ||
@@ -562,30 +570,50 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   RETURN(0);
 }
 
-#if 0
 //================================================================================
 // identifies masteru, the bindfs maps each subu_user's home to its mount point
 // in subuland.
-int subu_bind(char **mess, char *subu_user_home, char *subuhome){
-    char *command = "/usr/bin/bindfs";
-    char *argv[3];
-    argv[0] = command;
-    argv[1] = subu_username;
-    argv[2] = (char *) NULL;
-    char *envp[1];
-    envp[0] = (char *) NULL;
-    int dispatch_err = dispatch_exec(argv, envp);
-    if( dispatch_err != 0 ){
-      #ifdef DEBUG 
-      dispatch_f_mess("dispatch_exec", dispatch_err, command);
-      #endif
-      if(mess)*mess = userdel_mess(dispatch_err);
-      RETURN(SUBU_ERR_FAILED_USERDEL);
-    }
-    #ifdef DEBUG
-    dbprintf("deleted user \"%s\"\n", subu_username);
+int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuhome){
+
+  char *subu_user_home;
+  int rc;
+  rc = username_to_home(subu_username, &subu_user_home);
+  if( rc ){
+    if(mess) *mess = strdup("in subu_bind, subu user home directory lookup in /etc/passwd failed.");
+    return rc;
+  }
+
+  size_t len = 0;
+  char *map;
+  FILE* map_stream = open_memstream(&map, &len);
+  fprintf(map_stream, "--map=%s/%s:@%s/@%s", subu_username, masteru_name, subu_username, masteru_name);
+  fclose(map_stream);
+  
+  char *command = "/usr/bin/bindfs";
+  char *argv[5];
+  argv[0] = command;
+  argv[1] = map;
+  argv[2] = subu_user_home;
+  argv[3] = subuhome;
+  argv[4] = (char *) NULL;
+  char *envp[1];
+  envp[0] = (char *) NULL;
+  int dispatch_err = dispatch_exec(argv, envp);
+  if( dispatch_err != 0 ){
+    #ifdef DEBUG 
+    dispatch_f_mess(command, dispatch_err, "dispatch_exec");
     #endif
+    if(mess)*mess = strdup("bind failed");
+    return SUBU_ERR_BIND;
+  }
+  #ifdef DEBUG
+  dbprintf("mapped \"%s\" as \"%s\"\n", subu_user_home, subuhome);
+  #endif
+  return 0;
 }
+
+#if 0
+
 int subu_bind_all(char **mess, sqlite3 *db, char *subuname){
 
   int rc;
@@ -622,7 +650,7 @@ int subu_bind_all(char **mess, sqlite3 *db, char *subuname){
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
   rc =
-    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+    uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
     mk_subuland(masteru_home, &subuland)
     ||

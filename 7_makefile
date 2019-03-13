@@ -4,22 +4,22 @@ subdirectories=src
 
 all :
 	$(foreach dir, $(subdirectories), \
-		if [ -f $(dir)/makefile ]; then \
+		if [ -f $(dir)/7_makefile ]; then \
 			make -C $(dir) all && make -C $(dir) install; \
 		fi;\
 	)
 
 clean :
 	$(foreach dir, $(subdirectories), \
-		if [ -f ./$(dir)/makefile ]; then \
+		if [ -f ./$(dir)/7_makefile ]; then \
 			make -C $(dir) clean; \
 		fi;\
 	)
 
-dist_clean :
+dist-clean :
 	$(foreach dir, $(subdirectories), \
-		if [ -f ./$(dir)/makefile ]; then \
-			make -C $(dir) dist_clean; \
+		if [ -f ./$(dir)/7_makefile ]; then \
+			make -C $(dir) dist-clean; \
 		fi;\
 	)
 

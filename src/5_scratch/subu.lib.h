@@ -2,7 +2,7 @@
 #undef INTERFACE
 #include <sqlite3.h>
 int subudb_Masteru_Subu_rm(sqlite3 *db,char *masteru_name,char *subuname,char *subu_username);
-int subudb_Masteru_Subu_get(sqlite3 *db,char *masteru_name,char *subuname,char **subu_username);
+int subudb_Masteru_Subu_get_subu_username(sqlite3 *db,char *masteru_name,char *subuname,char **subu_username);
 #include <stdbool.h>
 #include <errno.h>
 int subu_rm_0(char **mess,sqlite3 *db,char *subuname);
@@ -14,22 +14,20 @@ int dispatch_exec(char **argv,char **envp);
 void dispatch_f_mess(char *fname,int err,char *dispatchee);
 #define ERR_DISPATCH -1024
 int dispatch_f_euid_egid(char *fname,int(*f)(void *arg),void *f_arg,uid_t euid,gid_t egid);
-int db_commit(sqlite3 *db);
-int subudb_number_init(sqlite3 *db,char *masteru_name,int n);
-typedef unsigned int uint;
-extern uint First_Max_Subunumber;
-int db_rollback(sqlite3 *db);
-int subudb_number_set(sqlite3 *db,char *masteru_name,int n);
-int subudb_number_get(sqlite3 *db,char *masteru_name,int *n);
-int db_begin(sqlite3 *db);
 int dbprintf(const char *format,...);
 int subu_mk_0(char **mess,sqlite3 *db,char *subuname);
 extern char Subuland_Extension[];
+int db_commit(sqlite3 *db);
+int db_rollback(sqlite3 *db);
+int subudb_number_set(sqlite3 *db,int n);
+int subudb_number_get(sqlite3 *db,int *n);
+int db_begin(sqlite3 *db);
+typedef unsigned int uint;
 extern uint Subuhome_Perms;
 extern char DB_File[];
 void subu_err(char *fname,int err,char *mess);
 #define SUBU_ERR_N 14
-#define SUBU_ERR_CONFIG_SUBU_NOT_FOUND 13
+#define SUBU_ERR_SUBU_NOT_FOUND 13
 #define SUBU_ERR_FAILED_USERDEL 12
 #define SUBU_ERR_FAILED_USERADD 11
 #define SUBU_ERR_BUG_SSS 10

@@ -25,10 +25,9 @@ int main(int argc, char **argv){
     }}
 
   int ret = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
-  if( ret != SQLITE_DONE ){
+  if( ret != SQLITE_OK ){
     fprintf(stderr, "subudb_Masteru_Subu_put indicates failure by returning %d\n",ret);
     fprintf(stderr, "sqlite3 issues message, %s\n", sqlite3_errmsg(db));
-    printf("put failed\n");
     return SUBU_ERR_DB_FILE;
   }
   ret = sqlite3_close(db);

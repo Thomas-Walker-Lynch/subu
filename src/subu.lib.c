@@ -121,7 +121,8 @@ void subu_err(char *fname, int err, char *mess){
     perror(fname);
     break;
   case SUBU_ERR_DB_FILE:
-    fprintf(stderr, "db file error: %s", DB_File); // DB_File is in common
+    fprintf(stderr, "error on %s", DB_File); // DB_File is in common
+    fprintf(stderr, ": %s", mess);
     break;
   case SUBU_ERR_MASTERU_HOMELESS:
     fprintf(stderr,"Masteru, \"%s\", has no home directory", mess);
@@ -208,7 +209,19 @@ static int masteru_rmdir_subuhome(void *arg){
 //--------------------------------------------------------------------------------
 // build strings 
 //
-static int mk_subu_user(char **mess, sqlite3 *db, char *masteru_name, int n, char **subu_username){
+static int mk_subu_username(char **mess, sqlite3 *db, char **subu_username){
+  int rc,n;
+  db_begin(db);
+  if(
+    (rc = subudb_number_get(db, &n))
+    ||
+    (rc = subudb_number_set(db, ++n))
+     ){
+    db_rollback(db);
+    return SUBU_ERR_DB_FILE;
+  }
+  db_commit(db);
+
   size_t len = 0;
   FILE* name_stream = open_memstream(subu_username, &len);
   fprintf(name_stream, "s%d", n);
@@ -288,45 +301,15 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   }
 
   //--------------------------------------------------------------------------------
-  // lookup the masteru name
   char *masteru_name = 0;
   char *masteru_home = 0;
-  rc = mk_masteru_name(masteru_uid, &masteru_name, &masteru_home);
-  if(rc) return rc;
-  #ifdef DEBUG
-  dbprintf("masteru_name: \"%s\"\n", masteru_name);
-  #endif
-
-  db_begin(db);
-  int n;
-  rc = subudb_number_get(db, masteru_name, &n);
-  if( rc == SQLITE_OK ){
-    n++;
-    rc = subudb_number_set(db, masteru_name, n);
-    if( rc != SQLITE_OK ){
-      db_rollback(db);
-      return SUBU_ERR_DB_FILE;
-    }
-  }else{ // perhaps this masteru's first subu, so we will try init
-    n = First_Max_Subunumber;
-    rc = subudb_number_init(db, masteru_name, n);
-    if( rc != SQLITE_OK ){
-      db_rollback(db);
-      return SUBU_ERR_DB_FILE;
-    }
-  }
-  db_commit(db);
-  #ifdef DEBUG
-  dbprintf("masteru max subunumber: %d\n", n);
-  #endif
-
-  //--------------------------------------------------------------------------------
-  // subu details
   char *subu_username = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
   rc =
-    mk_subu_user(mess, db, masteru_name, n, &subu_username)
+    mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
+    ||
+    mk_subu_username(mess, db, &subu_username)
     ||
     mk_subuland(masteru_home, &subuland)
     ||
@@ -416,7 +399,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   #endif
   {
     int rc = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
-    if( rc != SQLITE_DONE ){
+    if( rc != SQLITE_OK ){
       if(mess)*mess = strdup("insert of masteru subu relation failed");
       RETURN(SUBU_ERR_DB_FILE);
     }
@@ -463,6 +446,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   char *masteru_home = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
+  char *subu_username = 0;
   rc =
     mk_masteru_name(masteru_uid, &masteru_name, &masteru_home)
     ||
@@ -480,12 +464,11 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
   db_begin(db);
 
-  char *subu_username = 0;
   rc = subudb_Masteru_Subu_get_subu_username(db, masteru_name, subuname, &subu_username);
   if( rc != SQLITE_OK ){
     if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
     rc = SUBU_ERR_SUBU_NOT_FOUND;
-    db_rollback();
+    db_rollback(db);
     RETURN(rc);
   }
   #ifdef DEBUG
@@ -495,7 +478,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   rc = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
   if( rc != SQLITE_OK ){
     if(mess)*mess = strdup("removal of masteru subu relation failed");
-    db_rollback();
+    db_rollback(db);
     RETURN(SUBU_ERR_DB_FILE);
   }
   #ifdef DEBUG
@@ -553,10 +536,11 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
       }
     #endif
     char *command = "/usr/sbin/userdel";
-    char *argv[3];
+    char *argv[4];
     argv[0] = command;
     argv[1] = subu_username;
-    argv[2] = (char *) NULL;
+    argv[2] = "-r";  
+    argv[3] = (char *) NULL;
     char *envp[1];
     envp[0] = (char *) NULL;
     int dispatch_err = dispatch_exec(argv, envp);

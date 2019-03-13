@@ -14,7 +14,8 @@ SCRATCHDIR= 5_scratch # clean and others put things here
 CC=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LIB=2_lib/libsubu.a
+LIBDIR=2_lib/
+LIB=$(LIBDIR)libsubu.a
 LINKFLAGS=-L2_lib -lsubu -lsqlite3
 
 #these are the source files that exist
@@ -150,9 +151,9 @@ dist-clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	make clean
-	if [ -d $(APPLICATION) ]; then cd $(APPLICATION); make clean; fi
-	if [ -d 1_tests ]; then cd 1_tests; make dist_clean; fi
-	if [ -d 1_try ] ; then cd 1_try; make dist_clean; fi
+#	if [ -d $(APPLICATION) ]; then cd $(APPLICATION); make clean; fi
+#	if [ -d 1_tests ]; then cd 1_tests; make dist_clean; fi
+#	if [ -d 1_try ] ; then cd 1_try; make dist_clean; fi
 	@echo '______end make $@_____'
 
 #

@@ -1,8 +1,8 @@
 /* This file was automatically generated.  Do not edit! */
 #undef INTERFACE
 #include <sqlite3.h>
-int subudb_number_get(sqlite3 *db,char *masteru_name,int *n);
-int subudb_number_set(sqlite3 *db,char *masteru_name,int n);
+int subudb_number_get(sqlite3 *db,int *n);
+int subudb_number_set(sqlite3 *db,int n);
 #include <stdbool.h>
 #include <errno.h>
 #define SUBU_ERR_N 14

@@ -20,6 +20,7 @@ Each of these returns SQLITE_OK upon success
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 //--------------------------------------------------------------------------------
 // sqlite transactions don't nest.  There is a way to use save points, but still
@@ -37,67 +38,55 @@ int db_rollback(sqlite3 *db){
 
 //--------------------------------------------------------------------------------
 int subudb_schema(sqlite3 *db){
-  char sql[] = 
-    "CREATE TABLE Masteru_Subu(masteru_name TEXT, subuname TEXT, subu_username TEXT);"
-    "CREATE TABLE Masteru_Max(masteru_name TEXT, max_subu_number INT);"
-    ;
-  return sqlite3_exec(db, sql, NULL, NULL, NULL);
+  int rc;
+
+  { // build tables
+    char sql[] = 
+      "CREATE TABLE Masteru_Subu(masteru_name TEXT, subuname TEXT, subu_username TEXT);"
+      "CREATE TABLE Attribute_Int(attribute TEXT, value INT);"
+      ;
+    rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
+    if(rc != SQLITE_OK) return rc;
+  }
+
+  { // data initialization
+    char *sql = "INSERT INTO Attribute_Int (attribute, value) VALUES ('Max_Subunumber', ?1);";
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, First_Max_Subunumber);
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    if( rc != SQLITE_DONE ) return rc;
+  }
+
+  return SQLITE_OK;
 }
 
 //--------------------------------------------------------------------------------
-int subudb_number_init(sqlite3 *db, char *masteru_name, int n){
-  int rc;
-  char *sql = "INSERT INTO Masteru_Max (masteru_name, max_subu_number) VALUES (?1, ?2);";
+int subudb_number_get(sqlite3 *db, int *n){
+  char *sql = "SELECT value FROM Attribute_Int WHERE attribute = 'Max_Subunumber';";
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-  sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
-  sqlite3_bind_int(stmt, 2, n);
-  rc = sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
-  if( rc == SQLITE_DONE ) return SQLITE_OK;
-  return rc;
-}
-
-int subudb_number_get(sqlite3 *db, char *masteru_name, int *n){
-  char *sql = "SELECT max_subu_number FROM Masteru_Max WHERE masteru_name = ?1;";
-  sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-  sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
   int rc = sqlite3_step(stmt);
   if( rc == SQLITE_ROW ){
     *n = sqlite3_column_int(stmt,0);
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    if( rc == SQLITE_DONE ) return SQLITE_OK;
-    return rc;
+    if( rc != SQLITE_DONE ) return rc;
+    return SQLITE_OK;
   }
   // should have a message return, suppose
   sqlite3_finalize(stmt);
   return SQLITE_NOTFOUND; 
 }
 
-// on success returns SQLITE_DONE
-int subudb_number_set(sqlite3 *db, char *masteru_name, int n){
+int subudb_number_set(sqlite3 *db, int n){
   int rc;
-  char *sql = "UPDATE Masteru_Max SET max_subu_number = ?1 WHERE masteru_name = ?2;";
+  char *sql = "UPDATE Attribute_Int SET value = ?1 WHERE attribute = 'Max_Subunumber';";
   sqlite3_stmt *stmt;
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
   sqlite3_bind_int(stmt, 1, n);
-  sqlite3_bind_text(stmt, 2, masteru_name, -1, SQLITE_STATIC);
   rc = sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
-  if( rc == SQLITE_DONE ) return SQLITE_OK;
-  return rc;
-}
-
-// returns SQLITE_DONE or an error code
-// removes masteru/max_number relation from table
-int subudb_number_rm(sqlite3 *db, char *masteru_name){
-  char *sql = "DELETE FROM Masteru_Max WHERE masteru_name = ?1;";
-  sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-  sqlite3_bind_text(stmt, 1, masteru_name, -1, SQLITE_STATIC);
-  int rc = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
   if( rc == SQLITE_DONE ) return SQLITE_OK;
   return rc;
@@ -114,6 +103,7 @@ int subudb_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, cha
   sqlite3_bind_text(stmt, 3, subu_username, -1, SQLITE_STATIC);
   int rc = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
+  if( rc == SQLITE_DONE ) return SQLITE_OK;
   return rc;
 }
 
@@ -136,7 +126,7 @@ int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char 
     return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
   }
   rc = sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
+  if( rc == SQLITE_DONE ) return SQLITE_OK;
   return rc;
 }
 
@@ -151,41 +141,43 @@ static void expand(void **base, void **pt, size_t *s){
   free(base);
   *base = new_base;
   *pt = new_base + offset;
-  s = new_s;
+  *s = new_s;
 }
 static bool off_alloc(void *base, void *pt, size_t s){
   return pt == base + s;
 }
 
 // we return and array of subudb_subu_info
-struct subudb_subu_info{
+#if INTERFACE
+struct subudb_subu_element{
   char *subuname;
   char *subu_username;
 };
-static void subu_info_alloc(subudb_subu_info **base, size_t *s){
-  *s = 4 * sizeof(subudb_subu_info);
-  *base = malloc(s)
+#endif
+static void subu_element_alloc(subudb_subu_element **base, size_t *s){
+  *s = 4 * sizeof(subudb_subu_element);
+  *base = malloc(*s);
 }
-static void subu_info_free(subudb_subu_info *base, subu_db_subu_info *end_pt){
-  subudb_subu_info *pt = base;
+void subu_element_free(subudb_subu_element *base, subudb_subu_element *end_pt){
+  subudb_subu_element *pt = base;
   while( pt != end_pt ){
-    pt->free(subuname);
-    pt->free(subu_username);
+    free(pt->subuname);
+    free(pt->subu_username);
   pt++;
   }
   free(base);  
 }
 
-int subudb_Masteru_Subu_get_subu_info
+int subudb_Masteru_Subu_get_subus
 (
  sqlite3 *db,
  char *masteru_name,
- subudb_subu_info **si,
- subudb_subu_info **si_end
+ subudb_subu_element **sa_pt,
+ subudb_subu_element **sa_end_pt
 ){
   char *sql = "SELECT subuname, subu_username"
-              "FROM Masteru_Subu"
-              "WHERE masteru_name = ?1;";
+              " FROM Masteru_Subu"
+              " WHERE masteru_name = ?1;";
   size_t sql_len = strlen(sql);
   sqlite3_stmt *stmt;
   int rc;
@@ -193,13 +185,13 @@ int subudb_Masteru_Subu_get_subu_info
   if( rc != SQLITE_OK ) return rc;
   sqlite3_bind_text(stmt, 1, masteru_name, strlen(masteru_name), SQLITE_STATIC);
 
-  size_t subu_info_size;
-  subudb_subu_info *subu_info;
-  subu_info_alloc(&subu_info, &subu_info_size);
-  subudb_subu_info *pt = subu_info;
+  size_t subu_element_size;
+  subudb_subu_element *subu_element;
+  subu_element_alloc(&subu_element, &subu_element_size);
+  subudb_subu_element *pt = subu_element;
   rc = sqlite3_step(stmt);
   while( rc == SQLITE_ROW ){
-    if( off_alloc(subu_info, pt) ) expand(&subu_info, &pt, &subu_info_size);
+    if( off_alloc(subu_element, pt, subu_element_size) ) expand((void **)&subu_element, (void **)&pt, &subu_element_size);
     pt->subuname = strdup(sqlite3_column_text(stmt, 0));
     pt->subu_username = strdup(sqlite3_column_text(stmt, 1));
   rc = sqlite3_step(stmt);
@@ -209,9 +201,9 @@ int subudb_Masteru_Subu_get_subu_info
   if( rc != SQLITE_DONE ){
     return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
   }
-  *si = subu_info;
-  *si_end = pt;
-  return SQLTIE_OK;
+  *sa_pt = subu_element;
+  *sa_end_pt = pt;
+  return SQLITE_OK;
 }
 
 
@@ -228,5 +220,6 @@ int subudb_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char
   sqlite3_bind_text(stmt, 3, subu_username, -1, SQLITE_STATIC);
   rc = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
+  if( rc == SQLITE_DONE ) return SQLITE_OK;
   return rc;
 }

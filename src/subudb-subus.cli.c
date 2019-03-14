@@ -30,7 +30,7 @@ int main(int argc, char **argv){
   if( rc == SQLITE_OK ){
     subudb_subu_element *pt = sa;
     while( pt != sa_end ){
-      printf("%s\n", *pt);
+      printf("%s %s\n", pt->subuname, pt->subu_username);
     pt++;
     }
     rc = sqlite3_close(db);

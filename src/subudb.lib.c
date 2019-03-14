@@ -132,21 +132,6 @@ int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char 
 
 //--------------------------------------------------------------------------------
 
-// generic array expander
-static void expand(void **base, void **pt, size_t *s){
-  size_t offset = ((unsigned char *)*pt - (unsigned char *)*base);
-  size_t new_s = *s << 1;
-  void *new_base = malloc( new_s );
-  memcpy( new_base, *base, offset + 1);
-  free(base);
-  *base = new_base;
-  *pt = new_base + offset;
-  *s = new_s;
-}
-static bool off_alloc(void *base, void *pt, size_t s){
-  return pt == base + s;
-}
-
 // we return and array of subudb_subu_info
 #if INTERFACE
 struct subudb_subu_element{
@@ -155,8 +140,7 @@ struct subudb_subu_element{
 };
 #endif
 static void subu_element_alloc(subudb_subu_element **base, size_t *s){
-  *s = 4 * sizeof(subudb_subu_element);
-  *base = malloc(*s);
+  dalloc((void *)base, s, sizeof(subudb_subu_element));
 }
 void subu_element_free(subudb_subu_element *base, subudb_subu_element *end_pt){
   subudb_subu_element *pt = base;

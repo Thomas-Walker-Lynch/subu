@@ -1,0 +1,202 @@
+
+(defun undedicate-window (&optional window)
+  (interactive)
+  (set-window-dedicated-p (or window (get-buffer-window)) nil))
+
+;; Removing annoying dedicated buffer nonsense
+(defun switch-to-buffer! (buffer-or-name &optional norecord force-same-window)
+  "Like switch-to-buffer but works for dedicated buffers \(though
+it will ask first)."
+  (interactive
+   (list (read-buffer-to-switch "Switch to buffer: ") nil 'force-same-window))
+  (when (and (window-dedicated-p (get-buffer-window))
+             (yes-or-no-p "This window is dedicated, undedicate it? "))
+    (undedicate-window))
+  (switch-to-buffer buffer-or-name norecord force-same-window))
+
+(defun toggle-window-dedication (&optional window)
+  (interactive)
+  (let ((window (or window (get-buffer-window))))
+    (set-window-dedicated-p window (not (window-dedicated-p window)))))
+
+(global-set-key (kbd "C-x d") 'toggle-window-dedication)
+
+;; fix 'feature' of broken gdb where it takes control of an
+;; emacs window, and locks the user out from switching from it
+;;
+;; yes and this fix breaks file name completion...
+;;
+;;  (defun set-window-undedicated-p (window flag)
+;;   "Never set window dedicated."
+;;   flag)
+;;  (advice-add 'set-window-dedicated-p :override #'set-window-undedicated-p)
+;;
+;; Toggle window dedication
+
+  (defun toggle-window-dedicated ()
+  "Toggle whether the current active window is dedicated or not"
+  (interactive)
+  (message 
+   (if (let (window (get-buffer-window (current-buffer)))
+         (set-window-dedicated-p window 
+          (not (window-dedicated-p window))))
+      "Window '%s' is dedicated"
+      "Window '%s' is normal")
+   (current-buffer)))
+
+   (global-set-key "\C-q" 'toggle-window-dedicated)
+
+;; (setq ring-bell-function (lambda ()
+;;                            (call-process-shell-command
+;;                              "xset led 3; xset -led 3" nil 0 nil)))
+;;
+;; (setq ring-bell-function nil)
+
+ (setq ring-bell-function
+       (lambda ()
+	 (call-process-shell-command "xset led named 'Scroll Lock'")
+	 (call-process-shell-command "xset -led named 'Scroll Lock'")))
+
+
+;; preferable to have keys for the characters, but the keyboard is already overloaded ..
+;; (define-key key-translation-map (kbd "<f9> p") (kbd "¬"))
+;; (set-input-method “latin-9-prefix)
+
+  (global-set-key [f1] 'help-command)
+  (global-set-key "\C-h" 'nil)
+  (define-key key-translation-map (kbd "M-S") (kbd "§"))
+
+  (global-set-key (kbd "C-x g phi SPC") [?φ]) ; phi for phase
+  (global-set-key (kbd "C-x g Phi SPC") [?Φ]) 
+
+  (global-set-key (kbd "C-x g d SPC") [?δ])
+  (global-set-key (kbd "C-x g D SPC") [?Δ]) ; this is 'delta' is not 'increment'!
+  (global-set-key (kbd "C-x g delta SPC") [?δ])
+  (global-set-key (kbd "C-x g Delta SPC") [?Δ]) ; this is 'delta' is not 'increment'!
+
+
+  (global-set-key (kbd "C-x g g SPC") [?γ])
+  (global-set-key (kbd "C-x g G SPC") [?Γ])
+  (global-set-key (kbd "C-x g gamma SPC") [?γ])
+  (global-set-key (kbd "C-x g Gamma SPC") [?Γ])
+
+  (global-set-key (kbd "C-x g l SPC") [?λ])
+  (global-set-key (kbd "C-x g L SPC") [?Λ])
+  (global-set-key (kbd "C-x g lambda SPC") [?λ])
+  (global-set-key (kbd "C-x g Lambda SPC") [?Λ])
+
+  (global-set-key (kbd "C-x g p SPC") [?π])
+  (global-set-key (kbd "C-x g P SPC") [?Π])
+  (global-set-key (kbd "C-x g pi SPC") [?π])
+  (global-set-key (kbd "C-x g Pi SPC") [?Π])
+
+  (global-set-key (kbd "C-x g > = SPC") [?≥])
+  (global-set-key (kbd "C-x g < = SPC") [?≤])
+  (global-set-key (kbd "C-x g ! = SPC") [?≠])
+  (global-set-key (kbd "C-x g neq SPC") [?≠])
+      
+  (global-set-key (kbd "C-x g nil SPC") [?∅])
+
+  (global-set-key (kbd "C-x g not SPC") [?¬])
+
+  (global-set-key (kbd "C-x g and SPC") [?∧])
+  (global-set-key (kbd "C-x g or SPC") [?∨])
+
+  (global-set-key (kbd "C-x g exists SPC") [?∃])
+  (global-set-key (kbd "C-x g all SPC") [?∀])
+
+  (global-set-key (kbd "C-x g do SPC") [?⟳]) ; do
+  (global-set-key (kbd "C-x g rb SPC") [?◨])
+  (global-set-key (kbd "C-x g lb SPC") [?◧])
+
+  (global-set-key (kbd "C-x g cont SPC") [?➜]) ; continue
+  (global-set-key (kbd "C-x g thread SPC") [?☥]) ; thread
+
+  (global-set-key (kbd "C-x g in SPC") [?∈]) ; set membership
+
+
+
+;; lisp
+;;
+  (setq lisp-indent-offset 2)
+  (setq inferior-lisp-program "sbcl")      
+
+  (modify-syntax-entry ?[ "(]" lisp-mode-syntax-table)
+  (modify-syntax-entry ?] ")[" lisp-mode-syntax-table)
+  (modify-syntax-entry ?{ "(}" lisp-mode-syntax-table)
+  (modify-syntax-entry ?} "){" lisp-mode-syntax-table)
+
+;; get the pwd in shell mode from the prompt rather than guessing by
+;; watching the commands typed .. yes! now shell variables and source
+;; scripts will work
+;;   in bashrc: export PS1='\n$(/usr/local/bin/Z)\u@\h§\w§\n> '
+;;
+  (add-hook 'shell-mode-hook
+           (lambda ()
+             (shell-dirtrack-mode -1)
+             (dirtrack-mode 1)))
+
+  (add-hook 'dirtrack-directory-change-hook
+            (lambda ()
+              (message default-directory)))
+
+  (setq dirtrack-list '("§\\(.*\\)§\n> " 1))
+
+;; use a backrevs dir rather than leaving ~file droppings everywhere
+;;
+  (setq backup-directory-alist `(("." . "~/emacs_backrevs")))
+  (setq backup-by-copying t)
+
+;; stop the 'tab' character polution
+;;
+  (setq-default indent-tabs-mode nil)
+
+;; turn off the poison C-z key.  Use C-x C-z or the command suspend-emacs
+;;
+  (global-set-key (kbd "C-z") nil)
+
+;; truncate rather than wrapping lines (use horizontal scroll to see to the right)
+;;
+  (set-default 'truncate-lines t)
+  (setq truncate-partial-width-windows nil)
+  (setq-default fill-column 80)
+
+;; recover some window real estate
+;;   c-x mode-line to toggle the mode-line on and off
+;;
+  (defun mode-line () "toggles the modeline on and off"
+    (interactive) 
+    (setq mode-line-format
+      (if (equal mode-line-format nil)
+          (default-value 'mode-line-format)) )
+    (redraw-display))
+
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+
+
+(put 'upcase-region 'disabled nil)
+(put 'narrow-to-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+(put 'set-goal-column 'disabled nil)
+
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+  '(ansi-color-names-vector
+     ["#212526" "#ff4b4b" "#b4fa70" "#fce94f" "#729fcf" "#e090d7" "#8cc4ff" "#eeeeec"])
+ '(custom-enabled-themes (quote (wheatgrass)))
+ '(geiser-racket-binary "racket")
+ '(send-mail-function (quote smtpmail-send-it))
+ '(tool-bar-mode nil))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default ((t (:family "DejaVu Sans Mono" :foundry "PfEd" :slant normal :weight bold :height 98 :width normal)))))
+
+(put 'erase-buffer 'disabled nil)

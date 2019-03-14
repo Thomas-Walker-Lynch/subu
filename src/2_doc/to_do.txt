@@ -28,4 +28,11 @@
   need to add messages for subu errors I've added to the end of
   the list in subu.lib.c
   
+2019-03-14T10:43:50Z
 
+   should mod all to he subudb routines to return a message, probably
+   strdup(sqlite_errmsg(db)), then the callers to these routines can just pass
+   mess in rather than making up new ones for each situation. The error code
+   probably already carries the contexts specific message.  Or perhaps add
+   a string cat function for message strings, that would run through a stream
+   and free the originals.

@@ -1,118 +1,135 @@
 
+SHELL=/bin/bash
+
+# some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
+ECHO= echo
+#ECHO= echo -e
+
+# directories used by this makefile, these could all be set to dot for
+# the simplest source directory structure
+
+#$(PWD) is the directory that make was called from, this is already build in
+TMPDIR=1_tmp
+EXECSDIR=1_execs
+HDIR=1_headers
+LIBDIR=1_lib
+TOOLSDIR=$(realpath ../tools)
+
+# some important files
+DEPS_FILE=$(TMPDIR)/makefile_deps
+LIB_FILE=$(LIBDIR)/libsubu.a
+
+# external tools called out in this makefile
+SUID_TOOL=$(TOOLSDIR)/bin/setuid_root.sh
+
+# compiler and flags
+CC=gcc
+CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
+#CFLAGS=-std=gnu11 -fPIC -I. -Werror
+LINKFLAGS=-L1_lib -lsubu -lsqlite3
+
+### end of user defined variables
+###--------------------------------------------------------------------------------
+
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
 # multiple separate command arguments to a shell script from one variable value
 blank :=
 space :=$(blank)  $(blank)
 
-# some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
-ECHO= echo
-#ECHO= echo -e
-
-SHELL=/bin/bash
-SCRATCHDIR= 5_scratch # clean and others put things here
-CC=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LIBDIR=2_lib/
-LIB=$(LIBDIR)libsubu.a
-LINKFLAGS=-L2_lib -lsubu -lsqlite3
-
-#these are the source files that exist
+# files used by the compiler
 SOURCES_LIB= $(wildcard *.lib.c)
 SOURCES_CLI= $(wildcard *.cli.c)
 SOURCES= $(SOURCES_LIB) $(SOURCES_CLI)
 
-#these are the object files to be made
+HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
+
 OBJECTS_LIB= $(patsubst %.c, %.o, $(SOURCES_LIB))
 OBJECTS_CLI= $(patsubst %.c, %.o, $(SOURCES_CLI))
 OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
 
-#these are the header files that exist, makeheaders will want to see them
-HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
-
-# sort causes compiles to go in lexical order by file name, this is used to order the tests e.g.
 EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
 
-SUID=$(realpath ../tools/bin/setuid_root.sh)
-
-
 all: version deps lib execs
+
+version:
+	@echo '---- make $@:------------------------------------------------------------'
+	@echo makefile version 3.0
+	@echo "PWD: " $(PWD)
+	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
+	@echo "TMPDIR: " $(TMPDIR)
+	@echo "EXECSDIR: " $(EXECSDIR)
+	@echo "HDIR: " $(HDIR)
+	@echo "LIBDIR: " $(LIBDIR)
+	@echo "DEPS_FILE: " $(DEPS_FILE)
+	@echo "LIB_FILE: " $(LIB_FILE)
+	@echo "CC: " $(CC)
+	@echo "CFLAGS: " $(CFLAGS)
+	@echo "LINKFLAGS: " $(LINKFLAGS)
+	@echo "SUID_TOOL: " $(SUID_TOOL)
+	@echo '______end make $@_____'
 
 lists:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo "SOURCES_LIB: " $(SOURCES_LIB)
 	@echo "SOURCES_CLI: " $(SOURCES_CLI)
 	@echo "SOURCES: " $(SOURCES)
+	@echo "HFILES: " $(HFILES)
 	@echo "OBJECTS_LIB: " $(OBJECTS_LIB)
 	@echo "OBJECTS_CLI: " $(OBJECTS_CLI)
 	@echo "OBJECTS: " $(OBJECTS)
-	@echo "HFILES: " $(HFILES)
 	@echo "EXECS: " $(EXECS)
 	@echo '______end make $@_____'
 
-version:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>'
-	@echo makefile version 2.0
-	@echo "CC: " $(CC)
-	@echo "CFLAGS: " $(CFLAGS)
-	@echo "LINKFLAGS: " $(LINKFLAGS)
-	@echo "LIB: " $(LIB)
-	@echo "SUID: " $(SUID)
-	@echo '______end make $@_____'
-
-# safe to run this in an already setup or partially setup directory
+# should be safe to run this in an already setup or partially setup directory
 setup:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e $(SCRATCHDIR) ]; then mkdir $(SCRATCHDIR); fi
+	if [ ! -e $(TMPDIR) ]; then mkdir $(TMPDIR); fi
+	if [ ! -e 1_deprecated ]; then mkdir 1_deprecated; fi
+	if [ ! -e 1_doc ]; then mkdir 1_doc; fi
+	if [ ! -e 1_execs ]; then mkdir 1_execs; fi
+	if [ ! -e 1_headers ]; then mkdir 1_headers; fi
+	if [ ! -e 1_lib ]; then mkdir 1_lib; fi
 	if [ ! -e 1_tests ]; then mkdir 1_tests; fi
 	if [ ! -e 1_try ]; then mkdir 1_try; fi
-	if [ ! -e 2_bin ]; then mkdir 2_bin; fi
-	if [ ! -e 2_lib ]; then mkdir 2_lib; fi
-	if [ ! -e 2_doc ]; then mkdir 2_doc; fi
-	if [ ! -e 2_include ]; then mkdir 2_include; fi
-	if [ ! -e 5_deprecated ]; then mkdir 5_deprecated; fi
-	if [ ! -e 5_scratch ]; then mkdir 5_scratch; fi
 	@echo '______end make $@_____'
-
 
 deps:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	makeheaders $(SOURCES) $(HFILES)
 	sed -i '/^ *int *main *(.*)/d' *.h
-	$(CC) $(CFLAGS) -MM $(SOURCES) 1> 7_makefile_deps
+	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPS_FILE)
 	for i in $(EXECS) ; do\
-           $(ECHO) >> 7_makefile_deps;\
-           $(ECHO) "2_bin/$$i : $$i.cli.o $(LIB)" >> 7_makefile_deps;\
-           $(ECHO) "	$(CC) -o 2_bin/$$i $$i.cli.o $(LINKFLAGS)" >> 7_makefile_deps;\
+           $(ECHO) >> $(DEPS_FILE);\
+           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIB_FILE)" >> $(DEPS_FILE);\
+           $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPS_FILE);\
         done
 	@echo '______end make $@_____'
 
 lib: 
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e 7_makefile_deps ]; then make deps; fi
+	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
 	make sub_lib
 	@echo '______end make $@_____'
 
-sub_lib: $(LIB)
+sub_lib: $(LIB_FILE)
 
 
-execs: $(LIB)
+execs: $(LIB_FILE)
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
-	if [ ! -e 7_makefile_deps ]; then make deps; fi
+	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
 	make sub_execs
-	@echo "-> $(SUID) 2_bin/subu-mk-0 2_bin/subu-rm-0"
-	cat $(SUID)
+	@echo "-> $(SUID_TOOL) $(EXECSDIR)/subu-mk-0 $(EXECSDIR)/subu-rm-0 $(EXECSDIR)/subu-bind-all"
+	cat $(SUID_TOOL)
 	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} == y ]
-	sudo $(SUID) 2_bin/subu-mk-0 2_bin/subu-rm-0
+	sudo $(SUID_TOOL) $(EXECSDIR)/subu-mk-0 $(EXECSDIR)/subu-rm-0 $(EXECSDIR)/subu-bind-all
 	@echo '______end make $@_____'
 
-sub_execs: $(patsubst %,  2_bin/%, $(EXECS))
+sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
 
 #not ready yet
 install: all
@@ -120,8 +137,8 @@ install: all
 	@echo `pwd`'>' 
 	@if[ ! -e 1_tests_passed ]; then echo "can't install as tests have not passed"; fi
 	@test -e test_passed
-	for i in $(BIN); do cp $$i $(RT_BASE)/bin; done
-	cp $(LIB) $(RT_BASE)/lib
+	for i in $(EXECSDIR); do cp $$i $(RT_BASE)/bin; done
+	cp $(LIB_FILE) $(RT_BASE)/lib
 	cp $(APPLICATION).h  $(RT_BASE)/include
 	if [ -d $(APPLICATION) ]; then cp $(APPLICATION)/*.h $(RT_BASE)/include/$(APPLICATION); fi
 	@echo '______end make $@_____'
@@ -134,12 +151,12 @@ clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	if [ -f subudb ]; then rm subudb; fi
-	for i in $(wildcard *~); do mv $$i $(SCRATCHDIR); done
+	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
 	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
-	for i in $(HFILES); do mv $$i 5_scratch; done # just in case someone wrote a header file
-	for i in $(EXECS); do if [ -e 2_bin/$$i ]; then rm 2_bin/$$i; fi; done 
-	if [ -f $(LIB) ]; then rm $(LIB); fi
-	if [ -f 7_makefile_deps ]; then rm 7_makefile_deps; fi
+	for i in $(HFILES); do mv $$i $(TMPDIR); done # just in case someone wrote a header file
+	for i in $(EXECS); do if [ -e $(EXECSDIR)/$$i ]; then rm $(EXECSDIR)/$$i; fi; done 
+	if [ -f $(LIB_FILE) ]; then rm $(LIB_FILE); fi
+	if [ -f $(DEPS_FILE) ]; then rm $(DEPS_FILE); fi
 	@echo '______end make $@_____'
 
 
@@ -157,10 +174,10 @@ dist-clean:
 	@echo '______end make $@_____'
 
 #
-$(LIB) : $(OBJECTS_LIB)
-	ar rcs $(LIB) $(OBJECTS_LIB)
+$(LIB_FILE) : $(OBJECTS_LIB)
+	ar rcs $(LIB_FILE) $(OBJECTS_LIB)
 
--include 7_makefile_deps
+-include $(DEPS_FILE)
 
 # recipe for making object files:
 #

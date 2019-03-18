@@ -140,7 +140,7 @@ struct subudb_subu_element{
 };
 #endif
 static void subu_element_alloc(subudb_subu_element **base, size_t *s){
-  dalloc((void *)base, s, sizeof(subudb_subu_element));
+  da_alloc((void *)base, s, sizeof(subudb_subu_element));
 }
 void subu_element_free(subudb_subu_element *base, subudb_subu_element *end_pt){
   subudb_subu_element *pt = base;
@@ -175,7 +175,8 @@ int subudb_Masteru_Subu_get_subus
   subudb_subu_element *pt = subu_element;
   rc = sqlite3_step(stmt);
   while( rc == SQLITE_ROW ){
-    if( off_alloc(subu_element, pt, subu_element_size) ) expand((void **)&subu_element, (void **)&pt, &subu_element_size);
+    if( da_bound(subu_element, pt, subu_element_size) ) 
+      da_expand((void **)&subu_element, (void **)&pt, &subu_element_size);
     pt->subuname = strdup(sqlite3_column_text(stmt, 0));
     pt->subu_username = strdup(sqlite3_column_text(stmt, 1));
   rc = sqlite3_step(stmt);

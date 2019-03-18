@@ -11,16 +11,14 @@ all :
 
 clean :
 	$(foreach dir, $(subdirectories), \
-		if [ -f ./$(dir)/7_makefile ]; then \
-			make -C $(dir) clean; \
-		fi;\
+		cd $(dir);\
+		make clean;\
 	)
 
 dist-clean :
 	$(foreach dir, $(subdirectories), \
-		if [ -f ./$(dir)/7_makefile ]; then \
-			make -C $(dir) dist-clean; \
-		fi;\
+		cd $(dir);\
+		make dist-clean;\
 	)
 
 

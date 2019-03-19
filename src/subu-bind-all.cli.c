@@ -8,7 +8,7 @@ uses unmount to undo this
 #include <stdlib.h>
 
 int main(int argc, char **argv){
-  if( argc != 2){
+  if( argc != 1){
     fprintf(stderr, "%s does not take arguments\n",argv[0]);
     return SUBU_ERR_ARG_CNT;
   }

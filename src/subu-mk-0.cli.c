@@ -18,7 +18,8 @@ int main(int argc, char **argv){
   sqlite3 *db;
   rc = sqlite3_open_v2(DB_File, &db, SQLITE_OPEN_READWRITE, NULL);
   if( rc != SQLITE_OK ){
-    fprintf(stderr, "error exit, could not open db file\n");
+    fprintf(stderr, "error when opening db, %s\n", DB_File);
+    fprintf(stderr, "sqlite3 says: %s\n", sqlite3_errmsg(db));
     sqlite3_close(db);
     return SUBU_ERR_DB_FILE;
   }

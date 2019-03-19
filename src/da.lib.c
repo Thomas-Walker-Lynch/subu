@@ -13,83 +13,72 @@ Dynamic Array
 
 //--------------------------------------------------------------------------------
 // generic
+// We manipulate pointers to a smallest addressable unit. The sizeof operator
+// returns counts in these addressable units. Sizeof(char) is defined to be 1.
 
-// s is the size of the array in bytes
-void da_alloc(void **base, size_t *s, size_t item_size){
-  *s = 4 * item_size;
-  *base = malloc(*s);
+struct da{
+  char *base;
+  char *end; // one byte/one item off the end of the array
+  size_t *size; // size >= (end - base) + 1;
+  size_t item_size;
+};
+
+void da_alloc(da *dap, size_t item_size){
+  dap->size = 4 * item_size;
+  dap->item_size = item_size;
+  dap->end = 0;
+  dap->base = malloc(dap->size);
 }
 
-// doubles size of an array
-void da_expand(void **base, void **pt, size_t *s){
-  size_t offset = ((unsigned char *)*pt - (unsigned char *)*base);
-  size_t new_s = *s << 1;
-  void *new_base = malloc( new_s );
-  memcpy( new_base, *base, offset + 1);
-  free(base);
-  *base = new_base;
-  *pt = new_base + offset;
-  *s = new_s;
+// Doubles size of of da.  Returns old base, so that existing pointers into the
+// array can be moved to the new array
+char *da_expand(da *dap){
+  size_t end_offset = ((char *)dap->end - (char *)dap->base);
+  size_t new_size = dap->size << 1;
+  char *old_base = dap->base;
+  char *new_base = malloc( new_size );
+  memcpy( new_base, dap->base, end_offset + 1);
+  free(old_base);
+  dap->base = new_base;
+  dap->end = new_base + offset;
+  dap->size = new_size;
+  return old_base;
+}
+
+void da_rebase(da *dap, char *old_base, void *pta){
+  char **pt = (char **)pta;
+  size_t offset = *pt - old_base;
+  *pt = dap->base + offset;
 }
 
 // true when pt has run off the end of the area currently allocated for the array
-bool da_bound(void *base, void *pt, size_t s){
-  return pt >= base + s;
+bool da_endq(da *dap, void *pt){
+  return (char *)pt >= dap->end;
 }
 
-void da_push(void **base, void **pt, size_t *s, void *item, size_t item_size){
-  while( *pt + item_size >= *base + *s ){
-    da_expand(base, pt, s);
+void da_push(da *dap, void *item){
+  if( dap->end + dap->item_size >= dap->base + dap->size ){
+    da_expand(dap);
   }
-  memcpy(*pt, item, item_size);
-  *pt += item_size;
+  memcpy(dap->end, item, dap->item_size);
+  dap->end += item_size;
 }
 
-void da_map(void *base, void *end_pt, void f(void *), size_t item_size){
-  void *pt = base;
-  while( pt != end_pt ){
-    f(pt);
+// passed in f(item_pt, arg_pt)
+// Curring is difficult in C, so we allow that we might like to have an
+// additional arg.  The additional arg may be set to NULL if it is not needed.
+void da_map(da *dap, void f(void *, void *), void *arg){
+  char *pt = dap->base;
+  while( pt != dap->end ){
+    f(pt, arg);
   pt += item_size;
   }
 }
 
-//--------------------------------------------------------------------------------
-// dynamic array of pointers to strings
-
-// s is still the length of the array in bytes
-void daps_alloc(char **base, size_t *s){
-  da_alloc((void **)base, s, sizeof(char *));
-}
-
-void daps_expand(char **base, char **pt, size_t *s){
-  da_expand((void **)base, (void **)pt, s);
-}
-
-bool daps_bound(char **base, char **pt, size_t s){
-  return da_bound( (void *) base, (void *)pt, s);
-}
-
-void daps_push(char **base, char **pt, size_t *s, char *item){
-  da_push((void **)base, (void **)pt, s, (void *)item, sizeof(char *));
-}
-
-void daps_map(char **base, char **end_pt, void f(void *)){
-  da_map((void *)base, (void *)end_pt, f, sizeof(char *));
-}
-
-// one use for an array of string pointers is to keep list of
-// strings that must be freed.  I.e. 'managed' strings
 #if INTERFACE
 
-#define MK_MRS \
-  char **mrs;  \
-  char **mrs_end; \
-  size_t mrs_size; \
-  daps_alloc(mrs, &mrs_size);\
-  mrs_end = mrs;
-
-#define RETURN(rc) \
-  { daps_map(mrs, mrs_end, free); return rc; }
+#define RETURN(r) \
+  { daps_map(mrs, mrs_end, free); return r; }
 
 #endif
   

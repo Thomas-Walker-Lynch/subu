@@ -1,165 +1,40 @@
+# src/0_makefile
 
 SHELL=/bin/bash
 
 -include 0_makefile_flags
 
-DEPS_FILE=$(TMPDIR)/makefile_deps
+SUID_TOOL=$(TOOLSDIR)/bin/setuid_root.sh
+MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
 
-
-### end of user defined variables
-###--------------------------------------------------------------------------------
-
-# a single space literal, for example if you wanted to subsitute commas to
-# spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
-# multiple separate command arguments to a shell script from one variable value
-blank :=
-space :=$(blank)  $(blank)
-
-# files used by the compiler
-SOURCES_LIB= $(wildcard *.lib.c)
-SOURCES_CLI= $(wildcard *.cli.c)
-SOURCES= $(SOURCES_LIB) $(SOURCES_CLI)
-
-HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
-
-OBJECTS_LIB= $(patsubst %.c, %.o, $(SOURCES_LIB))
-OBJECTS_CLI= $(patsubst %.c, %.o, $(SOURCES_CLI))
-OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
-
-EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
+SOURCES=$(wildcard *.c)
+HFILES=$(wildcard *.h)
 
 all: version deps lib execs
 
 version:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo makefile version 3.0
-	@echo "PWD: " $(PWD)
-	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
-	@echo "TMPDIR: " $(TMPDIR)
-	@echo "EXECSDIR: " $(EXECSDIR)
-	@echo "HDIR: " $(HDIR)
-	@echo "LIBDIR: " $(LIBDIR)
-	@echo "DEPS_FILE: " $(DEPS_FILE)
-	@echo "LIB_FILE: " $(LIB_FILE)
-	@echo "CC: " $(CC)
-	@echo "CFLAGS: " $(CFLAGS)
-	@echo "LINKFLAGS: " $(LINKFLAGS)
+	$(MAKE) $@
 	@echo "SUID_TOOL: " $(SUID_TOOL)
-	@echo '______end make $@_____'
-
-lists:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo "SOURCES_LIB: " $(SOURCES_LIB)
-	@echo "SOURCES_CLI: " $(SOURCES_CLI)
-	@echo "SOURCES: " $(SOURCES)
-	@echo "HFILES: " $(HFILES)
-	@echo "OBJECTS_LIB: " $(OBJECTS_LIB)
-	@echo "OBJECTS_CLI: " $(OBJECTS_CLI)
-	@echo "OBJECTS: " $(OBJECTS)
-	@echo "EXECS: " $(EXECS)
-	@echo '______end make $@_____'
-
-# should be safe to run this in an already setup or partially setup directory
-setup:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ ! -e $(DEPRDIR) ]; then mkdir $(DEPRDIR); fi
-	if [ ! -e $(DOCDIR) ]; then mkdir $(DOCDIR); fi
-	if [ ! -e $(EXECSDIR) ]; then mkdir $(EXECSDIR); fi
-	if [ ! -e $(HDIR) ]; then mkdir $(HDIR); fi
-	if [ ! -e $(LIBDIR) ]; then mkdir $(LIBDIR); fi
-	if [ ! -e $(TESTDIR) ]; then mkdir $(TESTDIR); fi
-	if [ ! -e $(TMPDIR) ]; then mkdir $(TMPDIR); fi
-	if [ ! -e $(TRYDIR) ]; then mkdir $(TRYDIR); fi
-	@echo '______end make $@_____'
 
 deps:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
 	makeheaders $(SOURCES) $(HFILES)
 	sed -i '/^ *int *main *(.*)/d' *.h
-	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPS_FILE)
-	for i in $(EXECS) ; do\
-           $(ECHO) >> $(DEPS_FILE);\
-           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIB_FILE)" >> $(DEPS_FILE);\
-           $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPS_FILE);\
-        done
-	@echo '______end make $@_____'
+	$(MAKE) $@
 
-lib: 
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
-	make sub_lib
-	@echo '______end make $@_____'
-
-sub_lib: $(LIB_FILE)
-
-
-execs: $(LIB_FILE)
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
-	make sub_execs
+execs:
+	$(MAKE) $@
 	@echo "-> $(SUID_TOOL) $(EXECSDIR)/subu-mk-0 $(EXECSDIR)/subu-rm-0 $(EXECSDIR)/subu-bind-all"
 	cat $(SUID_TOOL)
 	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} == y ]
 	sudo $(SUID_TOOL) $(EXECSDIR)/subu-mk-0 $(EXECSDIR)/subu-rm-0 $(EXECSDIR)/subu-bind-all
-	@echo '______end make $@_____'
-
-sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
-
-#not ready yet
-install: all
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	@if[ ! -e 1_tests_passed ]; then echo "can't install as tests have not passed"; fi
-	@test -e test_passed
-	for i in $(EXECSDIR); do cp $$i $(RT_BASE)/bin; done
-	cp $(LIB_FILE) $(RT_BASE)/lib
-	cp $(APPLICATION).h  $(RT_BASE)/include
-	if [ -d $(APPLICATION) ]; then cp $(APPLICATION)/*.h $(RT_BASE)/include/$(APPLICATION); fi
-	@echo '______end make $@_____'
-
-# not written yet
-# copies stuff from the src dir to the stage dirs
-# stage:
 
 clean:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ -f subudb ]; then rm subudb; fi
-	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
-	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
-	for i in $(HFILES); do mv $$i $(TMPDIR); done # just in case someone wrote a header file
-	for i in $(EXECS); do if [ -e $(EXECSDIR)/$$i ]; then rm $(EXECSDIR)/$$i; fi; done 
-	if [ -f $(LIB_FILE) ]; then rm $(LIB_FILE); fi
-	if [ -f $(DEPS_FILE) ]; then rm $(DEPS_FILE); fi
-	@echo '______end make $@_____'
+	$(MAKE) $@
+	for i in $(HFILES); do rm $$i; done
+
+%::
+	$(MAKE) $@
 
 
-# not ready ...
-# dist_clean is used to clean thing up before doing a checkin,  hg add should be safe after a dist_clean
-# dist_clean will recurse into the include directory = $(APPLICATION), tests, and try if they are present 
-# 
-dist-clean:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	make clean
-#	if [ -d $(APPLICATION) ]; then cd $(APPLICATION); make clean; fi
-#	if [ -d 1_tests ]; then cd 1_tests; make dist_clean; fi
-#	if [ -d 1_try ] ; then cd 1_try; make dist_clean; fi
-	@echo '______end make $@_____'
-
-#
-$(LIB_FILE) : $(OBJECTS_LIB)
-	ar rcs $(LIB_FILE) $(OBJECTS_LIB)
-
--include $(DEPS_FILE)
-
-# recipe for making object files:
-#
-%.o : %.c
-	$(CC) $(CFLAGS) -c $<
 
 

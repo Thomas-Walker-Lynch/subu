@@ -10,22 +10,22 @@ ECHO= echo
 #$(PWD) is the directory that make was called from, this is already build in
 #set to dot to use the same directory as the source code
 #leave blank to ommit
-DEPRDIR=1_deprecated
-DOCDIR=1_doc
-EXECSDIR=1_execs
-HDIR=1_headers
-LIBDIR=1_lib
-TESTDIR=1_tests
+DEPRDIR=
+DOCDIR=
+EXECSDIR=.
+HDIR=.
+LIBDIR=.
+TESTDIR=.
 TMPDIR=1_tmp
 TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
-TRYDIR=1_try
+TRYDIR=
 
 
 # compiler and flags
 CC=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-L1_lib -lsubu -lsqlite3
+LINKFLAGS=-L$(PROJECT_SUBU)/src/$(LIBDIR) -L. -lsubu -lsqlite3 -lsubutests
 
-LIB_FILE=$(LIBDIR)/libsubu.a
+LIB_FILE=$(LIBDIR)/libtests.a
 

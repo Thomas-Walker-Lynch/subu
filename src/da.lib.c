@@ -56,12 +56,15 @@ bool da_endq(da *dap, void *pt){
   return (char *)pt >= dap->end;
 }
 
+// true when pt has run off the end of the area allocated for the array
+bool da_boundq(da *dap, void *pt){
+  return (char *)pt >= dap->base + dap->size
+}
+
 void da_push(da *dap, void *item){
-  if( dap->end + dap->item_size >= dap->base + dap->size ){
-    da_expand(dap);
-  }
+  if( dap->end + dap->item_size >= dap->base + dap->size ) da_expand(dap);
   memcpy(dap->end, item, dap->item_size);
-  dap->end += item_size;
+  dap->end += dap->item_size;
 }
 
 // passed in f(item_pt, arg_pt)

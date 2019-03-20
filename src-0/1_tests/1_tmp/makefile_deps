@@ -1,0 +1,4 @@
+da.cli.o: da.cli.c da.cli.h
+
+./da : da.cli.o ./libtests.a
+	gcc -o ./da da.cli.o -L/home/morpheus/subu_land/subu/src/. -L. -lsubu -lsqlite3 -lsubutests

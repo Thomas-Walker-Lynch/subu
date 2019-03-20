@@ -275,7 +275,8 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
 
   int rc;
   if(mess)*mess = 0;
-  MK_MRS;
+  da resources;
+  da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
   size_t subuname_len;
@@ -307,11 +308,11 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   char *subu_username = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
-  daps_push(mrs, mrs_end, &mrs_size, masteru_name);
-  daps_push(mrs, mrs_end, &mrs_size, masteru_home);
-  daps_push(mrs, mrs_end, &mrs_size, subu_username);
-  daps_push(mrs, mrs_end, &mrs_size, subuland);
-  daps_push(mrs, mrs_end, &mrs_size, subuhome);
+  da_push(&resources, masteru_name);
+  da_push(&resources, masteru_home);
+  da_push(&resources, subu_username);
+  da_push(&resources, subuland);
+  da_push(&resources, subuhome);
   rc =
     uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
@@ -321,7 +322,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     ||
     mk_subuhome(subuland, subuname, &subuhome)
     ;
-  if(rc) RETURN(rc);
+  if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
   dbprintf("subu_username, subuland, subuhome: \"%s\"\"%s\"\"%s\"\n", subu_username, subuland, subuhome);
   #endif
@@ -333,7 +334,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     struct stat st;
     if( stat(subuhome, &st) != -1 ){
       if(mess)*mess = strdup(subuhome);
-      RETURN(SUBU_ERR_SUBUHOME_EXISTS);
+      RETURN(&resources, SUBU_ERR_SUBUHOME_EXISTS);
     }
     int dispatch_err = dispatch_f_euid_egid
       (
@@ -348,7 +349,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
       dispatch_f_mess("dispatch_f_euid_egid", dispatch_err, "masteru_mkdir_subuhome");
       #endif
       if(mess)*mess = strdup(subuhome);
-      RETURN(SUBU_ERR_MKDIR_SUBUHOME);
+      RETURN(&resources, SUBU_ERR_MKDIR_SUBUHOME);
     }
   }
   #ifdef DEBUG
@@ -365,7 +366,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
       #ifdef DEBUG
         dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
-      if( setuid(0) == -1 ) RETURN(SUBU_ERR_BUG_SSS);
+      if( setuid(0) == -1 ) RETURN(&resources, SUBU_ERR_BUG_SSS);
     #endif
     char *command = "/usr/sbin/useradd";
     char *argv[3];
@@ -392,7 +393,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
       dispatch_f_mess("dispatch_f_euid_egid", dispatch_err_rmdir, "masteru_rmdir_subuhome");
       #endif
       if(mess)*mess = useradd_mess(dispatch_err);
-      RETURN(SUBU_ERR_FAILED_USERADD);
+      RETURN(&resources, SUBU_ERR_FAILED_USERADD);
     }
     #ifdef DEBUG
     dbprintf("added user \"%s\"\n", subu_username);
@@ -407,13 +408,13 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     int rc = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
     if( rc != SQLITE_OK ){
       if(mess)*mess = strdup("insert of masteru subu relation failed");
-      RETURN(SUBU_ERR_DB_FILE);
+      RETURN(&resources, SUBU_ERR_DB_FILE);
     }
   }
   #ifdef DEBUG
   dbprintf("finished subu-mk-0(%s)\n", subuname);
   #endif
-  RETURN(0);
+  RETURN(&resources, 0);
 }
 
 //================================================================================
@@ -421,7 +422,8 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
   int rc;
   if(mess)*mess = 0;
-  MK_MRS;
+  da resources;
+  da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
   size_t subuname_len;
@@ -453,10 +455,10 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   char *masteru_home = 0;
   char *subuland = 0;
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
-  daps_push(mrs, mrs_end, &mrs_size, masteru_name);
-  daps_push(mrs, mrs_end, &mrs_size, masteru_home);
-  daps_push(mrs, mrs_end, &mrs_size, subuland);
-  daps_push(mrs, mrs_end, &mrs_size, subuhome);
+  da_push(&resources, masteru_name);
+  da_push(&resources, masteru_home);
+  da_push(&resources, subuland);
+  da_push(&resources, subuhome);
   rc =
     uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
@@ -464,7 +466,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     ||
     mk_subuhome(subuland, subuname, &subuhome)
     ;
-  if(rc) RETURN(rc);
+  if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
   dbprintf("masteru_home, subuhome: \"%s\", \"%s\"\n", masteru_home, subuhome);
   #endif
@@ -472,7 +474,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   //--------------------------------------------------------------------------------
   // removal from db
   char *subu_username = 0;
-  daps_push(mrs, mrs_end, &mrs_size, subu_username);
+  da_push(&resources, subu_username);
 
   db_begin(db);
 
@@ -481,7 +483,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     if(mess) *mess = strdup("subu requested for removal not found under this masteru in db file");
     rc = SUBU_ERR_SUBU_NOT_FOUND;
     db_rollback(db);
-    RETURN(rc);
+    RETURN(&resources, rc);
   }
   #ifdef DEBUG
   printf("subu_username: \"%s\"\n", subu_username);  
@@ -491,7 +493,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   if( rc != SQLITE_OK ){
     if(mess)*mess = strdup("removal of masteru subu relation failed");
     db_rollback(db);
-    RETURN(SUBU_ERR_DB_FILE);
+    RETURN(&resources, SUBU_ERR_DB_FILE);
   }
   #ifdef DEBUG
   dbprintf("removed the masteru_name, subuname, subu_username relation\n");
@@ -500,7 +502,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   rc = db_commit(db);
   if( rc != SQLITE_OK ){
     if(mess)*mess = strdup("removal of masteru subu relation in unknown state, exiting");
-    RETURN(SUBU_ERR_DB_FILE);
+    RETURN(&resources, SUBU_ERR_DB_FILE);
   }
   
   // even after removing the last masteru subu relation, we still do not remove
@@ -528,7 +530,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
       dispatch_f_mess("dispatch_f_euid_egid", dispatch_err, "masteru_rmdir_subuhome");
       #endif
       if(mess)*mess = strdup(subuhome);
-      RETURN(SUBU_ERR_RMDIR_SUBUHOME);
+      RETURN(&resources, SUBU_ERR_RMDIR_SUBUHOME);
     }
   }
 
@@ -543,7 +545,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
         dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
       if( setuid(0) == -1 ){
-        RETURN(SUBU_ERR_BUG_SSS);
+        RETURN(&resources, SUBU_ERR_BUG_SSS);
       }
     #endif
     char *command = "/usr/sbin/userdel";
@@ -560,7 +562,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
       dispatch_f_mess("dispatch_exec", dispatch_err, command);
       #endif
       if(mess)*mess = userdel_mess(dispatch_err);
-      RETURN(SUBU_ERR_FAILED_USERDEL);
+      RETURN(&resources, SUBU_ERR_FAILED_USERDEL);
     }
     #ifdef DEBUG
     dbprintf("deleted user \"%s\"\n", subu_username);
@@ -570,7 +572,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   #ifdef DEBUG
   dbprintf("finished subu-rm-0(%s)\n", subuname);
   #endif
-  RETURN(0);
+  RETURN(&resources, 0);
 }
 
 //================================================================================
@@ -580,20 +582,23 @@ int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuho
 
   int rc;
   if(mess)*mess = 0;
-  MK_MRS;
+  da resources;
+  da_alloc(&resources, sizeof(char *));
 
   // lookup the subu_user_home
   char *subu_user_home = 0;
-  daps_push(mrs, mrs_end, &mrs_size, subu_user_home);
+  da_push(&resources, subu_user_home);
+
   rc = username_to_home(subu_username, &subu_user_home);
   if( rc ){
     if(mess) *mess = strdup("in subu_bind, subu user home directory lookup in /etc/passwd failed.");
-    RETURN(rc);
+    RETURN(&resources, rc);
   }
 
   size_t len = 0;
   char *map = 0;
-  daps_push(mrs, mrs_end, &mrs_size, map);
+  da_push(&resources, map);
+
   FILE* map_stream = open_memstream(&map, &len);
   fprintf(map_stream, "--map=%s/%s:@%s/@%s", subu_username, masteru_name, subu_username, masteru_name);
   fclose(map_stream);
@@ -613,19 +618,20 @@ int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuho
     dispatch_f_mess(command, dispatch_err, "dispatch_exec");
     #endif
     if(mess)*mess = strdup("bind failed");
-    RETURN(SUBU_ERR_BIND);
+    RETURN(&resources, SUBU_ERR_BIND);
   }
   #ifdef DEBUG
   dbprintf("mapped \"%s\" as \"%s\"\n", subu_user_home, subuhome);
   #endif
-  RETURN(0);
+  RETURN(&resources, 0);
 }
 
 int subu_bind_all(char **mess, sqlite3 *db){
 
   int rc;
   if(mess)*mess = 0;
-  MK_MRS;
+  da resources;
+  da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
   uid_t masteru_uid;
@@ -648,15 +654,15 @@ int subu_bind_all(char **mess, sqlite3 *db){
   char *masteru_name = 0;
   char *masteru_home = 0;
   char *subuland = 0;
-  daps_push(mrs, mrs_end, &mrs_size, masteru_name);
-  daps_push(mrs, mrs_end, &mrs_size, masteru_home);
-  daps_push(mrs, mrs_end, &mrs_size, subuland);
+  da_push(&resources, masteru_name);
+  da_push(&resources, masteru_home);
+  da_push(&resources, subuland);
   rc =
     uid_to_name_and_home(masteru_uid, &masteru_name, &masteru_home)
     ||
     mk_subuland(masteru_home, &subuland)
     ;
-  if(rc) RETURN(rc);
+  if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
   if(masteru_name)  
     dbprintf("masteru_name: \"%s\"", masteru_name);
@@ -670,21 +676,19 @@ int subu_bind_all(char **mess, sqlite3 *db){
   #endif
 
   //--------------------------------------------------------------------------------
-  subudb_subu_element *sa;
-  subudb_subu_element *sa_end;
-  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, &sa, &sa_end);
+  da subus;
+  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, &subus);
   if( rc != SQLITE_OK ){
     if(mess)*mess = strdup("db access failed when fetching a list of subus");
     return rc;
   }
-  if( sa == sa_end ) return 0; // no subus to bind
-
   // a limitation of our error reporting approach is that we can only 
   // return one error, but here is a loop that might generate many
+  rc = 0; 
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
-  uint rc_count = 0;
-  subudb_subu_element *pt = sa;
-  while( pt != sa_end ){
+  uint err_cnt = 0;
+  subudb_subu_element *pt = (subudb_subu_element *)(subus.base);
+  while( !da_endq(&subus,pt) ){
     rc = mk_subuhome(subuland, pt->subuname, &subuhome);
     #ifdef DEBUG
     if(subuhome)
@@ -693,17 +697,17 @@ int subu_bind_all(char **mess, sqlite3 *db){
       dbprintf("subuhome unknown \n");
     #endif
     if(!rc) rc = subu_bind(NULL, masteru_name, pt->subu_username, subuhome);
-    if(rc) rc_count++;
+    if(rc) err_cnt++;
     free(subuhome);
     subuhome=0;
   pt++;
   }
-  if(rc_count==1){
-    RETURN(rc);
+  if(err_cnt==1){
+    RETURN(&resources, rc);
   }
-  if(rc_count > 1){
+  if(err_cnt > 1){
     *mess = strdup("multiple errors occured while binding subus");
-    RETURN(SUBU_ERR_BIND);
+    RETURN(&resources, SUBU_ERR_BIND);
   }
-  RETURN(0);
+  RETURN(&resources, 0);
 }

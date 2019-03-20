@@ -139,25 +139,12 @@ struct subudb_subu_element{
   char *subu_username;
 };
 #endif
-static void subu_element_alloc(subudb_subu_element **base, size_t *s){
-  da_alloc((void *)base, s, sizeof(subudb_subu_element));
-}
-void subu_element_free(subudb_subu_element *base, subudb_subu_element *end_pt){
-  subudb_subu_element *pt = base;
-  while( pt != end_pt ){
-    free(pt->subuname);
-    free(pt->subu_username);
-  pt++;
-  }
-  free(base);  
-}
 
 int subudb_Masteru_Subu_get_subus
 (
  sqlite3 *db,
  char *masteru_name,
- subudb_subu_element **sa_pt,
- subudb_subu_element **sa_end_pt
+ da *subus
 ){
   char *sql = "SELECT subuname, subu_username"
               " FROM Masteru_Subu"
@@ -169,28 +156,23 @@ int subudb_Masteru_Subu_get_subus
   if( rc != SQLITE_OK ) return rc;
   sqlite3_bind_text(stmt, 1, masteru_name, strlen(masteru_name), SQLITE_STATIC);
 
-  size_t subu_element_size;
-  subudb_subu_element *subu_element;
-  subu_element_alloc(&subu_element, &subu_element_size);
-  subudb_subu_element *pt = subu_element;
+  da_alloc(subus, sizeof(subudb_subu_element));
+  subudb_subu_element *pt = (subudb_subu_element *)subus->base;
   rc = sqlite3_step(stmt);
   while( rc == SQLITE_ROW ){
-    if( da_bound(subu_element, pt, subu_element_size) ) 
-      da_expand((void **)&subu_element, (void **)&pt, &subu_element_size);
+    if( da_boundq(subus, pt) ){
+      char *old_base = da_expand(subus);
+      da_rebase(subus, old_base, pt);
+    }
     pt->subuname = strdup(sqlite3_column_text(stmt, 0));
     pt->subu_username = strdup(sqlite3_column_text(stmt, 1));
   rc = sqlite3_step(stmt);
   pt++;
   }
   sqlite3_finalize(stmt);
-  if( rc != SQLITE_DONE ){
-    return rc; // woops this needs to return an error!,  be sure it is not SQLITE_DONE
-  }
-  *sa_pt = subu_element;
-  *sa_end_pt = pt;
+  if( rc != SQLITE_DONE ) return rc;
   return SQLITE_OK;
 }
-
 
 //--------------------------------------------------------------------------------
 int subudb_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){

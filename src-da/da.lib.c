@@ -16,12 +16,14 @@ Dynamic Array
 // We manipulate pointers to a smallest addressable unit. The sizeof operator
 // returns counts in these addressable units. Sizeof(char) is defined to be 1.
 
+#if INTERFACE
 struct da{
   char *base;
   char *end; // one byte/one item off the end of the array
-  size_t *size; // size >= (end - base) + 1;
+  size_t size; // size >= (end - base) + 1;
   size_t item_size;
 };
+#endif
 
 void da_alloc(da *dap, size_t item_size){
   dap->size = 4 * item_size;
@@ -40,7 +42,7 @@ char *da_expand(da *dap){
   memcpy( new_base, dap->base, end_offset + 1);
   free(old_base);
   dap->base = new_base;
-  dap->end = new_base + offset;
+  dap->end = new_base + end_offset;
   dap->size = new_size;
   return old_base;
 }
@@ -58,7 +60,7 @@ bool da_endq(da *dap, void *pt){
 
 // true when pt has run off the end of the area allocated for the array
 bool da_boundq(da *dap, void *pt){
-  return (char *)pt >= dap->base + dap->size
+  return (char *)pt >= dap->base + dap->size;
 }
 
 void da_push(da *dap, void *item){
@@ -68,20 +70,23 @@ void da_push(da *dap, void *item){
 }
 
 // passed in f(item_pt, arg_pt)
-// Curring is difficult in C, so we allow that we might like to have an
-// additional arg.  The additional arg may be set to NULL if it is not needed.
-void da_map(da *dap, void f(void *, void *), void *arg){
+// We have no language support closures, so we pass in an argument for it.
+// The closure may be set to NULL if it is not needed.
+void da_map(da *dap, void f(void *, void *), void *closure){
   char *pt = dap->base;
   while( pt != dap->end ){
-    f(pt, arg);
-  pt += item_size;
+    f(pt, closure);
+  pt += dap->item_size;
   }
 }
 
+// da_lists are sometimes used as resource managers
+void da_free(void *pt, void *closure){
+  free(pt);
+}
+
 #if INTERFACE
-
-#define RETURN(r) \
-  { daps_map(mrs, mrs_end, free); return r; }
-
+#define RETURN(dap, r)                      \
+  { da_map(dap, da_free, NULL); return r; }
 #endif
   

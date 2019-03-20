@@ -1,7 +1,7 @@
 
 SHELL=/bin/bash
 
--include 0_makefile_flags
+-include 0_makefile-flags
 
 DEPS_FILE=$(TMPDIR)/makefile_deps
 
@@ -41,7 +41,7 @@ info:
 	@echo "DEPDIR: " $(DEPDIR)
 	@echo "DOCDIR: " $(DOCDIR)
 	@echo "EXECSDIR: " $(EXECSDIR)
-	@echo "HDIR: " $(HDIR)
+	@echo "INCDIR: " $(INCDIR)
 	@echo "LIBDIR: " $(LIBDIR)
 	@echo "TESTDIR: " $(TESTDIR)
 	@echo "TMPDIR: " $(TMPDIR)
@@ -66,7 +66,7 @@ setup:
 	if [ ! -e $(DEPRDIR) ]; then mkdir $(DEPRDIR); fi
 	if [ ! -e $(DOCDIR) ]; then mkdir $(DOCDIR); fi
 	if [ ! -e $(EXECSDIR) ]; then mkdir $(EXECSDIR); fi
-	if [ ! -e $(HDIR) ]; then mkdir $(HDIR); fi
+	if [ ! -e $(INCDIR) ]; then mkdir $(INCDIR); fi
 	if [ ! -e $(LIBDIR) ]; then mkdir $(LIBDIR); fi
 	if [ ! -e $(TESTDIR) ]; then mkdir $(TESTDIR); fi
 	if [ ! -e $(TMPDIR) ]; then mkdir $(TMPDIR); fi
@@ -79,7 +79,7 @@ deps:
 	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPS_FILE)
 	for i in $(EXECS) ; do\
            $(ECHO) >> $(DEPS_FILE);\
-           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIB_FILE)" >> $(DEPS_FILE);\
+           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIB_FILE)" >> $(DEPS_FILE);\
            $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPS_FILE);\
         done
 	@echo '______end make $@_____'
@@ -91,10 +91,10 @@ lib:
 	make sub_lib
 	@echo '______end make $@_____'
 
-sub_lib: $(LIB_FILE)
+sub_lib: $(LIBDIR)/$(LIB_FILE)
 
 
-execs: $(LIB_FILE)
+execs: $(LIBDIR)/$(LIB_FILE)
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
@@ -103,13 +103,17 @@ execs: $(LIB_FILE)
 
 sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
 
+stage:
+	if [ -f $(LBIDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
+	if [ -f $(INCDIR)/$(INC_FILE) ]; then cp $(INCDIR)/$(INC_FILE) $(PROJECT_SUBU)/stage/include; fi
+
 clean:
 	@echo '---- make $@:------------------------------------------------------------'
 	@echo `pwd`'>' 
 	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
 	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
 	for i in $(EXECS); do if [ -e $(EXECSDIR)/$$i ]; then rm $(EXECSDIR)/$$i; fi; done 
-	if [ -f $(LIB_FILE) ]; then rm $(LIB_FILE); fi
+	if [ -f $(LIBDIR)/$(LIB_FILE) ]; then rm $(LIBDIR)/$(LIB_FILE); fi
 	if [ -f $(DEPS_FILE) ]; then rm $(DEPS_FILE); fi
 	@echo '______end make $@_____'
 
@@ -122,8 +126,8 @@ dist-clean:
 	@echo '______end make $@_____'
 
 #
-$(LIB_FILE) : $(OBJECTS_LIB)
-	ar rcs $(LIB_FILE) $(OBJECTS_LIB)
+$(LIBDIR)/$(LIB_FILE) : $(OBJECTS_LIB)
+	ar rcs $(LIBDIR)/$(LIB_FILE) $(OBJECTS_LIB)
 
 -include $(DEPS_FILE)
 

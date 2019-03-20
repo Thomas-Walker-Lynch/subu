@@ -1,0 +1,1 @@
+dbprintf.lib.o: dbprintf.lib.c dbprintf.lib.h

@@ -98,11 +98,6 @@ clean:
 	if [ -f $(LIBDIR)/$(LIBFILE) ]; then rm $(LIBDIR)/$(LIBFILE); fi
 	if [ -f $(DEPSFILE) ]; then rm $(DEPSFILE); fi
 
-dist-clean:
-	make clean
-	if [ -d $(TESTDIR) ]; then cd $(TESTDIR); make dist-clean; fi
-	if [ -d $(TRYDIR) ] ; then cd $(TRYDIR); make dist-clean; fi
-
 #
 $(LIBDIR)/$(LIBFILE) : $(OBJECTS_LIB)
 	ar rcs $(LIBDIR)/$(LIBFILE) $(OBJECTS_LIB)

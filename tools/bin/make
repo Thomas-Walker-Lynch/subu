@@ -2,7 +2,7 @@
 
 mf=( ?_makefile )
 if [ -f "$mf" ]; then
-   /usr/bin/make -f ?_makefile "$@"
+   /usr/bin/make -f "$mf" "$@"
 else 
    /usr/bin/make "$@"
 fi

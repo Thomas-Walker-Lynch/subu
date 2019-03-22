@@ -30,3 +30,5 @@ LIBFILE=libda.a
 INCFILE=da.h
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+

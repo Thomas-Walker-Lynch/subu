@@ -24,7 +24,7 @@ TRYDIR=1_try
 CC=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -I$(PROJECT_SUBU)/stage/include -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-L1_lib -lda 
+LINKFLAGS=-L1_lib -L$(PROJECT_SUBU)/stage/lib -lda -ltranche
 
 LIBFILE=libtranche.a
 INCFILE=tranche.h

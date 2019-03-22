@@ -46,7 +46,7 @@ bool test_da_1(){
   int *pt = (int *)da.base;
   // will double, 4 -> 8, then double 8 -> 16
   while( i < 10 ){
-    da.end += da.item_size;
+    da.end += da.element_size;
     if( da_boundq(&da) ){
       char *old_base = da_expand(&da);
       da_rebase(&da, old_base, &pt);

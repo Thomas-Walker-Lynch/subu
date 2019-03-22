@@ -2,18 +2,19 @@
 
 umask 0077
 
-if [ $EMACS ]; then 
+if [ $INSIDE_EMACS ]; then 
   echo Hello Emacs
 fi
 export PS1='\n$(/usr/local/bin/Z)\n\u@\h§\w§\n> '
-export PS2='>'
+export PS2='>>'
+PATH=~/bin:$PATH
 
-PATH=~/tools/bin:$PATH
+#temporarily while active in subu code development
+export PROJECT_SUBU=~/subu
+PATH="$PROJECT_SUBU"/tools/bin:$PATH
 
-PS_FORMAT=user:15,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command
-export PS_FORMAT
+export PS_FORMAT=user:15,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command
 
-EDITOR=emacs
-export EDITOR
+export EDITOR=emacs
 
 

@@ -1,0 +1,3 @@
+this is a test
+ends without a newline
+(setq mode-require-final-newline nil)

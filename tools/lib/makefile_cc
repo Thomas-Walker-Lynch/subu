@@ -3,7 +3,7 @@ SHELL=/bin/bash
 
 -include 0_makefile-flags
 
-DEPS_FILE=$(TMPDIR)/makefile_deps
+DEPSFILE=$(TMPDIR)/makefile_deps
 
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
@@ -27,17 +27,14 @@ EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
 all: version deps lib execs
 
 version:
-	@echo '---- make $@:------------------------------------------------------------'
 	@echo makefile version 3.0
 	@echo "PWD: " $(PWD)
 	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
 	@echo "CC: " $(CC)
 	@echo "CFLAGS: " $(CFLAGS)
 	@echo "LINKFLAGS: " $(LINKFLAGS)
-	@echo '______end make $@_____'
 
 info:
-	@echo '---- make $@:------------------------------------------------------------'
 	@echo "DEPDIR: " $(DEPDIR)
 	@echo "DOCDIR: " $(DOCDIR)
 	@echo "EXECSDIR: " $(EXECSDIR)
@@ -47,8 +44,8 @@ info:
 	@echo "TMPDIR: " $(TMPDIR)
 	@echo "TOOLSDIR: " $(TOOLSDIR)
 	@echo "TRYDIR: " $(TRYDIR)
-	@echo "DEPS_FILE: " $(DEPS_FILE)
-	@echo "LIB_FILE: " $(LIB_FILE)
+	@echo "DEPSFILE: " $(DEPSFILE)
+	@echo "LIBFILE: " $(LIBFILE)
 	@echo "SOURCES_LIB: " $(SOURCES_LIB)
 	@echo "SOURCES_CLI: " $(SOURCES_CLI)
 	@echo "SOURCES: " $(SOURCES)
@@ -57,12 +54,9 @@ info:
 	@echo "OBJECTS_CLI: " $(OBJECTS_CLI)
 	@echo "OBJECTS: " $(OBJECTS)
 	@echo "EXECS: " $(EXECS)
-	@echo '______end make $@_____'
 
 # should be safe to run this in an already setup or partially setup directory
 setup:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
 	if [ ! -e $(DEPRDIR) ]; then mkdir $(DEPRDIR); fi
 	if [ ! -e $(DOCDIR) ]; then mkdir $(DOCDIR); fi
 	if [ ! -e $(EXECSDIR) ]; then mkdir $(EXECSDIR); fi
@@ -71,65 +65,49 @@ setup:
 	if [ ! -e $(TESTDIR) ]; then mkdir $(TESTDIR); fi
 	if [ ! -e $(TMPDIR) ]; then mkdir $(TMPDIR); fi
 	if [ ! -e $(TRYDIR) ]; then mkdir $(TRYDIR); fi
-	@echo '______end make $@_____'
 
 deps:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPS_FILE)
+	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPSFILE)
 	for i in $(EXECS) ; do\
-           $(ECHO) >> $(DEPS_FILE);\
-           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIB_FILE)" >> $(DEPS_FILE);\
-           $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPS_FILE);\
+           $(ECHO) >> $(DEPSFILE);\
+           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
+           $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
         done
-	@echo '______end make $@_____'
 
 lib: 
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
+	if [ ! -e $(DEPSFILE) ]; then make deps; fi
 	make sub_lib
-	@echo '______end make $@_____'
 
-sub_lib: $(LIBDIR)/$(LIB_FILE)
+sub_lib: $(LIBDIR)/$(LIBFILE)
 
 
-execs: $(LIBDIR)/$(LIB_FILE)
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
-	if [ ! -e $(DEPS_FILE) ]; then make deps; fi
+execs: $(LIBDIR)/$(LIBFILE)
+	if [ ! -e $(DEPSFILE) ]; then make deps; fi
 	make sub_execs
-	@echo '______end make $@_____'
 
 sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
 
 stage:
-	if [ -f $(LBIDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
-	if [ -f $(INCDIR)/$(INC_FILE) ]; then cp $(INCDIR)/$(INC_FILE) $(PROJECT_SUBU)/stage/include; fi
+	if [ -f $(LIBDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
+	if [ -f $(INCDIR)/$(INCFILE) ]; then cp $(INCDIR)/$(INCFILE) $(PROJECT_SUBU)/stage/include; fi
 
 clean:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
 	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
 	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
 	for i in $(EXECS); do if [ -e $(EXECSDIR)/$$i ]; then rm $(EXECSDIR)/$$i; fi; done 
-	if [ -f $(LIBDIR)/$(LIB_FILE) ]; then rm $(LIBDIR)/$(LIB_FILE); fi
-	if [ -f $(DEPS_FILE) ]; then rm $(DEPS_FILE); fi
-	@echo '______end make $@_____'
+	if [ -f $(LIBDIR)/$(LIBFILE) ]; then rm $(LIBDIR)/$(LIBFILE); fi
+	if [ -f $(DEPSFILE) ]; then rm $(DEPSFILE); fi
 
 dist-clean:
-	@echo '---- make $@:------------------------------------------------------------'
-	@echo `pwd`'>' 
 	make clean
-	if [ -d $(TESTDIR) ]; then cd $(TESTDIR); make dist_clean; fi
-	if [ -d $(TRYDIR) ] ; then cd $(TRYDIR); make dist_clean; fi
-	@echo '______end make $@_____'
+	if [ -d $(TESTDIR) ]; then cd $(TESTDIR); make dist-clean; fi
+	if [ -d $(TRYDIR) ] ; then cd $(TRYDIR); make dist-clean; fi
 
 #
-$(LIBDIR)/$(LIB_FILE) : $(OBJECTS_LIB)
-	ar rcs $(LIBDIR)/$(LIB_FILE) $(OBJECTS_LIB)
+$(LIBDIR)/$(LIBFILE) : $(OBJECTS_LIB)
+	ar rcs $(LIBDIR)/$(LIBFILE) $(OBJECTS_LIB)
 
--include $(DEPS_FILE)
+-include $(DEPSFILE)
 
 # recipe for making object files:
 #

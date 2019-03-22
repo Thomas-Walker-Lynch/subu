@@ -27,5 +27,7 @@ CFLAGS=-std=gnu11 -fPIC -I. -I../1_include -ggdb -Werror -DDEBUG -DDEBUGDB
 #CFLAGS=-std=gnu11 -fPIC -I. -I../1_include -Werror
 LINKFLAGS=-L. -L../1_lib -ltests -lda
 
-LIB_FILE=libtests.a
+LIBFILE=libtests.a
+MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+
 

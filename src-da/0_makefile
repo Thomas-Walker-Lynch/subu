@@ -4,8 +4,6 @@ SHELL=/bin/bash
 
 -include 0_makefile-flags
 
-MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
-
 all: version deps lib execs
 
 lib:

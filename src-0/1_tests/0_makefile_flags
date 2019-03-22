@@ -27,5 +27,5 @@ CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
 LINKFLAGS=-L$(PROJECT_SUBU)/src/$(LIBDIR) -L. -lsubu -lsqlite3 -lsubutests
 
-LIB_FILE=$(LIBDIR)/libtests.a
+LIBFILE=$(LIBDIR)/libtests.a
 

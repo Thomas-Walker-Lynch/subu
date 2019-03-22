@@ -1,0 +1,9 @@
+
+      src-da a simple doubling size expanding array in C
+ src-tranche splits source code into multiple files.  A poor man's 'makeheaders'.
+src-dispatch runs a function or shell command as a separate process
+      src-db sqlite schema and interface for subu
+       src-0 The layer 0 commands for subu. Some are setuid root programs.
+      src-py The application layer
+
+

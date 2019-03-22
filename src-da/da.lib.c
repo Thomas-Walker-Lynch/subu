@@ -20,6 +20,17 @@ void da_alloc(Da *dap, size_t item_size){
   dap->base = malloc(dap->size);
   dap->end = dap->base;
 }
+void da_free(Da *dap){
+  free(dap->base);
+  dap->size = 0;
+}
+void da_rewind(Da *dap){
+  dap->end = dap->base;
+}
+
+bool da_empty(Da *dap){
+  return dap->end == dap->base;
+}
 
 // Doubles size of of da.  Returns old base, so that existing pointers into the
 // array can be moved to the new array
@@ -58,6 +69,15 @@ void da_push(Da *dap, void *item){
   dap->end += dap->item_size;
 }
 
+bool da_pop(Da *dap, void *item){
+  bool flag = dap->end >= dap->base + dap->item_size;
+  if( flag ){
+    dap->end -= dap->item_size;
+    if(item) memcpy(item, dap->end, dap->item_size);
+  }
+  return flag;
+}
+
 // passed in f(item_pt, arg_pt)
 // We have no language support closures, so we pass in an argument for it.
 // The closure may be set to NULL if it is not needed.
@@ -70,15 +90,22 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
 }
 
 // da_lists are sometimes used as resource managers
-void da_free(void *pt, void *closure){
+static void da_free_element(void *pt, void *closure){
   free(pt);
 }
 
+void da_free_elements(Da *dap){
+  da_map(dap, da_free_element, NULL);
+  da_rewind(dap);
+}
+
+
 // Puts text from a line into buffer *dap. Does not push EOF or '\n' into the
-// buffer.  Returns the line terminator, which will either be EOF or '\n'.  This
-// will not work very well if the line gets very long, as da doubles in size at
-// buffer overrun. items_size for dap must be sizeof(char).
-int da_fgets(Da *dap, FILE *fd){
+// buffer.  Returns the old_base so that external pointers can be rebased.
+// It is possible that the the base hasn't changed. Use feof(FILE *stream) to
+// test for EOF;
+char *da_fgets(Da *dap, FILE *fd){
+  char *old_base = dap->base;
   int c = fgetc(fd);
   while( c != EOF && c != '\n' ){
     da_push(dap, &c);
@@ -86,5 +113,5 @@ int da_fgets(Da *dap, FILE *fd){
   }
   int terminator = 0;
   da_push(dap, &terminator);
-  return c;
+  return old_base;
 }

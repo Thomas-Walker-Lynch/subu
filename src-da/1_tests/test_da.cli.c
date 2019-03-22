@@ -9,17 +9,28 @@ int main(){
   unsigned int passed = 0;
   unsigned int failed = 0;
 
-  if( !test_da_0() ){
-    failed++;
-    printf("test_da_0 failed\n");
-  }else
-    passed++;
+  // enumeration of tests
+  typedef bool (*test_fun)();
+  test_fun tests[] = {test_da_0, test_da_1, test_da_2, test_da_3, NULL};
+  char *test_names[] = {"test_da_0", "test_da_1", "test_da_2", "test_da_3", NULL};
 
-  if( !test_da_1() ){
-    failed++;
-    printf("test_da_1 failed\n");
-  }else
-    passed++;
+  // call tests
+  test_fun *tfp = tests;
+  char **tnp = test_names;
+  while(*tfp){
+    if( !(*tfp)() ){
+      failed++;
+      if(*tnp)
+        printf("%s failed\n", *tnp);
+      else
+        fprintf(stderr, "internal error, no test_names[] entry for test\n");
+    }else
+      passed++;
+  tfp++;
+  tnp++;
+  }
+
+  // summarize results
 
   if( passed == 0 && failed == 0)
     printf("no tests ran\n");

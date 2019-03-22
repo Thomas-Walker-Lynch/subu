@@ -13,19 +13,20 @@ ECHO= echo
 DEPRDIR=1_deprecated
 DOCDIR=1_doc
 EXECSDIR=1_execs
-HDIR=1_headers
+INCDIR=1_include
 LIBDIR=1_lib
 TESTDIR=1_tests
 TMPDIR=1_tmp
 TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
 TRYDIR=1_try
 
-
 # compiler and flags
 CC=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
+CFLAGS=-std=gnu11 -fPIC -I. -I$(PROJECT_SUBU)/stage/include -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-L1_lib -lsubu -lsqlite3
+LINKFLAGS=-L1_lib -lda 
 
-LIB_FILE=$(LIBDIR)/libsubu.a
+LIBFILE=libtranche.a
+INCFILE=tranche.h
 
+MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc

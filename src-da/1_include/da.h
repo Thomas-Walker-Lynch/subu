@@ -15,13 +15,17 @@ typedef struct Da{
   { da_map(dap, da_free, NULL); return r; }
 
 void da_alloc(Da *dap, size_t item_size);
+void da_free(Da *dap);
+void da_rewind(Da *dap);
 char *da_expand(Da *dap);
 void da_rebase(Da *dap, char *old_base, void *pta);
 bool da_endq(Da *dap, void *pt);
 bool da_boundq(Da *dap);
 void da_push(Da *dap, void *item);
+bool da_pop(Da *dap, void *item);
 void da_map(Da *dap, void f(void *, void *), void *closure);
-void da_free(void *pt, void *closure);
+void da_free_elements(Da *dap);
+char *da_fgets(Da *dap, FILE *fd);
 
 #endif
 

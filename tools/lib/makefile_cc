@@ -90,6 +90,7 @@ sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
 stage:
 	if [ -f $(LIBDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
 	if [ -f $(INCDIR)/$(INCFILE) ]; then cp $(INCDIR)/$(INCFILE) $(PROJECT_SUBU)/stage/include; fi
+	cp $(EXECSDIR)/* $(PROJECT_SUBU)/stage/bin
 
 clean:
 	for i in $(wildcard *~); do mv $$i $(TMPDIR); done

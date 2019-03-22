@@ -6,6 +6,10 @@ SHELL=/bin/bash
 
 all: version deps lib execs
 
+lib:
+	$(MAKE) $@
+	cp tranche.lib.h 1_include/tranche.h
+
 %::
 	$(MAKE) $@
 

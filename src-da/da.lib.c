@@ -78,6 +78,12 @@ bool da_pop(Da *dap, void *element){
   return flag;
 }
 
+char *da_index(Da *dap, size_t i){
+  size_t offset = i * dap->element_size;
+  char *pt = dap->base + offset;
+  return pt;
+}
+
 // passed in f(element_pt, arg_pt)
 // We have no language support closures, so we pass in an argument for it.
 // The closure may be set to NULL if it is not needed.
@@ -91,12 +97,21 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
 
 // da_lists are sometimes used as resource managers
 static void da_free_element(void *pt, void *closure){
-  free(pt);
+  free(*(char **)pt); // free does not care about the pointer type
 }
 
 void da_free_elements(Da *dap){
   da_map(dap, da_free_element, NULL);
   da_rewind(dap);
+}
+
+// for the case of an array of strings
+void da_strings_puts(Da *dap){
+  char *pt = dap->base;
+  while( pt != dap->end ){
+    puts(*(char **)pt);
+  pt += dap->element_size;
+  }
 }
 
 

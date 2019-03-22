@@ -23,8 +23,10 @@ bool da_endq(Da *dap, void *pt);
 bool da_boundq(Da *dap);
 void da_push(Da *dap, void *element);
 bool da_pop(Da *dap, void *element);
+char *da_index(Da *dap, size_t i);
 void da_map(Da *dap, void f(void *, void *), void *closure);
 void da_free_elements(Da *dap);
+void da_strings_puts(Da *dap);
 char *da_fgets(Da *dap, FILE *fd);
 
 #endif

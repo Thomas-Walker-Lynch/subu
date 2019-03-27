@@ -1,6 +1,34 @@
 
 SHELL=/bin/bash
 
+# files used by the compiler
+C_SOURCES_LIB= $(wildcard *.lib.c)
+C_SOURCES_CLI= $(wildcard *.cli.c)
+C_SOURCES= $(C_SOURCES_LIB) $(C_SOURCES_CLI)
+
+CC_SOURCES_LIB= $(wildcard *.lib.cc)
+CC_SOURCES_CLI= $(wildcard *.cli.cc)
+CC_SOURCES= $(CC_SOURCES_LIB) $(CC_SOURCES_CLI)
+
+OBJECTS_LIB=$(sort\
+        $(patsubst %.c, %.o, $(C_SOURCES_LIB))\
+        $(patsubst %.cc, %.o, $(CC_SOURCES_LIB))\
+        )
+OBJECTS_CLI=$(sort\
+        $(patsubst %.c, %.o, $(C_SOURCES_CLI))\
+        $(patsubst %.cc, %.o, $(CC_SOURCES_CLI))\
+        )
+OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
+
+EXECS= $(sort \
+         $(patsubst %.cli.c,  %, $(wildcard *.cli.c))\
+         $(patsubst %.cli.cc,  %, $(wildcard *.cli.cc))\
+         )
+
+#otherwise make provides default values for these
+C=
+CC=
+
 -include 0_makefile-flags
 
 DEPSFILE=$(TMPDIR)/makefile_deps
@@ -11,18 +39,6 @@ DEPSFILE=$(TMPDIR)/makefile_deps
 blank :=
 space :=$(blank)  $(blank)
 
-# files used by the compiler
-SOURCES_LIB= $(wildcard *.lib.c)
-SOURCES_CLI= $(wildcard *.cli.c)
-SOURCES= $(SOURCES_LIB) $(SOURCES_CLI)
-
-HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
-
-OBJECTS_LIB= $(patsubst %.c, %.o, $(SOURCES_LIB))
-OBJECTS_CLI= $(patsubst %.c, %.o, $(SOURCES_CLI))
-OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
-
-EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))
 
 all: version deps lib execs
 
@@ -30,8 +46,10 @@ version:
 	@echo makefile version 3.0
 	@echo "PWD: " $(PWD)
 	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
-	@echo "CC: " $(CC)
+	@echo "C: " $(C)
 	@echo "CFLAGS: " $(CFLAGS)
+	@echo "CC: " $(CC)
+	@echo "CCFLAGS: " $(CCFLAGS)
 	@echo "LINKFLAGS: " $(LINKFLAGS)
 
 info:
@@ -46,10 +64,12 @@ info:
 	@echo "TRYDIR: " $(TRYDIR)
 	@echo "DEPSFILE: " $(DEPSFILE)
 	@echo "LIBFILE: " $(LIBFILE)
-	@echo "SOURCES_LIB: " $(SOURCES_LIB)
-	@echo "SOURCES_CLI: " $(SOURCES_CLI)
-	@echo "SOURCES: " $(SOURCES)
-	@echo "HFILES: " $(HFILES)
+	@echo "C_SOURCES_LIB: " $(C_SOURCES_LIB)
+	@echo "C_SOURCES_CLI: " $(C_SOURCES_CLI)
+	@echo "C_SOURCES: " $(C_SOURCES)
+	@echo "CC_SOURCES_LIB: " $(CC_SOURCES_LIB)
+	@echo "CC_SOURCES_CLI: " $(CC_SOURCES_CLI)
+	@echo "CC_SOURCES: " $(CC_SOURCES)
 	@echo "OBJECTS_LIB: " $(OBJECTS_LIB)
 	@echo "OBJECTS_CLI: " $(OBJECTS_CLI)
 	@echo "OBJECTS: " $(OBJECTS)
@@ -67,22 +87,44 @@ setup:
 	if [ ! -e $(TRYDIR) ]; then mkdir $(TRYDIR); fi
 
 deps:
-	$(CC) $(CFLAGS) -MM $(SOURCES) 1> $(DEPSFILE)
-	for i in $(EXECS) ; do\
-           $(ECHO) >> $(DEPSFILE);\
-           $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
-           $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
-        done
+	@if [ -z "$(CC)" ]; then\
+	  if [ -z "$C()" ]; then\
+	    echo "No compiler specified";\
+	    exit 1;\
+	  else\
+	    echo "C compiler only deps" ;\
+	    $(C) $(CFLAGS) -MM  $(C_SOURCES) 1> $(DEPSFILE);\
+	    echo "deps for C linking";\
+	    for i in $(EXECS) ; do\
+	      $(ECHO) >> $(DEPSFILE);\
+	      $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
+	      $(ECHO) "	$(C) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
+	    done;\
+	  fi;\
+	else\
+	  $(CC) $(CCFLAGS) -MM  $(CC_SOURCES) 1> $(DEPSFILE);\
+	  if [ -z "$C()" ]; then\
+	    echo "CC compiler only deps" ;\
+	  else\
+	    echo "CC and C mixed compile deps" ;\
+	    $(C) $(CFLAGS) -MM  $(C_SOURCES) 1>> $(DEPSFILE);\
+	  fi;\
+	  echo "deps for CC linking";\
+	  for i in $(EXECS) ; do\
+	    $(ECHO) >> $(DEPSFILE);\
+	    $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
+	    $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
+	  done;\
+	fi
 
 lib: 
+	make $(LIBDIR)/$(LIBFILE)
+
+$(LIBDIR)/$(LIBFILE) : $(OBJECTS_LIB)
 	if [ ! -e $(DEPSFILE) ]; then make deps; fi
-	make sub_lib
-
-sub_lib: $(LIBDIR)/$(LIBFILE)
-
+	ar rcs $(LIBDIR)/$(LIBFILE) $(OBJECTS_LIB)
 
 execs: $(LIBDIR)/$(LIBFILE)
-	if [ ! -e $(DEPSFILE) ]; then make deps; fi
 	make sub_execs
 
 sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
@@ -90,7 +132,7 @@ sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
 stage:
 	if [ -f $(LIBDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
 	if [ -f $(INCDIR)/$(INCFILE) ]; then cp $(INCDIR)/$(INCFILE) $(PROJECT_SUBU)/stage/include; fi
-	cp $(EXECSDIR)/* $(PROJECT_SUBU)/stage/bin
+	-cp $(EXECSDIR)/* $(PROJECT_SUBU)/stage/bin
 
 clean:
 	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
@@ -99,15 +141,14 @@ clean:
 	if [ -f $(LIBDIR)/$(LIBFILE) ]; then rm $(LIBDIR)/$(LIBFILE); fi
 	if [ -f $(DEPSFILE) ]; then rm $(DEPSFILE); fi
 
-#
-$(LIBDIR)/$(LIBFILE) : $(OBJECTS_LIB)
-	ar rcs $(LIBDIR)/$(LIBFILE) $(OBJECTS_LIB)
-
 -include $(DEPSFILE)
 
 # recipe for making object files:
 #
 %.o : %.c
-	$(CC) $(CFLAGS) -c $<
+	$(C) $(CFLAGS) -c $<
+
+%.o : %.cc
+	$(CC) $(CCFLAGS) -c $<
 
 

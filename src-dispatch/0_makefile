@@ -1,0 +1,18 @@
+# src-da/0_makefile
+
+SHELL=/bin/bash
+
+-include 0_makefile-flags
+
+all: version deps lib execs
+
+lib:
+	$(MAKE) $@
+	cp da.lib.h 1_include/da.h
+
+%::
+	$(MAKE) $@
+
+
+
+

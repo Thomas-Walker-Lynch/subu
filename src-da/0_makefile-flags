@@ -21,14 +21,17 @@ TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
 TRYDIR=1_try
 
 # compiler and flags
-CC=gcc
+C=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
 LINKFLAGS=-L1_lib -lda 
+
+CC=
 
 LIBFILE=libda.a
 INCFILE=da.h
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
 #MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+
 

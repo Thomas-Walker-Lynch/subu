@@ -30,3 +30,16 @@ LIBFILE=libtranche.a
 INCFILE=tranche.h
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+
+# files used by the compiler
+SOURCES_LIB= $(wildcard *.lib.c)
+SOURCES_CLI= $(wildcard *.cli.c)
+SOURCES= $(SOURCES_LIB) $(SOURCES_CLI)
+
+HFILES = $(wildcard *.lib.h) $(wildcard *.cli.h)
+
+OBJECTS_LIB= $(patsubst %.c, %.o, $(SOURCES_LIB))
+OBJECTS_CLI= $(patsubst %.c, %.o, $(SOURCES_CLI))
+OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
+
+EXECS= $(sort $(patsubst %.cli.c,  %, $(wildcard *.cli.c)))

@@ -1,26 +1,3 @@
-/*
-The purpose of this tools is to facilitate putting prototypes (declarations) next
-to implementations (definitions) in a single source file of a C/C++ programs. 
-
-Splits a single source file into multiple files.  Scans through the single
-source file looking for lines of the form:
-
-  #tranche-begin filename ...
-
-With the # as the first non-space character on the line, and only filename
-following the tag. Upon finding such a line, copies all following lines into the
-listed files, until reaching the end marker:
-
-  #tranche-end
-
-A next improvement of this file would be to support variables to be passed in
-for the file names.  As it stands, changing the file name requires editing 
-the source file.
-
-Files are opened for create or append, so opening to the same file will append
-to the end.
-
-*/
 
 #include <da.h>
 #include <stdio.h>
@@ -72,8 +49,6 @@ static bool parse_file_list(Da *file_names, char *pt0){
   }
 }
 
-
-
 //--------------------------------------------------------------------------------
 // da_map calls
 
@@ -107,15 +82,14 @@ static void tranche_puts_all(Da *fdap, char *string){
   da_map(fdap, tranche_puts, string);
 }
 
-
-
 //--------------------------------------------------------------------------------
-// we have a little problem if the user tries to tranche two things to the same file ..
+// does the work of tranching a source file
+
 int tranche_send(FILE *src, Da *arg_fdap){
   char *pt;
-  Da line;
-  Da file_name_arr;
-  Da fda;
+  Da line; // buffer holding the characters from a line
+  Da file_name_arr; // an array of file name parameters parsed from a #tranche line
+  Da fda; // open file descriptors corresponding to the file name parameters
   da_alloc(&line, sizeof(char));
   da_alloc(&file_name_arr, sizeof(char *));
   da_alloc(&fda, sizeof(int));
@@ -142,5 +116,71 @@ int tranche_send(FILE *src, Da *arg_fdap){
   da_free(&line);
   da_free(&file_name_arr);
   da_free(&fda);
+  return 0;
+}
+
+//--------------------------------------------------------------------------------
+// returns a list of unique target file names from a tranche source
+
+
+// return true if proffered test string is already in the strings array
+typedef struct {
+  char *string;
+  bool found;
+} string_state;
+static void string_equal(void *sp, void *closure){
+  char *string_element = *(char **)sp;
+  string_state *ss = (string_state *)closure;
+  if( ss->found ) return;
+  char *test_string = ss->string;
+  ss->found = !strcmp(string_element, test_string);
+  return;
+}
+static bool exists(Da *strings, char *test_string){
+  string_state ss;
+  ss.string = test_string;
+  ss.found = false;
+  da_map(strings, string_equal, &ss);
+  return ss.found;
+}
+
+// only inserts the string if it is not already in the array
+static void insert_if_unique(Da *strings, char *proffered_string){
+  if( exists( strings, proffered_string)){ // then throw it away, we don't need it
+    free(proffered_string);
+    return;
+  }
+  da_push(strings, proffered_string);
+}
+
+// dissolves proffered array into the existing array
+static void combine_one(void *psp, void *closure){
+  char *proffered_string = (char *)psp;
+  Da *strings = (Da *)closure;
+  insert_if_unique(strings, proffered_string);
+}
+static void combine(Da *strings, Da *proffered_strings){
+  da_map(proffered_strings, combine_one, strings);
+  return;
+}
+
+int tranche_targets(FILE *src, Da *targets){
+  char *pt;
+  Da line; // buffer holding the characters from a line
+  Da file_name_arr;// an array of file name parameters parsed from a #tranche line
+  da_alloc(&line, sizeof(char));
+  da_alloc(&file_name_arr, sizeof(char *));
+  while( !feof(src) ){
+    da_fgets(&line, src);
+    if( is_tranche_end(line.base) ) break;
+    pt = is_tranche_begin(line.base);
+    if(pt){ // then this line is the start of a nested tranche block
+      parse_file_list(&file_name_arr, pt);
+      combine(targets, &file_name_arr); // frees strings that are not inserted
+    }
+    da_rewind(&line);
+  }
+  da_free(&line);
+  da_free(&file_name_arr);
   return 0;
 }

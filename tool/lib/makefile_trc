@@ -1,9 +1,12 @@
 
-# We should read the tranche sources and see what files they output, and then
+# Ideally we would read the tranche sources and see what files they output, and then
 # build the deps accordingly, but this makefile is more primitive approach.
 # Here the programmer must have one output .c file or .cc file per input tranche
 # file and it must be name <base>.{lib,cli}.{c,cc} and the {.c,.cc} output
 # tranche must be named <base>.trc.{c,cc}
+
+# usually we have a bunch of source files and one target, here we have one source
+# file, the tranch file, and a bunch of targets.
 
 # will re-orgnaize the directory structure .. will name the src-da .. etc. to the
 # name of the module, then have a source dir inside that has only the stuff
@@ -11,29 +14,13 @@
 
 SHELL=/bin/bash
 
-#LIDBIR, EXECDIR, HDIR hold the make results that might later be staged
-#$(PWD) is the directory that make was called from, this is already build in
-#set to dot to use the same directory as the source code
-#leave blank to ommit
-DEPRDIR=deprecated
-DOCDIR=doc
-EXECDIR=exec
-INCDIR=include
-LIBDIR=lib
-SRCDIR=src
-TESTDIR=test
-TMPDIR=tmp
-TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
-TRYDIR=try
-
-LIBFILE=$(LIBDIR)/lib$(MODULE).a
-INCFILE=$(MODULE).h
+TRCDIR=trc
 
 # these are the sources edited by the programmer
-C_SOURCE_LIB=  $(wildcard $(SRCDIR)/*.lib.c)
-C_SOURCE_CLI=  $(wildcard $(SRCDIR)/*.cli.c)
-CC_SOURCE_LIB= $(wildcard $(SRCDIR)/*.lib.cc)
-CC_SOURCE_CLI= $(wildcard $(SRCDIR)/*.cli.cc)
+C_TRC_LIB=  $(wildcard $(TRCDIR)/*.lib.c)
+C_TRC_CLI=  $(wildcard $(TRCDIR)/*.cli.c)
+CC_TRC_LIB= $(wildcard $(TRCDIR)/*.lib.cc)
+CC_TRC_CLI= $(wildcard $(TRCDIR)/*.cli.cc)
 
 #remove the suffix to get base name
 C_BASE_LIB=  $(sort $(patsubst %.lib.c,  %, $(notdir $(C_SOURCE_LIB))))

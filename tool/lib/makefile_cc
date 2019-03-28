@@ -1,9 +1,15 @@
 
+# this makefile is usually called from via make from a local makefile
+
+
 #should add test that incdir is not pwd before deleting the include file in
 #dist-clean currently make is looking for module.h while the include file is
 #always module.lib.h so the lib include is not getting clobbered
 
 SHELL=/bin/bash
+
+#--------------------------------------------------------------------------------
+# defaults
 
 # these are the sources edited by the programmer
 C_SOURCE_LIB=  $(wildcard $(SRCDIR)/*.lib.c)
@@ -24,21 +30,39 @@ OBJECT_CLI= $(patsubst %, $(TMPDIR)/%.cli.o, $(C_BASE_CLI) $(CC_BASE_CLI))
 # executables are made from CLI sources
 EXEC= $(patsubst %, $(EXECDIR)/%, $(C_BASE_CLI) $(CC_BASE_CLI))
 
-#otherwise make provides default values for these
-C=
-CC=
+DEPRDIR=deprecated
+DOCDIR=doc
+EXECDIR=exec
+INCDIR=include
+LIBDIR=lib
+SHAREDIR=../share
+SRCDIR=src
+TESTDIR=test
+TMPDIR=tmp
+TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
+TRYDIR=try
 
 DEPFILE=$(TMPDIR)/makefile-dep
 LIBFILE=$(LIBDIR)/lib$(MODULE).a
 INCFILE=$(INCDIR)/$(MODULE).h
 
--include makefile-flags
-
 # a single space literal, for example if you wanted to subsitute commas to
-# spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
-# multiple separate command arguments to a shell script from one variable value
+# spaces: $(subst $(space),;,$(string))
 blank :=
 space :=$(blank)  $(blank)
+
+# prevent make from subsittuing its default for CC
+C=
+CC=
+
+#--------------------------------------------------------------------------------
+# local customization
+#  user must define things needed by the local makefile, the compiler, and flags
+
+-include makefile-flags
+
+#--------------------------------------------------------------------------------
+# targets
 
 .PHONY: all
 all: version dep lib exec
@@ -140,11 +164,11 @@ exec: $(LIBFILE)
 .PHONY: sub_exec
 sub_exec: $(EXEC)
 
-.PHONY: stage
-stage:
-	[ -f $(LIBFILE) ] && cp $(LIBFILE) $(PROJECT_SUBU)/stage/lib || true
-	[ -f $(INCFILE) ] && cp $(INCFILE) $(PROJECT_SUBU)/stage/include || true
-	[ $(shell ls -A $(EXECDIR)) ] && cp $(EXECDIR)/* $(PROJECT_SUBU)/stage/bin || true
+.PHONY: share
+share:
+	if [ -f $(LIBFILE) ];then cp $(LIBFILE) $(SHAREDIR)/lib; fi
+	if [ -f $(INCFILE) ];then cp $(INCFILE) $(SHAREDIR)/include; fi
+	if [ $(shell ls -A $(EXECDIR)) ];then cp $(EXECDIR)/* $(SHAREDIR)/bin; fi
 
 .PHONY: clean
 clean:

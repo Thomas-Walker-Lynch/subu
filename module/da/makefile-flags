@@ -8,21 +8,6 @@ ECHO= echo
 # directories used by this makefile, these could all be set to dot for
 # the simplest source directory structure
 
-#LIDBIR, EXECDIR, INCDIR hold the make results that might later be shared
-#$(PWD) is the directory that make was called from, this is already build in
-#set to dot to use the same directory as the source code
-#leave blank to ommit
-DEPRDIR=deprecated
-DOCDIR=doc
-EXECDIR=exec
-INCDIR=include
-LIBDIR=lib
-SRCDIR=src
-TESTDIR=test
-TMPDIR=tmp
-TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
-TRYDIR=try
-
 # compiler and flags
 C=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 

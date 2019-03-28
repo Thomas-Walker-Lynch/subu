@@ -1,4 +1,6 @@
 
+MODULE=test
+
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
 #ECHO= echo -e
@@ -10,28 +12,22 @@ ECHO= echo
 #$(PWD) is the directory that make was called from, this is already build in
 #set to dot to use the same directory as the source code
 #leave blank to ommit
-DEPRDIR=1_deprecated
-DOCDIR=1_doc
-EXECSDIR=1_execs
-INCDIR=1_include
-LIBDIR=1_lib
-TESTDIR=1_tests
-TMPDIR=1_tmp
+DEPRDIR=
+DOCDIR=
+EXECDIR=.
+INCDIR=.
+LIBDIR=.
+SRCDIR=.
+TESTDIR=
+TMPDIR=.
 TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
-TRYDIR=1_try
+TRYDIR=
 
 # compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-L1_lib -lda 
-
-CC=
-
-LIBFILE=libda.a
-INCFILE=da.h
+CFLAGS=-std=gnu11 -fPIC -I../include -ggdb -Werror -DDEBUG -DDEBUGDB 
+#CFLAGS=-std=gnu11 -fPIC -I../include -Werror
+LINKFLAGS=-L. -L../lib -ltest -lda
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
 #MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
-
-

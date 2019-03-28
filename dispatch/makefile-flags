@@ -1,0 +1,20 @@
+
+# some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
+ECHO= echo
+#ECHO= echo -e
+
+# directories used by this makefile, these could all be set to dot for
+# the simplest source directory structure
+
+# compiler and flags
+C=gcc
+CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
+#CFLAGS=-std=gnu11 -fPIC -I. -Werror
+
+LINKFLAGS=-L1_lib -lda 
+
+MODULE=dispatch
+
+MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_trc
+#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_trc
+

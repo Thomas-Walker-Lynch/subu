@@ -1,4 +1,6 @@
 
+MODULE=da
+
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
 #ECHO= echo -e
@@ -6,30 +8,28 @@ ECHO= echo
 # directories used by this makefile, these could all be set to dot for
 # the simplest source directory structure
 
-#LIDBIR, EXECSDIR, HDIR hold the make results that might later be staged
+#LIDBIR, EXECDIR, INCDIR hold the make results that might later be staged
 #$(PWD) is the directory that make was called from, this is already build in
 #set to dot to use the same directory as the source code
 #leave blank to ommit
-DEPRDIR=1_deprecated
-DOCDIR=1_doc
-EXECSDIR=1_execs
-INCDIR=1_include
-LIBDIR=1_lib
-TESTDIR=1_tests
-TMPDIR=1_tmp
+DEPRDIR=deprecated
+DOCDIR=doc
+EXECDIR=exec
+INCDIR=include
+LIBDIR=lib
+SRCDIR=src
+TESTDIR=test
+TMPDIR=tmp
 TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
-TRYDIR=1_try
+TRYDIR=try
 
 # compiler and flags
 C=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-
-LINKFLAGS=-L1_lib -lda 
-
-LIBFILE=libdispatch.a
-INCFILE=dispatch.h
+LINKFLAGS=-Llib -lda 
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
 #MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+
 

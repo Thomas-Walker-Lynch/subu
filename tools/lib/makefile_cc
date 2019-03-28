@@ -1,37 +1,38 @@
 
+#should add test that incdir is not pwd before deleting the include file in
+#dist-clean currently make is looking for module.h while the include file is
+#always module.lib.h so the lib include is not getting clobbered
+
 SHELL=/bin/bash
 
-# files used by the compiler
-C_SOURCES_LIB= $(wildcard *.lib.c)
-C_SOURCES_CLI= $(wildcard *.cli.c)
-C_SOURCES= $(C_SOURCES_LIB) $(C_SOURCES_CLI)
+# these are the sources edited by the programmer
+C_SOURCE_LIB=  $(wildcard $(SRCDIR)/*.lib.c)
+C_SOURCE_CLI=  $(wildcard $(SRCDIR)/*.cli.c)
+CC_SOURCE_LIB= $(wildcard $(SRCDIR)/*.lib.cc)
+CC_SOURCE_CLI= $(wildcard $(SRCDIR)/*.cli.cc)
 
-CC_SOURCES_LIB= $(wildcard *.lib.cc)
-CC_SOURCES_CLI= $(wildcard *.cli.cc)
-CC_SOURCES= $(CC_SOURCES_LIB) $(CC_SOURCES_CLI)
+#remove the suffix to get base name
+C_BASE_LIB=  $(sort $(patsubst %.lib.c,  %, $(notdir $(C_SOURCE_LIB))))
+C_BASE_CLI=  $(sort $(patsubst %.cli.c,  %, $(notdir $(C_SOURCE_CLI))))
+CC_BASE_LIB= $(sort $(patsubst %.lib.cc, %, $(notdir $(CC_SOURCE_LIB))))
+CC_BASE_CLI= $(sort $(patsubst %.cli.cc, %, $(notdir $(CC_SOURCE_CLI))))
 
-OBJECTS_LIB=$(sort\
-        $(patsubst %.c, %.o, $(C_SOURCES_LIB))\
-        $(patsubst %.cc, %.o, $(CC_SOURCES_LIB))\
-        )
-OBJECTS_CLI=$(sort\
-        $(patsubst %.c, %.o, $(C_SOURCES_CLI))\
-        $(patsubst %.cc, %.o, $(CC_SOURCES_CLI))\
-        )
-OBJECTS= $(OBJECTS_LIB) $(OBJECTS_CLI)
+# two sets of object files, one for the lib, and one for the command line interface progs
+OBJECT_LIB= $(patsubst %, $(TMPDIR)/%.lib.o, $(C_BASE_LIB) $(CC_BASE_LIB))
+OBJECT_CLI= $(patsubst %, $(TMPDIR)/%.cli.o, $(C_BASE_CLI) $(CC_BASE_CLI))
 
-EXECS= $(sort \
-         $(patsubst %.cli.c,  %, $(wildcard *.cli.c))\
-         $(patsubst %.cli.cc,  %, $(wildcard *.cli.cc))\
-         )
+# executables are made from CLI sources
+EXEC= $(patsubst %, $(EXECDIR)/%, $(C_BASE_CLI) $(CC_BASE_CLI))
 
 #otherwise make provides default values for these
 C=
 CC=
 
--include 0_makefile-flags
+DEPFILE=$(TMPDIR)/makefile-dep
+LIBFILE=$(LIBDIR)/lib$(MODULE).a
+INCFILE=$(INCDIR)/$(MODULE).h
 
-DEPSFILE=$(TMPDIR)/makefile_deps
+-include makefile-flags
 
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string)) we ran into this out of a need to send
@@ -39,11 +40,12 @@ DEPSFILE=$(TMPDIR)/makefile_deps
 blank :=
 space :=$(blank)  $(blank)
 
+.PHONY: all
+all: version dep lib exec
 
-all: version deps lib execs
-
+.PHONY: version
 version:
-	@echo makefile version 3.0
+	@echo makefile version 4.0
 	@echo "PWD: " $(PWD)
 	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
 	@echo "C: " $(C)
@@ -52,103 +54,115 @@ version:
 	@echo "CCFLAGS: " $(CCFLAGS)
 	@echo "LINKFLAGS: " $(LINKFLAGS)
 
+.PHONY: info
 info:
-	@echo "DEPDIR: " $(DEPDIR)
+	@echo "DEPRDIR: " $(DEPRDIR)
 	@echo "DOCDIR: " $(DOCDIR)
-	@echo "EXECSDIR: " $(EXECSDIR)
+	@echo "EXECDIR: " $(EXECDIR)
 	@echo "INCDIR: " $(INCDIR)
 	@echo "LIBDIR: " $(LIBDIR)
 	@echo "TESTDIR: " $(TESTDIR)
 	@echo "TMPDIR: " $(TMPDIR)
 	@echo "TOOLSDIR: " $(TOOLSDIR)
 	@echo "TRYDIR: " $(TRYDIR)
-	@echo "DEPSFILE: " $(DEPSFILE)
+	@echo "DEPFILE: " $(DEPFILE)
 	@echo "LIBFILE: " $(LIBFILE)
-	@echo "C_SOURCES_LIB: " $(C_SOURCES_LIB)
-	@echo "C_SOURCES_CLI: " $(C_SOURCES_CLI)
-	@echo "C_SOURCES: " $(C_SOURCES)
-	@echo "CC_SOURCES_LIB: " $(CC_SOURCES_LIB)
-	@echo "CC_SOURCES_CLI: " $(CC_SOURCES_CLI)
-	@echo "CC_SOURCES: " $(CC_SOURCES)
-	@echo "OBJECTS_LIB: " $(OBJECTS_LIB)
-	@echo "OBJECTS_CLI: " $(OBJECTS_CLI)
-	@echo "OBJECTS: " $(OBJECTS)
-	@echo "EXECS: " $(EXECS)
+	@echo "INCFILE: " $(INCFILE)
+	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
+	@echo "C_SOURCE_CLI: " $(C_SOURCE_CLI)
+	@echo "CC_SOURCE_LIB: " $(CC_SOURCE_LIB)
+	@echo "CC_SOURCE_CLI: " $(CC_SOURCE_CLI)
+	@echo "C_BASE_LIB: " $(C_BASE_LIB)
+	@echo "C_BASE_CLI: " $(C_BASE_CLI)
+	@echo "CC_BASE_LIB: " $(CC_BASE_LIB)
+	@echo "CC_BASE_CLI: " $(CC_BASE_CLI)
+	@echo "OBJECT_LIB: " $(OBJECT_LIB)
+	@echo "OBJECT_CLI: " $(OBJECT_CLI)
+	@echo "EXEC: " $(EXEC)
 
 # should be safe to run this in an already setup or partially setup directory
+.PHONY: setup
 setup:
-	if [ ! -e $(DEPRDIR) ]; then mkdir $(DEPRDIR); fi
-	if [ ! -e $(DOCDIR) ]; then mkdir $(DOCDIR); fi
-	if [ ! -e $(EXECSDIR) ]; then mkdir $(EXECSDIR); fi
-	if [ ! -e $(INCDIR) ]; then mkdir $(INCDIR); fi
-	if [ ! -e $(LIBDIR) ]; then mkdir $(LIBDIR); fi
-	if [ ! -e $(TESTDIR) ]; then mkdir $(TESTDIR); fi
-	if [ ! -e $(TMPDIR) ]; then mkdir $(TMPDIR); fi
-	if [ ! -e $(TRYDIR) ]; then mkdir $(TRYDIR); fi
+	[ ! -e $(DEPRDIR) ] && mkdir $(DEPRDIR) || true
+	[ ! -e $(DOCDIR) ]  && mkdir $(DOCDIR)  || true
+	[ ! -e $(EXECDIR) ] && mkdir $(EXECDIR) || true
+	[ ! -e $(INCDIR) ]  && mkdir $(INCDIR)  || true
+	[ ! -e $(LIBDIR) ]  && mkdir $(LIBDIR)  || true
+	[ ! -e $(SRCDIR) ]  && mkdir $(SRCDIR)  || true
+	[ ! -e $(TESTDIR) ] && mkdir $(TESTDIR) || true
+	[ ! -e $(TMPDIR) ]  && mkdir $(TMPDIR)  || true
+	[ ! -e $(TRYDIR) ]  && mkdir $(TRYDIR)  || true
 
-deps:
+#better to put the dependency generation into a loop on the source file and specify -MT for the target
+#also should be redirecting only stdout so stderr messages will be displayed >>1 depfile
+.PHONY: dep
+dep: 
 	@if [ -z "$(CC)" ]; then\
 	  if [ -z "$C()" ]; then\
 	    echo "No compiler specified";\
 	    exit 1;\
 	  else\
 	    echo "C compiler only deps" ;\
-	    $(C) $(CFLAGS) -MM  $(C_SOURCES) 1> $(DEPSFILE);\
+	    $(C) $(CFLAGS) -MM  $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
 	    echo "deps for C linking";\
-	    for i in $(EXECS) ; do\
-	      $(ECHO) >> $(DEPSFILE);\
-	      $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
-	      $(ECHO) "	$(C) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
+	    for i in $(C_BASE_CLI) ; do\
+	      $(ECHO) >> $(DEPFILE);\
+	      $(ECHO) "$(EXECDIR)/$$i : $(TMPDIR)/$$i.cli.o $(LIBFILE)" >> $(DEPFILE);\
+	      $(ECHO) "	$(C) -o $(EXECDIR)/$$i $(TMPDIR)/$$i.cli.o $(LINKFLAGS)" >> $(DEPFILE);\
 	    done;\
 	  fi;\
 	else\
-	  $(CC) $(CCFLAGS) -MM  $(CC_SOURCES) 1> $(DEPSFILE);\
+	  $(CC) $(CCFLAGS) -MM  $(CC_SOURCE_LIB) $(CC_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
 	  if [ -z "$C()" ]; then\
 	    echo "CC compiler only deps" ;\
 	  else\
 	    echo "CC and C mixed compile deps" ;\
-	    $(C) $(CFLAGS) -MM  $(C_SOURCES) 1>> $(DEPSFILE);\
+	    $(C) $(CFLAGS) -MM   $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
 	  fi;\
 	  echo "deps for CC linking";\
-	  for i in $(EXECS) ; do\
-	    $(ECHO) >> $(DEPSFILE);\
-	    $(ECHO) "$(EXECSDIR)/$$i : $$i.cli.o $(LIBDIR)/$(LIBFILE)" >> $(DEPSFILE);\
-	    $(ECHO) "	$(CC) -o $(EXECSDIR)/$$i $$i.cli.o $(LINKFLAGS)" >> $(DEPSFILE);\
+	  for i in $(CC_BASE_CLI) $(C_BASE_CLI) ; do\
+	    $(ECHO) >> $(DEPFILE);\
+	    $(ECHO) "$(EXECDIR)/$$i : $(TMPDIR)/$$i.cli.o $(LIBFILE)" >> $(DEPFILE);\
+	    $(ECHO) "	$(CC) -o $(EXECDIR)/$$i $(TMPDIR)/$$i.cli.o $(LINKFLAGS)" >> $(DEPFILE);\
 	  done;\
 	fi
 
-lib: 
-	make $(LIBDIR)/$(LIBFILE)
+.PHONY: lib
+lib: $(LIBFILE)
 
-$(LIBDIR)/$(LIBFILE) : $(OBJECTS_LIB)
-	if [ ! -e $(DEPSFILE) ]; then make deps; fi
-	ar rcs $(LIBDIR)/$(LIBFILE) $(OBJECTS_LIB)
+$(LIBFILE): $(OBJECT_LIB)
+	ar rcs $(LIBFILE) $(OBJECT_LIB)
 
-execs: $(LIBDIR)/$(LIBFILE)
-	make sub_execs
+.PHONY: exec
+exec: $(LIBFILE)
+	make sub_exec
 
-sub_execs: $(patsubst %,  $(EXECSDIR)/%, $(EXECS))
+.PHONY: sub_exec
+sub_exec: $(EXEC)
 
+.PHONY: stage
 stage:
-	if [ -f $(LIBDIR)/$(LIBFILE) ]; then cp $(LIBDIR)/$(LIBFILE) $(PROJECT_SUBU)/stage/lib; fi
-	if [ -f $(INCDIR)/$(INCFILE) ]; then cp $(INCDIR)/$(INCFILE) $(PROJECT_SUBU)/stage/include; fi
-	-cp $(EXECSDIR)/* $(PROJECT_SUBU)/stage/bin
+	[ -f $(LIBFILE) ] && cp $(LIBFILE) $(PROJECT_SUBU)/stage/lib || true
+	[ -f $(INCFILE) ] && cp $(INCFILE) $(PROJECT_SUBU)/stage/include || true
+	[ $(shell ls -A $(EXECDIR)) ] && cp $(EXECDIR)/* $(PROJECT_SUBU)/stage/bin || true
 
+.PHONY: clean
 clean:
-	for i in $(wildcard *~); do mv $$i $(TMPDIR); done
-	for i in $(wildcard *.lib.o) $(wildcard *.cli.o); do rm $$i; done 
-	for i in $(EXECS); do if [ -e $(EXECSDIR)/$$i ]; then rm $(EXECSDIR)/$$i; fi; done 
-	if [ -f $(LIBDIR)/$(LIBFILE) ]; then rm $(LIBDIR)/$(LIBFILE); fi
-	if [ -f $(DEPSFILE) ]; then rm $(DEPSFILE); fi
+	for i in $(wildcard tmp/*); do rm $$i || true; done 
 
--include $(DEPSFILE)
+.PHONY: dist-clean
+dist-clean: clean
+	for i in $(EXEC); do [ -e $$i ] && rm $$i || true; done 
+	rm $(INCFILE) || true
+	rm $(LIBFILE) || true
 
-# recipe for making object files:
-#
-%.o : %.c
-	$(C) $(CFLAGS) -c $<
+-include $(DEPFILE)
 
-%.o : %.cc
-	$(CC) $(CCFLAGS) -c $<
+# recipes
 
+$(TMPDIR)/%.o : $(SRCDIR)/%.c
+	$(C) $(CFLAGS) -o $@ -c $<
+
+$(TMPDIR)/%.o : $(SRCDIR)/%.cc
+	$(CC) $(CCFLAGS) -o $@ -c $<
 

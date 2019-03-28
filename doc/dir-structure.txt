@@ -1,6 +1,9 @@
 
 ~ is the project directory
 
+--------------------------------------------------------------------------------
+most subdirectories are source modules
+
 
 --------------------------------------------------------------------------------
 ~/tools
@@ -27,29 +30,7 @@ Typically the install target copies material in the staging area to
 system locations.
 
 --------------------------------------------------------------------------------
-~/src
-
-The prefixed numbered directories are overhead for building the src code.
-
-src/1_tests  these are programs that typically must pass before the compiled
-code may be staged.  Tests typically make use of the library in 2_lib and
-the header files in 2_include.
-
-src/1_try a free area for the programmer to try things out. For example when
-learning a language. Programs and code left in this directory might be interesting
-to newcomers.
-
-src/2_bin these are cli executables that have been created by the makefile
-and will be staged after testing
-
-src/2_include  interface header files to be released with the lib. These might
-be different from the build header files found in the src dir.
-
-src/2_lib holds libraries being tested. Currently each src directory only
-builds one library.
-
-3_documents  these are for developers working on src. A user manual might
-be under development.
+~/<module>
 
 
 

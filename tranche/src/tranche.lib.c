@@ -5,17 +5,20 @@ to implementations (definitions) in a single source file of a C/C++ programs.
 Splits a single source file into multiple files.  Scans through the single
 source file looking for lines of the form:
 
-  #tranche filename ...
+  #tranche-begin filename ...
 
 With the # as the first non-space character on the line, and only filename
 following the tag. Upon finding such a line, copies all following lines into the
 listed files, until reaching the end marker:
 
-  #endtranche
+  #tranche-end
 
 A next improvement of this file would be to support variables to be passed in
 for the file names.  As it stands, changing the file name requires editing 
 the source file.
+
+Files are opened for create or append, so opening to the same file will append
+to the end.
 
 */
 
@@ -77,7 +80,7 @@ static bool parse_file_list(Da *file_names, char *pt0){
 static void tranche_open_fd(void *fnp, void *closure){
   char *file_name = *(char **)fnp;
   Da *fdap = (Da *)closure;
-  int fd = open(file_name, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  int fd = open(file_name, O_WRONLY | O_APPEND | O_CREAT, 0666);
   if(fd == -1){
     fprintf(stderr, "Could not open file %s\n", file_name);
     return;

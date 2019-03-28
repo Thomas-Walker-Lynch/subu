@@ -1,3 +1,4 @@
+MODULE=tranche
 
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
@@ -6,28 +7,25 @@ ECHO= echo
 # directories used by this makefile, these could all be set to dot for
 # the simplest source directory structure
 
-#LIDBIR, EXECSDIR, HDIR hold the make results that might later be staged
+#LIDBIR, EXECDIR, INCDIR hold the make results that might later be staged
 #$(PWD) is the directory that make was called from, this is already build in
 #set to dot to use the same directory as the source code
 #leave blank to ommit
-DEPRDIR=
-DOCDIR=
-EXECSDIR=.
-INCDIR=.
-LIBDIR=.
-TESTDIR=.
-TMPDIR=1_tmp
+DEPRDIR=deprecated
+DOCDIR=doc
+EXECDIR=exec
+INCDIR=include
+LIBDIR=lib
+SRCDIR=src
+TESTDIR=test
+TMPDIR=tmp
 TOOLSDIR=$(realpath $(PROJECT_SUBU)/tools)
-TRYDIR=
+TRYDIR=try
 
-
-# compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -I../1_include -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -I../1_include -Werror
-LINKFLAGS=-L. -L../1_lib -ltests -lda
-
-LIBFILE=libtests.a
+CFLAGS=-std=gnu11 -fPIC -I. -I../stage/include -ggdb -Werror -DDEBUG -DDEBUGDB 
+#CFLAGS=-std=gnu11 -fPIC -I. -Werror
+LINKFLAGS=-Llib -L../stage/lib/ -lda -ltranche
 
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_cc
 #MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc

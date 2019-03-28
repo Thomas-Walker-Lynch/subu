@@ -1,11 +1,11 @@
 #MAKEABLE=$(shell \
-#    find .\
+#    find src-*\
 #	\( -name 'makefile' -o -name 'Makefile' \)\
 #	-printf "%h\n"\
 #    | grep -v deprecated | grep -v doc | sort -u | sed ':a;N;$!ba;s/\n/ /g' \
 #)
 
-MAKEABLE= da da/test tranche
+MAKEABLE= module/da module/da/test module/tranche
 
 .PHONY: all info clean dist-clean
 

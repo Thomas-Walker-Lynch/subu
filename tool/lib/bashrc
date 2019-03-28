@@ -11,7 +11,7 @@ PATH=~/bin:$PATH
 
 #temporarily while active in subu code development
 export PROJECT_SUBU=~/subu
-PATH="$PROJECT_SUBU"/tools/bin:$PATH
+PATH="$PROJECT_SUBU"/tool/bin:$PATH
 
 export PS_FORMAT=user:15,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command
 

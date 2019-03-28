@@ -63,7 +63,7 @@ info:
 	@echo "LIBDIR: " $(LIBDIR)
 	@echo "TESTDIR: " $(TESTDIR)
 	@echo "TMPDIR: " $(TMPDIR)
-	@echo "TOOLSDIR: " $(TOOLSDIR)
+	@echo "TOOLDIR: " $(TOOLDIR)
 	@echo "TRYDIR: " $(TRYDIR)
 	@echo "DEPFILE: " $(DEPFILE)
 	@echo "LIBFILE: " $(LIBFILE)

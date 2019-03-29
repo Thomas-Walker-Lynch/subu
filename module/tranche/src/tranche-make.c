@@ -1,7 +1,10 @@
 /*
-Scans a tranche file and outputs a dep line suitable for make.
+Scans a tranche file and outputs a make rule for makefile-deps, of the form:
 
-The dep file is opened for append. If the depfile is not present stdout is used.
+<target>...  : <src>
+      tranche $@
+
+ file is opened for append. If the depfile is not present stdout is used.
 
 If the given source file name has a directory prefix, the targets in 
 the dep line are given the same prefix.

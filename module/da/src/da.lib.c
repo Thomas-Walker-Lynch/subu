@@ -78,6 +78,28 @@ bool da_pop(Da *dap, void *element){
   return flag;
 }
 
+void da_cat(Da *dap0, Da *dap1){
+  if(dap1->base == dap1->end) return;
+  size_t dap0_size = dap0->end - dap0->base;
+  size_t dap1_size = dap1->end - dap1->base; // size of the active portion
+  dap0->end += dap1_size;
+  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
+  memcpy(dap0->base + dap0_size, dap1->base, dap1_size);
+}
+
+// If dap0 has had a terminatating zero added, that must be popped off before
+// the call.  Similarly if a terminating zero is desired, it should be pushed
+// after the call.
+void da_push_string(Da *dap0, char *string){
+  if(!*string) return;
+  size_t dap0_size = dap0->end - dap0->base;
+  size_t string_size = strlen(string);
+  dap0->end += string_size;
+  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
+  memcpy(dap0->base + dap0_size, string, string_size);
+}
+
+
 char *da_index(Da *dap, size_t i){
   size_t offset = i * dap->element_size;
   char *pt = dap->base + offset;
@@ -108,8 +130,18 @@ void da_free_elements(Da *dap){
 // for the case of an array of strings
 void da_strings_puts(Da *dap){
   char *pt = dap->base;
-  while( pt != dap->end ){
+  while( pt < dap->end ){
     puts(*(char **)pt);
+  pt += dap->element_size;
+  }
+}
+
+// would like to pass in the printf format to make a general print
+// but can't get *pt on the stack for the printf call .. hmmm
+void da_ints_print(Da *dap){
+  char *pt = dap->base;
+  while( pt < dap->end ){
+    printf("%u\n", *(int *)pt);
   pt += dap->element_size;
   }
 }

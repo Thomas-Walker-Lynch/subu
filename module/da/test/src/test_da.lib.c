@@ -128,6 +128,43 @@ bool test_da_3(){
   return f0 && f1 && f2 && f3;
 }
 
+// da_cat
+bool test_da_4(){
+
+  Da da0, da1;
+  da_alloc(&da0, sizeof(int));
+  da_alloc(&da1, sizeof(int));
+
+  int i = 5;
+  while(i < 8){
+    da_push(&da0, &i);
+  i++;
+  }
+  while(i < 11){
+    da_push(&da1, &i);
+  i++;
+  }
+
+  da_cat(&da0, &da1);
+
+  bool f[6];
+  int j;
+  int k = 0;
+  while(k < 6){
+    f[k] = da_pop(&da0, &j) && (j == 10 - k);
+  k++;
+  }
+
+  bool result = f[0];
+  k = 1;
+  while(result && k < 6){
+    result = f[k];
+  k++;
+  }
+
+  return result;
+}
+
 
 
 

@@ -32,10 +32,12 @@ int main(int argc, char **argv, char **envp){
   }
   if(err) return err;
 
-  Da targets;
-  da_alloc(&targets, sizeof(char *));
-  tranche_targets(src_file, &targets);
-  da_strings_puts(&targets);
+  Da target_arr;
+  Da *target_arrp = &target_arr;
+  da_alloc(target_arrp, sizeof(char *));
+  tranche_target(src_file, target_arrp);
+  da_strings_puts(target_arrp);
+  da_free_elements(target_arrp);
   fclose(src_file);
   return 0;
 }

@@ -1,5 +1,0 @@
-./test_da.lib.o: test_da.lib.c ../include/da.h test_da.lib.h
-./test_da.cli.o: test_da.cli.c test_da.lib.h
-
-./test_da : ./test_da.cli.o ./libtest.a
-	gcc -o ./test_da ./test_da.cli.o -L. -L../lib -ltest -lda

@@ -74,37 +74,40 @@ bool test_da_1(){
 // da_fgets
 bool test_da_2(){
 
-  FILE *fd = fopen("test.dat","r");
+  char *data_file_name = "../lib/test.dat";
+  FILE *file = fopen(data_file_name,"r");
+  if(!file){
+    fprintf(stderr,"test_da_2, could not open data file %s for reading\n", data_file_name);
+    return false;
+  }
 
   Da da;
   da_alloc(&da, sizeof(char));
 
-  da_fgets(&da, fd);
+  da_fgets(&da, file);
   bool f0 = !strcmp(da.base, "this is a test");
 
   char *old_base;
   da_pop(&da, NULL); // pop the prior null terminator
   char *s1 = da.end;
-  old_base = da_fgets(&da,fd);
+  old_base = da_fgets(&da,file);
   da_rebase(&da, old_base, &s1);
   bool f1 = !strcmp(s1, "ends without a newline");
   
   da_pop(&da, NULL); // pop the prior null terminator
   char *s2 = da.end;
-  old_base = da_fgets(&da,fd);
+  old_base = da_fgets(&da,file);
   da_rebase(&da, old_base, &s2);
   bool f2 = !strcmp(s2, "(setq mode-require-final-newline nil)");
 
   bool f3 = !strcmp(da.base, "this is a testends without a newline(setq mode-require-final-newline nil)");
 
-  fclose(fd);
+  fclose(file);
   return f0 && f1 && f2 && f3;
 }
 
 // da_fgets
 bool test_da_3(){
-
-  FILE *fd = fopen("test.dat","r");
 
   Da da;
   da_alloc(&da, sizeof(int));

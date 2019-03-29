@@ -132,39 +132,38 @@ static void string_equal(void *sp, void *closure){
   char *string_element = *(char **)sp;
   string_state *ss = (string_state *)closure;
   if( ss->found ) return;
-  char *test_string = ss->string;
-  ss->found = !strcmp(string_element, test_string);
+  ss->found = !strcmp(string_element, ss->string);
   return;
 }
-static bool exists(Da *strings, char *test_string){
+static bool exists(Da *string_arrp, char *test_string){
   string_state ss;
   ss.string = test_string;
   ss.found = false;
-  da_map(strings, string_equal, &ss);
+  da_map(string_arrp, string_equal, &ss);
   return ss.found;
 }
 
 // only inserts the string if it is not already in the array
-static void insert_if_unique(Da *strings, char *proffered_string){
-  if( exists( strings, proffered_string)){ // then throw it away, we don't need it
+static void insert_if_unique(Da *string_arrp, char *proffered_string){
+  if( exists( string_arrp, proffered_string)){ // then throw it away, we don't need it
     free(proffered_string);
     return;
   }
-  da_push(strings, proffered_string);
+  da_push(string_arrp, &proffered_string);
 }
 
 // dissolves proffered array into the existing array
 static void combine_one(void *psp, void *closure){
-  char *proffered_string = (char *)psp;
-  Da *strings = (Da *)closure;
-  insert_if_unique(strings, proffered_string);
+  char *proffered_string = *(char **)psp;
+  Da *string_arrp = (Da *)closure;
+  insert_if_unique(string_arrp, proffered_string);
 }
-static void combine(Da *strings, Da *proffered_strings){
-  da_map(proffered_strings, combine_one, strings);
+static void combine(Da *string_arrp, Da *proffered_string_arrp){
+  da_map(proffered_string_arrp, combine_one, string_arrp);
   return;
 }
 
-int tranche_targets(FILE *src, Da *targets){
+int tranche_target(FILE *src, Da *target_arrp){
   char *pt;
   Da line; // buffer holding the characters from a line
   Da file_name_arr;// an array of file name parameters parsed from a #tranche line
@@ -176,7 +175,9 @@ int tranche_targets(FILE *src, Da *targets){
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
       parse_file_list(&file_name_arr, pt);
-      combine(targets, &file_name_arr); // frees strings that are not inserted
+      combine(target_arrp, &file_name_arr); // frees strings that are not inserted
+      da_rewind(&file_name_arr);
+      tranche_target(src, target_arrp);
     }
     da_rewind(&line);
   }

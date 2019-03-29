@@ -42,10 +42,6 @@ TMPDIR=tmp
 TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
 TRYDIR=try
 
-DEPFILE=$(TMPDIR)/makefile-dep
-LIBFILE=$(LIBDIR)/lib$(MODULE).a
-INCFILE=$(INCDIR)/$(MODULE).h
-
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string))
 blank :=
@@ -60,6 +56,10 @@ CC=
 #  user must define things needed by the local makefile, the compiler, and flags
 
 -include makefile-flags
+
+DEPFILE=$(TMPDIR)/makefile-dep
+LIBFILE=$(LIBDIR)/lib$(MODULE).a
+INCFILE=$(INCDIR)/$(MODULE).h
 
 #--------------------------------------------------------------------------------
 # targets
@@ -166,9 +166,9 @@ sub_exec: $(EXEC)
 
 .PHONY: share
 share:
-	if [ -f $(LIBFILE) ];then cp $(LIBFILE) $(SHAREDIR)/lib; fi
-	if [ -f $(INCFILE) ];then cp $(INCFILE) $(SHAREDIR)/include; fi
-	if [ $(shell ls -A $(EXECDIR)) ];then cp $(EXECDIR)/* $(SHAREDIR)/bin; fi
+	if [ ! -z "$(wildcard $(LIBDIR)/*)" ]; then cp $(LIBDIR)/* $(SHAREDIR)/lib; fi
+	if [ ! -z "$(wildcard $(INCDIR)/*)" ]; then cp $(INCDIR)/* $(SHAREDIR)/include; fi
+	if [ ! -z "$(wildcard $(EXECDIR)/*)" ]; then cp $(EXECDIR)/* $(SHAREDIR)/bin; fi
 
 .PHONY: clean
 clean:

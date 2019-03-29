@@ -6,7 +6,7 @@
 #define TRANCHE_ERR_DEP_OPEN 4
 
 int tranche_send(FILE *src, Da *arg_fds);
-int tranche_targets(FILE *src, Da *targets);
+int tranche_target(FILE *src, Da *targets);
 
 
 #endif

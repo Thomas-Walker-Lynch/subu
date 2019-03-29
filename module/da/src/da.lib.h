@@ -17,6 +17,8 @@ typedef struct Da{
 void da_alloc(Da *dap, size_t element_size);
 void da_free(Da *dap);
 void da_rewind(Da *dap);
+bool da_emptyq(Da *dap);
+size_t da_length(Da *dap);
 char *da_expand(Da *dap);
 void da_rebase(Da *dap, char *old_base, void *pta);
 bool da_endq(Da *dap, void *pt);

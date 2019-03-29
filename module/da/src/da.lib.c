@@ -28,9 +28,14 @@ void da_rewind(Da *dap){
   dap->end = dap->base;
 }
 
-bool da_empty(Da *dap){
+bool da_emptyq(Da *dap){
   return dap->end == dap->base;
 }
+
+size_t da_length(Da *dap){
+  return dap->end - dap->base;
+}
+
 
 void da_rebase(Da *dap, char *old_base, void *pta){
   char **pt = (char **)pta;
@@ -129,7 +134,7 @@ void da_free_elements(Da *dap){
 
 // for the case of an array of strings
 void da_strings_puts(Da *dap){
-  char *pt = dap->base;
+  char *pt = dap->base; // char * because it points to a byte in the array
   while( pt < dap->end ){
     puts(*(char **)pt);
   pt += dap->element_size;

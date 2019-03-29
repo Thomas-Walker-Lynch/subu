@@ -28,7 +28,7 @@ the same file as one already open in the containing tranche ..
 int main(int argc, char **argv, char **envp){
   if(argc != 2){
     fprintf(stderr, "usage: %s <source-file>\n",argv[0]);
-    return TRANCHE_ERR_ARGC;
+    return TRANCHE_ERR_ARG_PARSE;
   }
   FILE *file = fopen(argv[1], "r");
   if(!file){

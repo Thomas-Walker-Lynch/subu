@@ -33,7 +33,7 @@ bool da_emptyq(Da *dap){
 }
 
 size_t da_length(Da *dap){
-  return dap->end - dap->base;
+  return (dap->end - dap->base)/dap->element_size;
 }
 
 

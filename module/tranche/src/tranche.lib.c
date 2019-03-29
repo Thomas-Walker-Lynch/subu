@@ -190,7 +190,7 @@ int tranche_target(FILE *src, Da *target_arrp){
 // Inserts a zero to chop off the filename similar to the old basename.
 // Returns a pointer to the first character after the inserted zero, i.e. to the filename.
 char *path_chop(char *path){
-  file = path + strlen(path);
+  char *file = path + strlen(path);
   if(file == path) return file;
   file--;
   if(file == path){
@@ -216,10 +216,10 @@ char *path_chop(char *path){
 void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char *tdir){
 
   // target list
-  Da tarr;
-  Da *tarrp; // target array pointer
-  da_alloc(tarrp, sizeof(char *));
-  tranche_target(src_file, tarrp);
+  Da ta;
+  Da *tap=&ta; // target array pointer
+  da_alloc(tap, sizeof(char *));
+  tranche_target(src_file, tap);
 
   char sp = ' ';
   char colon = ':';
@@ -229,41 +229,39 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char
   char terminator = 0;
 
   // output the dependency line ----------------------------------------
-  Da dlarr;
-  Da *dlarrp; // dependency line array pointer
-  da_alloc(dlarrp, sizeof(char));
-  char *pt = tarrp->base; // char * because it points to a byte in the array
-  while( pt < tarrp->end ){
+  Da dla;
+  Da *dlap=&dla; // dependency line array pointer
+  da_alloc(dlap, sizeof(char));
+  char *pt = tap->base; // char * because it points to a byte in the array
+  while( pt < tap->end ){
     if(tdir){
-      da_push_string(dlarrp, tdir);
-      da_push(dlarrp, &slash);
+      da_push_string(dlap, tdir);
+      da_push(dlap, &slash);
     }
-    da_push_string(dlarrp, *(char **)pt);
-    da_push(dlarrp, &sp);
-  pt += dap->element_size;
+    da_push_string(dlap, *(char **)pt);
+    da_push(dlap, &sp);
+  pt += tap->element_size;
   }
-  da_push(dlarrp, &colon);
-  da_push(dlarrp, &sp);
+  da_push(dlap, &colon);
+  da_push(dlap, &sp);
   if(sdir){
-    da_push_string(dlarrp, sdir);
-    da_push(dlarrp, &slash);
+    da_push_string(dlap, sdir);
+    da_push(dlap, &slash);
   }
-  da_push_string(dlarrp, src_name);
-  da_push(dlarrp, &newline);
-  da_push(dlarrp, &terminator);
-  write(mfile_fd, dlarrp->base, dlarrp->end - dlarrp->base);
-  da_free_elements(tarrp);
-  da_free(tarrp);
+  da_push_string(dlap, src_name);
+  da_push(dlap, &newline);
+  write(mfile_fd, dlap->base, dlap->end - dlap->base);
+  da_free_elements(tap);
+  da_free(tap);
   
   // output acction line ----------------------------------------
-  da_rewind(dlarrp); // reuse the line buffer
-  da_push(dlarrp, &tab);
-  da_push_string(dlarrp, "tranche $<");
-  da_push(dlarrp, &newline);
-  da_push(dlarrp, &newline);
-  da_push(dlarrp, &terminator);
-  write(mfile_fd, dlarrp->base, dlarrp->end - dlarrp->base);
-  da_free(dlarrp);
+  da_rewind(dlap); // reuse the line buffer
+  da_push(dlap, &tab);
+  da_push_string(dlap, "tranche $<");
+  da_push(dlap, &newline);
+  da_push(dlap, &newline);
+  write(mfile_fd, dlap->base, dlap->end - dlap->base);
+  da_free(dlap);
 
   return;
 }

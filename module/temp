@@ -1,0 +1,10 @@
+sed -i -e 's/makefile_cc/makefile-cc/g' ./db/0_makefile
+sed -i -e 's/makefile_cc/makefile-cc/g' ./subu-0/1_tests/0_makefile
+sed -i -e 's/makefile_cc/makefile-cc/g' ./subu-0/0_makefile
+sed -i -e 's/makefile_cc/makefile-cc/g' ./tranche/deprecated/0_makefile
+sed -i -e 's/makefile_cc/makefile-cc/g' ./tranche/makefile-flags
+sed -i -e 's/makefile_cc/makefile-cc/g' ./tranche/makefile-flags
+sed -i -e 's/makefile_cc/makefile-cc/g' ./da/test/makefile-flags
+sed -i -e 's/makefile_cc/makefile-cc/g' ./da/test/makefile-flags
+sed -i -e 's/makefile_cc/makefile-cc/g' ./da/makefile-flags
+sed -i -e 's/makefile_cc/makefile-cc/g' ./da/makefile-flags

@@ -1,0 +1,37 @@
+
+# This makefile is usually called through a local makefile rather than directly.
+# The purpose of this makefile is to expand out the tranched C/CC sources, and
+# otherwise to fall through to makefile_cc.
+
+SHELL=/bin/bash
+
+TRCDIR=trc
+
+# these are the sources edited by the programmer
+TRC_FILE= $(wildcard $(TRCDIR)/*.trc.c) $(wildcard $(TRCDIR)/*.trc.cc)
+
+-include makefile-flags
+
+MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
+#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tool/lib/makefile-cc
+
+DEPFILE=$(TMPDIR)/makefile-trc.deps
+
+all: version deps lib execs
+
+.PHONY: all version deps lib exec
+all: version deps lib exec
+
+lib:
+	$(MAKE) $@
+
+exec:
+	$(MAKE) $@
+
+share:
+	if [ ! -z "$(wildcard $(EXECDIR)/*)" ]; then cp $(EXECDIR)/* $(PROJECT_SUBU)/tool/bin; fi
+
+%::
+	$(MAKE) $@
+
+dep: 

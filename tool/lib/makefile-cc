@@ -1,10 +1,9 @@
 
-# this makefile is usually called from via make from a local makefile
+# This makefile is usually called through a local makefile rather than directly.
 
-
-#should add test that incdir is not pwd before deleting the include file in
-#dist-clean currently make is looking for module.h while the include file is
-#always module.lib.h so the lib include is not getting clobbered
+# should add test that incdir is not pwd before deleting the include
+# file. Currently it is working for us despite this problem because dist-clean is
+# looking for $(module).h while the include file is always $(module).lib.h.
 
 SHELL=/bin/bash
 
@@ -57,7 +56,7 @@ CC=
 
 -include makefile-flags
 
-DEPFILE=$(TMPDIR)/makefile-dep
+DEPFILE=$(TMPDIR)/makefile-cc.deps
 LIBFILE=$(LIBDIR)/lib$(MODULE).a
 INCFILE=$(INCDIR)/$(MODULE).h
 

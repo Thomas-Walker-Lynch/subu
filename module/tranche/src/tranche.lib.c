@@ -187,33 +187,23 @@ int tranche_target(FILE *src, Da *target_arrp){
   return 0;
 }
 
-// Inserts a zero to chop off the filename similar to the old basename.
-// Returns a pointer to the first character after the inserted zero, i.e. to the filename.
-char *path_chop(char *path){
-  char *file = path + strlen(path);
-  if(file == path) return file;
-  file--;
-  if(file == path){
-    if(*file == '.') file++; // lone '.' case
-    return file;
+// replaces trailing slashes with zeros
+void path_trim_slashes(char *path){
+  if(!path || !*path) return;
+  char *pt = path + strlen(path) - 1;
+ loop:
+  if(*pt == '/'){
+    *pt = 0;
+    if(pt != path){
+      pt--;
+      goto loop;
+    }
   }
-  file--;
-  if(file == path){
-    if(*file == '.' && *(file+1)=='.') file+=2; // lone '..' case
-    return file;
-  }
-  do{
-    file--;
-  }while(file != path && *file != '/');
-  if( *file == '/' ){
-    *file = 0;
-    file++;
-  }
-  return file;
+  return;
 }
 
 // write a make file rule for making the tranche targets
-void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char *tdir){
+void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
 
   // target list
   Da ta;
@@ -228,7 +218,7 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char
   char tab = '\t';
   char terminator = 0;
 
-  // output the dependency line ----------------------------------------
+  // construct then output the dependency line ----------------------------------------
   Da dla;
   Da *dlap=&dla; // dependency line array pointer
   da_alloc(dlap, sizeof(char));
@@ -244,10 +234,6 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char
   }
   da_push(dlap, &colon);
   da_push(dlap, &sp);
-  if(sdir){
-    da_push_string(dlap, sdir);
-    da_push(dlap, &slash);
-  }
   da_push_string(dlap, src_name);
   da_push(dlap, &newline);
   write(mfile_fd, dlap->base, dlap->end - dlap->base);
@@ -258,6 +244,10 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *sdir, char
   da_rewind(dlap); // reuse the line buffer
   da_push(dlap, &tab);
   da_push_string(dlap, "tranche $<");
+  if(tdir){
+    da_push_string(dlap, " -tdir ");
+    da_push_string(dlap, tdir);
+  }
   da_push(dlap, &newline);
   da_push(dlap, &newline);
   write(mfile_fd, dlap->base, dlap->end - dlap->base);

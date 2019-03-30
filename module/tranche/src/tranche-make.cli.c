@@ -1,11 +1,7 @@
 /*
 
-.. don't think I need sdir, just pass src_file_path through as the source,
-need to add -tdir option to the tranche call, an mod tranche to take it.
-sname then becomes also becomes a path to src. 
-
 usage: 
-   argv[0] [<src_file_path>] [-sname <sname>] [-sdir <dir>] [-tdir <dir>] [-mfile <mfile_path>]
+   argv[0] [<src_file_path>] [-sname <sname>] [-tdir <tdir>] [-mfile <mfile_path>]
 
 gets the names of all the targets from the source file, then appends
 to the mfile a couple of lines of the form:
@@ -18,8 +14,7 @@ located.
 
 options
 <src_file_path>  the trc file to be read
--sdir <sdir>   prepend <sdir> to <src> in the makefile deps line that is printed
--tdir <tdir>   prepend <tdir> to each <target> "
+-tdir <tdir>   prepend <tdir>/ to each <target> "
 -mfile <mfile_path> where to send the output, defaults to stdout
 -sname <sname> replaces sourcename as the name to write as the source - useful for pipes
 
@@ -29,7 +24,7 @@ If -sdir is not provided, the directory part of the <src_file_path> is used. If 
 user does not want this behavior, give a value of "." for -sdir.
 
 .. should modify this to allow multiple source files on the command line ..
-
+.. should check that tdir is an existing directory
 */
   
 #include <sys/types.h>
@@ -45,7 +40,6 @@ int main(int argc, char **argv, char **envp){
 
   char *src_file_path = 0;
   char *sname = 0;
-  char *sdir = 0;  
   char *tdir = 0;  
   char *mfile_path = 0; 
 
@@ -77,10 +71,6 @@ int main(int argc, char **argv, char **envp){
           mfile_path = value;
           goto endif;
         }
-        if( !strcmp(option, "sdir") ){
-          sdir = value;
-          goto endif;
-        }
         if( !strcmp(option, "tdir") ){
           tdir = value;
           goto endif;
@@ -102,16 +92,16 @@ int main(int argc, char **argv, char **envp){
     if(args_cnt > 1) src_file_path = *(char **)da_index(argsp, 1);
 
     // arg contracts
-    if(da_length(argsp) > 2){
+    if(args_cnt > 2){
       fprintf(stderr, "too many args\n");
       err_cnt++;
     }
     if(!src_file_path && !sname){
-      fprintf(stderr, "must specify at least one eof a src_file_path or an sname\n");
+      fprintf(stderr, "must specify at least one of a src_file_path or an sname\n");
       err_cnt++;
     }
     if(err_cnt > 0){
-      fprintf(stderr, "usage: %s [<src_file_path>] [-sname <sname>] [-sdir <dir>] [-tdir <dir>] [-mfile <mfile_path>]\n", argv[0]);
+      fprintf(stderr, "usage: %s [<src_file_path>] [-sname <sname>] [-tdir <dir>] [-mfile <mfile_path>]\n", argv[0]);
       return TRANCHE_ERR_ARG_PARSE;
     }
     da_free(argsp); // this only frees the array itself, not the things it points to
@@ -143,14 +133,9 @@ int main(int argc, char **argv, char **envp){
     if(err) return err;
   }
 
-  char *file_name_part;
-  if(src_file_path){
-    // we are guaranteed a filename part, otherwise the fopen above would have failed
-    file_name_part = path_chop(src_file_path);
-    if(!sname) sname = file_name_part;
-    if(!sdir && file_name_part != src_file_path) sdir = src_file_path; // note the file name has been chopped from src_file_path
-  }
-  tranche_make(src_file, sname,  mfile_fd, sdir, tdir);
+  if(sname)src_file_path = sname;
+  path_trim_slashes(tdir);
+  tranche_make(src_file, src_file_path,  mfile_fd, tdir);
 
   { // deallocate resources instead of just existing, so as to catch any errors
     int err_cnt = 0;

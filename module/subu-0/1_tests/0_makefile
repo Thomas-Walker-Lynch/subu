@@ -4,7 +4,7 @@ SHELL=/bin/bash
 
 -include 0_makefile_flags
 
-MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile-cc
 
 SOURCES=$(wildcard *.c)
 HFILES=$(wildcard *.h)

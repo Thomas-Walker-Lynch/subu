@@ -5,7 +5,7 @@ SHELL=/bin/bash
 -include 0_makefile_flags
 
 SUID_TOOL=$(TOOLSDIR)/bin/setuid_root.sh
-MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_cc
+MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile-cc
 
 SOURCES=$(wildcard *.c)
 HFILES=$(wildcard *.h)

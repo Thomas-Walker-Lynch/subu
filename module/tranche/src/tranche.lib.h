@@ -9,7 +9,7 @@
 #define TRANCHE_ERR_SNAME 32
 
 void path_trim_slashes(char *path);
-int tranche_send(FILE *src, Da *arg_fds);
+int tranche_send(FILE *src, Da *arg_fds, char *tdir);
 int tranche_target(FILE *src, Da *targets, char *tdir);
 void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir);
 

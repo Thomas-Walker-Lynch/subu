@@ -10,6 +10,11 @@ MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 .PHONY: all
 all: version
 
+.PHONY: dep
+dep:
+	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
+	$(MAKE) $@
+
 .PHONY: lib
 lib:
 	$(MAKE) $@

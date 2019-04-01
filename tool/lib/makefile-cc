@@ -30,7 +30,6 @@ OBJECT_CLI= $(patsubst %, $(TMPDIR)/%.cli.o, $(C_BASE_CLI) $(CC_BASE_CLI))
 EXEC= $(patsubst %, $(EXECDIR)/%, $(C_BASE_CLI) $(CC_BASE_CLI))
 
 # default directory seteup
-# For TRC projects define TRDIR (even if it is just '.'), and typically set SRCDIR to tmp
 #
 
 DEPRDIR=deprecated
@@ -43,7 +42,6 @@ SRCDIR=src
 TESTDIR=test
 TMPDIR=tmp
 TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
-TRCDIR=
 TRYDIR=try
 
 
@@ -66,17 +64,6 @@ DEPFILE=$(TMPDIR)/makefile-cc.deps
 LIBFILE=$(LIBDIR)/lib$(MODULE).a
 INCFILE=$(INCDIR)/$(MODULE).h
 
-#--------------------------------------------------------------------------------
-# when local customizations set a TRCDIR, then these are the actual sources
-
-ifneq ($TRCDIR,)
-  TRCSOURCES=$(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc)
-  TRCTARGETS=
-else
-  TRCSOURCES=
-  TRCTARGETS=
-endif
-
 
 #--------------------------------------------------------------------------------
 # targets
@@ -86,7 +73,7 @@ all: version
 
 .PHONY: version
 version:
-	@echo makefile version 5.0
+	@echo makefile version 6.0
 	@echo "PWD: " $(PWD)
 	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
 	@echo "C: " $(C)
@@ -105,12 +92,10 @@ info:
 	@echo "TESTDIR: " $(TESTDIR)
 	@echo "TMPDIR: " $(TMPDIR)
 	@echo "TOOLDIR: " $(TOOLDIR)
-	@echo "TRCDIR: " $(TRCDIR)
 	@echo "TRYDIR: " $(TRYDIR)
 	@echo "DEPFILE: " $(DEPFILE)
 	@echo "LIBFILE: " $(LIBFILE)
 	@echo "INCFILE: " $(INCFILE)
-	@echo "TRCSOURCES: " $(TRCSOURCES)
 	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_CLI: " $(C_SOURCE_CLI)
@@ -136,37 +121,10 @@ setup:
 	[ ! -e $(SRCDIR)  ]  && mkdir $(SRCDIR)  || true
 	[ ! -e $(TESTDIR) ]  && mkdir $(TESTDIR) || true
 	[ ! -e $(TMPDIR)  ]  && mkdir $(TMPDIR)  || true
-	[ ! -e $(TRCDIR)  ]  && mkdir $(TRCDIR)  || true
 	[ ! -e $(TRYDIR)  ]  && mkdir $(TRYDIR)  || true
-
-# gee this script could be better, particlarly in gathering the targets
-# it would be simplified if the tranche commands took multiple source arguments
-# if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
-# if [ ! -z "$(TRCSOURCES)" ]; then\
-#   targets="";\
-#   for i in $(TRCSOURCES); do\
-#     tranche-make $$i -tdir $(SRCDIR) -mfile $(DEPFILE);\
-#     targets+=$$(tranche-target $$i);\
-#     targets+=" ";\
-#   done;\
-#   echo $$targets;\
-# fi    
-
 
 .PHONY: dep
 dep:
-	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
-ifneq ($(TRCDIR),)
-	$(ECHO) TRC deps
-	@trcsources=$(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc);\
-	$(ECHO) $$trcsources;\
-	if [ ! -z "$$trcsources" ]; then\
-	  trctargets=$$(tranche-target $$trcsources -sep " ");\
-	  echo $$trctargets;\
-	  tranche-make $$trcsources -tdir $(SRCDIR) -mfile $(DEPFILE);\
-	  $(MAKE) $$trctargets;\
-	fi
-endif
 	@if [ -z "$(CC)" ]; then\
 	  if [ -z "$C()" ]; then\
 	    $(ECHO) "No compiler specified";\
@@ -226,9 +184,8 @@ dist-clean: clean
 	rm $(INCFILE) || true
 	rm $(LIBFILE) || true
 
--include $(DEPFILE)
-
 # recipes
+-include $(DEPFILE)
 
 $(TMPDIR)/%.o : $(SRCDIR)/%.c
 	$(C) $(CFLAGS) -o $@ -c $<

@@ -100,7 +100,7 @@ static void tranche_puts_all(Da *fdap, char *string){
 //--------------------------------------------------------------------------------
 // does the work of tranching a source file
 
-int tranche_send(FILE *src, Da *arg_fdap){
+int tranche_send(FILE *src, Da *arg_fdap, char *tdir){
   char *pt;
   Da line; // buffer holding the characters from a line
   Da file_name_arr; // an array of file name parameters parsed from a #tranche line
@@ -114,10 +114,10 @@ int tranche_send(FILE *src, Da *arg_fdap){
     if( is_tranche_end(line.base) ) break;
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
-      parse_file_list(&file_name_arr, pt, NULL);
+      parse_file_list(&file_name_arr, pt, tdir);
       tranche_open_fds(&file_name_arr, &fda);
       da_free_elements(&file_name_arr);
-      tranche_send(src, &fda);
+      tranche_send(src, &fda, tdir);
       tranche_close_fds(&fda);
     }else{
       da_pop(&line, NULL); // pop the terminating zero

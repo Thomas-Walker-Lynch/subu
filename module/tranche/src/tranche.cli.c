@@ -85,7 +85,6 @@ int main(int argc, char **argv, char **envp){
   da_alloc(target_arrp, sizeof(int));
   int fd = STDOUT_FILENO;
   da_push(target_arrp, &fd);
-  if(tdir)chdir(tdir);
 
   Da src_arr;
   Da *src_arrp = &src_arr;
@@ -96,7 +95,7 @@ int main(int argc, char **argv, char **envp){
   char *src_file_path;
   FILE *src_file;
   if(da_emptyq(src_arrp))
-    tranche_send(stdin, target_arrp);
+    tranche_send(stdin, target_arrp, tdir);
   else{
     char *pt = src_arrp->base;
     while( pt < src_arrp->end ){
@@ -106,7 +105,7 @@ int main(int argc, char **argv, char **envp){
         fprintf(stderr,"Could not open source file %s.\n", src_file_path);
         err |= TRANCHE_ERR_SRC_OPEN;
       }else{
-        tranche_send(src_file, target_arrp);
+        tranche_send(src_file, target_arrp, tdir);
         if( fclose(src_file) == -1 ){perror(NULL); err |= TRANCHE_ERR_FCLOSE;}
       }
     pt += src_arrp->element_size;

@@ -15,9 +15,8 @@ CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB
 
 LINKFLAGS=-L1_lib -lda 
 
+TMPDIR=tmp
 SRCDIR=tmp
 TRCDIR=trc
 
-MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
-#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 

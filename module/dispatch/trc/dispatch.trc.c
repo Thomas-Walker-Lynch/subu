@@ -30,7 +30,7 @@ struct dispatch_ctx{
 };
 #tranche-end
 
-#include "dispatch.h"
+#include "dispatch.lib.h"
 
 // we need the declaration for uid_t etc.
 // without this #define execvpe is undefined
@@ -162,5 +162,9 @@ int dispatch_exec(char **argv, char **envp){
     return err;
   }
 }
+
+#tranche dispatch.lib.h
+#endif
+#tranche-end
 
 #tranche-end

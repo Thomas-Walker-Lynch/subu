@@ -10,9 +10,7 @@ Dynamic Array
 #include<string.h>
 
 //--------------------------------------------------------------------------------
-// generic
-// We manipulate pointers to a smallest addressable unit. The sizeof operator
-// returns counts in these addressable units. Sizeof(char) is defined to be 1.
+// allocation
 
 void da_alloc(Da *dap, size_t element_size){
   dap->element_size = element_size;
@@ -36,7 +34,6 @@ size_t da_length(Da *dap){
   return (dap->end - dap->base)/dap->element_size;
 }
 
-
 void da_rebase(Da *dap, char *old_base, void *pta){
   char **pt = (char **)pta;
   size_t offset = *pt - old_base;
@@ -58,14 +55,18 @@ char *da_expand(Da *dap){
   return old_base;
 }
 
-// true when pt has run off the end of the area currently allocated for the array
-bool da_endq(Da *dap, void *pt){
-  return (char *)pt >= dap->end;
-}
-
-// true when pt has run off the end of the area allocated for the array
+// true when end has run off the allocated area
 bool da_boundq(Da *dap){
   return dap->end >= dap->base + dap->size;
+}
+
+//--------------------------------------------------------------------------------
+// putting/taking items
+
+char *da_index(Da *dap, size_t i){
+  size_t offset = i * dap->element_size;
+  char *pt = dap->base + offset;
+  return pt;
 }
 
 void da_push(Da *dap, void *element){
@@ -83,32 +84,12 @@ bool da_pop(Da *dap, void *element){
   return flag;
 }
 
-void da_cat(Da *dap0, Da *dap1){
-  if(dap1->base == dap1->end) return;
-  size_t dap0_size = dap0->end - dap0->base;
-  size_t dap1_size = dap1->end - dap1->base; // size of the active portion
-  dap0->end += dap1_size;
-  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
-  memcpy(dap0->base + dap0_size, dap1->base, dap1_size);
-}
+//--------------------------------------------------------------------------------
+// iteration
 
-// If dap0 has had a terminatating zero added, that must be popped off before
-// the call.  Similarly if a terminating zero is desired, it should be pushed
-// after the call.
-void da_push_string(Da *dap0, char *string){
-  if(!*string) return;
-  size_t dap0_size = dap0->end - dap0->base;
-  size_t string_size = strlen(string);
-  dap0->end += string_size;
-  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
-  memcpy(dap0->base + dap0_size, string, string_size);
-}
-
-
-char *da_index(Da *dap, size_t i){
-  size_t offset = i * dap->element_size;
-  char *pt = dap->base + offset;
-  return pt;
+// true when pt has run off the end
+bool da_endq(Da *dap, void *pt){
+  return (char *)pt >= dap->end;
 }
 
 // passed in f(element_pt, arg_pt)
@@ -122,41 +103,98 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
   }
 }
 
-// da_lists are sometimes used as resource managers
+//--------------------------------------------------------------------------------
+// da being used as a resource manager
+
+
+// elements were malloced, now they will all be freed
 static void da_free_element(void *pt, void *closure){
   free(*(char **)pt); // free does not care about the pointer type
 }
-
 void da_free_elements(Da *dap){
   da_map(dap, da_free_element, NULL);
   da_rewind(dap);
 }
 
-// for the case of an array of strings
-void da_strings_puts(Da *dap){
-  char *pt = dap->base; // char * because it points to a byte in the array
-  while( pt < dap->end ){
-    puts(*(char **)pt);
-  pt += dap->element_size;
-  }
-}
+//--------------------------------------------------------------------------------
+// da is an array of integers
 
 // would like to pass in the printf format to make a general print
 // but can't get *pt on the stack for the printf call .. hmmm
-void da_ints_print(Da *dap){
-  char *pt = dap->base;
-  while( pt < dap->end ){
-    printf("%u\n", *(int *)pt);
-  pt += dap->element_size;
-  }
+void da_ints_print(Da *dap, char *sep){
+  char *pt = dap->base; // char * because it points to a byte in the array
+  if( pt < dap->end ){
+    printf("%u", *(int *)pt);
+    pt += dap->element_size;
+    while( pt < dap->end ){
+      printf("%s%u", sep, *(int *)pt);
+      pt += dap->element_size;
+    }}}
+
+
+//--------------------------------------------------------------------------------
+// da is an array of strings
+
+// for the case of an array of strings
+void da_strings_print(Da *dap, char *sep){
+  char *pt = dap->base; // char * because it points to a byte in the array
+  if( pt < dap->end ){
+    fputs(*(char **)pt, stdout);
+    pt += dap->element_size;
+    while( pt < dap->end ){
+      fputs(sep,stdout);
+      fputs(*(char **)pt,stdout);
+      pt += dap->element_size;
+    }}}
+
+// da is an array of strings, true if the test string is in the array
+// might be better to iterate instead of using a map ... 
+typedef struct {
+  char *string;
+  bool found;
+} da_strings_exists_closure;
+static void string_equal(void *sp, void *closure){
+  char *string_element = *(char **)sp;
+  da_strings_exists_closure *ss = (da_strings_exists_closure *)closure;
+  if( ss->found ) return;
+  ss->found = !strcmp(string_element, ss->string);
+  return;
+}
+bool da_strings_exists(Da *string_arrp, char *test_string){
+  da_strings_exists_closure sec;
+  sec.string = test_string;
+  sec.found = false;
+  da_map(string_arrp, string_equal, &sec);
+  return sec.found;
 }
 
+void da_strings_set_insert(Da *string_arrp, char *proffered_string, void destruct(void *)){
+  if( da_strings_exists( string_arrp, proffered_string)){ // then throw it away, we don't need it
+    if(destruct)destruct(proffered_string);
+    return;
+  }
+  da_push(string_arrp, &proffered_string);
+}
+
+// union
+void da_strings_set_union(Da *string_arrp, Da *proffered_string_arrp, void destruct(void *)){
+  char *pt = proffered_string_arrp->base;
+  while( pt < proffered_string_arrp->end ){
+    da_strings_set_insert(string_arrp, *(char **)pt, destruct);
+  pt += proffered_string_arrp->element_size;
+  }
+  return;
+}
+
+
+//--------------------------------------------------------------------------------
+// the da itself is a string
 
 // Puts text from a line into buffer *dap. Does not push EOF or '\n' into the
 // buffer.  Returns the old_base so that external pointers can be rebased.
 // It is possible that the the base hasn't changed. Use feof(FILE *stream) to
 // test for EOF;
-char *da_fgets(Da *dap, FILE *file){
+char *da_string_input(Da *dap, FILE *file){
   char *old_base = dap->base;
   int c = fgetc(file);
   while( c != EOF && c != '\n' ){
@@ -167,3 +205,32 @@ char *da_fgets(Da *dap, FILE *file){
   da_push(dap, &terminator);
   return old_base;
 }
+
+void da_string_push(Da *dap0, char *string){
+  if(!*string) return;
+  size_t dap0_size = dap0->end - dap0->base;
+  size_t string_size = strlen(string);
+  dap0->end += string_size;
+  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
+  memcpy(dap0->base + dap0_size, string, string_size);
+}
+
+
+//--------------------------------------------------------------------------------
+// list operations
+
+// If dap0 has had a terminatating zero added, that must be popped off before
+// the call.  Similarly if a terminating zero is desired, it should be pushed
+// after the call.
+
+// appends contents of dap1 onto dap0
+void da_cat(Da *dap0, Da *dap1){
+  if(dap1->base == dap1->end) return;
+  size_t dap0_size = dap0->end - dap0->base;
+  size_t dap1_size = dap1->end - dap1->base; // size of the active portion
+  dap0->end += dap1_size;
+  while( dap0->end >= dap0->base + dap0->size ) da_expand(dap0);
+  memcpy(dap0->base + dap0_size, dap1->base, dap1_size);
+}
+
+

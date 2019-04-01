@@ -95,7 +95,7 @@ int tranche_send(FILE *src, Da *arg_fdap){
   da_alloc(&fda, sizeof(int));
 
   while( !feof(src) ){
-    da_fgets(&line, src);
+    da_string_input(&line, src);
     if( is_tranche_end(line.base) ) break;
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
@@ -122,47 +122,6 @@ int tranche_send(FILE *src, Da *arg_fdap){
 //--------------------------------------------------------------------------------
 // returns a list of unique target file names from a tranche source
 
-
-// return true if proffered test string is already in the strings array
-typedef struct {
-  char *string;
-  bool found;
-} string_state;
-static void string_equal(void *sp, void *closure){
-  char *string_element = *(char **)sp;
-  string_state *ss = (string_state *)closure;
-  if( ss->found ) return;
-  ss->found = !strcmp(string_element, ss->string);
-  return;
-}
-static bool exists(Da *string_arrp, char *test_string){
-  string_state ss;
-  ss.string = test_string;
-  ss.found = false;
-  da_map(string_arrp, string_equal, &ss);
-  return ss.found;
-}
-
-// only inserts the string if it is not already in the array
-static void insert_if_unique(Da *string_arrp, char *proffered_string){
-  if( exists( string_arrp, proffered_string)){ // then throw it away, we don't need it
-    free(proffered_string);
-    return;
-  }
-  da_push(string_arrp, &proffered_string);
-}
-
-// dissolves proffered array into the existing array
-static void combine_one(void *psp, void *closure){
-  char *proffered_string = *(char **)psp;
-  Da *string_arrp = (Da *)closure;
-  insert_if_unique(string_arrp, proffered_string);
-}
-static void combine(Da *string_arrp, Da *proffered_string_arrp){
-  da_map(proffered_string_arrp, combine_one, string_arrp);
-  return;
-}
-
 // make a list of the unique tranche target files found in src
 int tranche_target(FILE *src, Da *target_arrp){
   char *pt;
@@ -171,12 +130,12 @@ int tranche_target(FILE *src, Da *target_arrp){
   da_alloc(&line, sizeof(char));
   da_alloc(&file_name_arr, sizeof(char *));
   while( !feof(src) ){
-    da_fgets(&line, src);
+    da_string_input(&line, src);
     if( is_tranche_end(line.base) ) break;
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
       parse_file_list(&file_name_arr, pt);
-      combine(target_arrp, &file_name_arr); // frees strings that are not inserted
+      da_strings_set_union(target_arrp, &file_name_arr, free);
       da_rewind(&file_name_arr);
       tranche_target(src, target_arrp);
     }
@@ -225,16 +184,16 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   char *pt = tap->base; // char * because it points to a byte in the array
   while( pt < tap->end ){
     if(tdir){
-      da_push_string(dlap, tdir);
+      da_string_push(dlap, tdir);
       da_push(dlap, &slash);
     }
-    da_push_string(dlap, *(char **)pt);
+    da_string_push(dlap, *(char **)pt);
     da_push(dlap, &sp);
   pt += tap->element_size;
   }
   da_push(dlap, &colon);
   da_push(dlap, &sp);
-  da_push_string(dlap, src_name);
+  da_string_push(dlap, src_name);
   da_push(dlap, &newline);
   write(mfile_fd, dlap->base, dlap->end - dlap->base);
   da_free_elements(tap);
@@ -243,10 +202,10 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   // output acction line ----------------------------------------
   da_rewind(dlap); // reuse the line buffer
   da_push(dlap, &tab);
-  da_push_string(dlap, "tranche $<");
+  da_string_push(dlap, "tranche $<");
   if(tdir){
-    da_push_string(dlap, " -tdir ");
-    da_push_string(dlap, tdir);
+    da_string_push(dlap, " -tdir ");
+    da_string_push(dlap, tdir);
   }
   da_push(dlap, &newline);
   da_push(dlap, &newline);

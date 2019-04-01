@@ -17,7 +17,7 @@ exec:
 	$(MAKE) $@
 
 share:
-	if [ ! -z "$(wildcard $(EXECDIR)/*)" ]; then cp $(EXECDIR)/* $(PROJECT_SUBU)/tool/bin; fi
+	if [ -d $(EXECDIR) ]; then if [ ! -z "$(wildcard $(EXECDIR)/*)" ]; then cp $(EXECDIR)/* $(PROJECT_SUBU)/tool/bin; fi; fi
 
 %::
 	$(MAKE) $@

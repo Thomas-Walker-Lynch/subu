@@ -1,4 +1,6 @@
 
+MODULE=dispatch
+
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
 #ECHO= echo -e
@@ -13,8 +15,9 @@ CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB
 
 LINKFLAGS=-L1_lib -lda 
 
-MODULE=dispatch
+SRCDIR=tmp
+TRCDIR=trc
 
-MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tools/lib/makefile_trc
-#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tools/lib/makefile_trc
+MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
+#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 

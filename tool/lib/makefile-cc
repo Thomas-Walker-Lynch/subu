@@ -29,6 +29,10 @@ OBJECT_CLI= $(patsubst %, $(TMPDIR)/%.cli.o, $(C_BASE_CLI) $(CC_BASE_CLI))
 # executables are made from CLI sources
 EXEC= $(patsubst %, $(EXECDIR)/%, $(C_BASE_CLI) $(CC_BASE_CLI))
 
+# default directory seteup
+# For TRC projects define TRDIR (even if it is just '.'), and typically set SRCDIR to tmp
+#
+
 DEPRDIR=deprecated
 DOCDIR=doc
 EXECDIR=exec
@@ -39,7 +43,9 @@ SRCDIR=src
 TESTDIR=test
 TMPDIR=tmp
 TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
+TRCDIR=
 TRYDIR=try
+
 
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string))
@@ -61,14 +67,24 @@ LIBFILE=$(LIBDIR)/lib$(MODULE).a
 INCFILE=$(INCDIR)/$(MODULE).h
 
 #--------------------------------------------------------------------------------
+# when local customizations set a TRCDIR, then these are the actual sources
+
+ifneq ($TRCDIR,)
+  TRCFILES= $(wildcard $(TRCDIR)/*.trc.c) $(wildcard $(TRCDIR)/*.trc.cc)
+else
+  TRCFILES=
+endif
+
+
+#--------------------------------------------------------------------------------
 # targets
 
 .PHONY: all
-all: version dep lib exec
+all: version
 
 .PHONY: version
 version:
-	@echo makefile version 4.0
+	@echo makefile version 5.0
 	@echo "PWD: " $(PWD)
 	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
 	@echo "C: " $(C)
@@ -87,10 +103,13 @@ info:
 	@echo "TESTDIR: " $(TESTDIR)
 	@echo "TMPDIR: " $(TMPDIR)
 	@echo "TOOLDIR: " $(TOOLDIR)
+	@echo "TRCDIR: " $(TRCDIR)
 	@echo "TRYDIR: " $(TRYDIR)
 	@echo "DEPFILE: " $(DEPFILE)
 	@echo "LIBFILE: " $(LIBFILE)
 	@echo "INCFILE: " $(INCFILE)
+	@echo "TRCFILES: " $(TRCFILES)
+	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_CLI: " $(C_SOURCE_CLI)
 	@echo "CC_SOURCE_LIB: " $(CC_SOURCE_LIB)
@@ -104,43 +123,62 @@ info:
 	@echo "EXEC: " $(EXEC)
 
 # should be safe to run this in an already setup or partially setup directory
+# gee looks like a candidate for a makefile function ..
 .PHONY: setup
 setup:
-	[ ! -e $(DEPRDIR) ] && mkdir $(DEPRDIR) || true
-	[ ! -e $(DOCDIR) ]  && mkdir $(DOCDIR)  || true
-	[ ! -e $(EXECDIR) ] && mkdir $(EXECDIR) || true
-	[ ! -e $(INCDIR) ]  && mkdir $(INCDIR)  || true
-	[ ! -e $(LIBDIR) ]  && mkdir $(LIBDIR)  || true
-	[ ! -e $(SRCDIR) ]  && mkdir $(SRCDIR)  || true
-	[ ! -e $(TESTDIR) ] && mkdir $(TESTDIR) || true
-	[ ! -e $(TMPDIR) ]  && mkdir $(TMPDIR)  || true
-	[ ! -e $(TRYDIR) ]  && mkdir $(TRYDIR)  || true
+	[ ! -e $(DEPRDIR) ]  && mkdir $(DEPRDIR) || true
+	[ ! -e $(DOCDIR)  ]  && mkdir $(DOCDIR)  || true
+	[ ! -e $(EXECDIR) ]  && mkdir $(EXECDIR) || true
+	[ ! -e $(INCDIR)  ]  && mkdir $(INCDIR)  || true
+	[ ! -e $(LIBDIR)  ]  && mkdir $(LIBDIR)  || true
+	[ ! -e $(SRCDIR)  ]  && mkdir $(SRCDIR)  || true
+	[ ! -e $(TESTDIR) ]  && mkdir $(TESTDIR) || true
+	[ ! -e $(TMPDIR)  ]  && mkdir $(TMPDIR)  || true
+	[ ! -e $(TRCDIR)  ]  && mkdir $(TRCDIR)  || true
+	[ ! -e $(TRYDIR)  ]  && mkdir $(TRYDIR)  || true
 
-#better to put the dependency generation into a loop on the source file and specify -MT for the target
-#also should be redirecting only stdout so stderr messages will be displayed >>1 depfile
+# gee this script could be better, particlarly in gathering the targets
+# it would be simplified if the tranche commands took multiple source arguments
+# if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
+# if [ ! -z "$(TRCFILES)" ]; then\
+#   targets="";\
+#   for i in $(TRCFILES); do\
+#     tranche-make $$i -tdir $(SRCDIR) -mfile $(DEPFILE);\
+#     targets+=$$(tranche-target $$i);\
+#     targets+=" ";\
+#   done;\
+#   echo $$targets;\
+# fi    
+
+
 .PHONY: dep
-dep: 
-	@if [ -z "$(CC)" ]; then\
+dep:
+	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
+	if [ ! -z "$(TRCFILES)" ]; then\
+	  tranche-make $(TRCFILES) -mfile $(DEPFILE);\
+	  $(MAKE) $(shell tranche-targets $(TRCFILES) -sep " ");\
+	fi       
+	if [ -z "$(CC)" ]; then\
 	  if [ -z "$C()" ]; then\
 	    echo "No compiler specified";\
 	    exit 1;\
 	  else\
 	    echo "C compiler only deps" ;\
-	    $(C) $(CFLAGS) -MM  $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
+	    $(C) $(CFLAGS) -MM  $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' >> $(DEPFILE);\
 	    echo "deps for C linking";\
-	    for i in $(C_BASE_CLI) ; do\
+	    for i in $(C_BASE_CLI); do\
 	      $(ECHO) >> $(DEPFILE);\
 	      $(ECHO) "$(EXECDIR)/$$i : $(TMPDIR)/$$i.cli.o $(LIBFILE)" >> $(DEPFILE);\
 	      $(ECHO) "	$(C) -o $(EXECDIR)/$$i $(TMPDIR)/$$i.cli.o $(LINKFLAGS)" >> $(DEPFILE);\
 	    done;\
 	  fi;\
 	else\
-	  $(CC) $(CCFLAGS) -MM  $(CC_SOURCE_LIB) $(CC_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
+	  $(CC) $(CCFLAGS) -MM  $(CC_SOURCE_LIB) $(CC_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' >> $(DEPFILE);\
 	  if [ -z "$C()" ]; then\
 	    echo "CC compiler only deps" ;\
 	  else\
 	    echo "CC and C mixed compile deps" ;\
-	    $(C) $(CFLAGS) -MM   $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' > $(DEPFILE);\
+	    $(C) $(CFLAGS) -MM   $(C_SOURCE_LIB) $(C_SOURCE_CLI) | sed 's|^.*\.o|$(TMPDIR)/&|' >> $(DEPFILE);\
 	  fi;\
 	  echo "deps for CC linking";\
 	  for i in $(CC_BASE_CLI) $(C_BASE_CLI) ; do\

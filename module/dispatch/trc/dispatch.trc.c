@@ -1,6 +1,6 @@
-#tranche tmp/dispatch.trc.c
+#tranche dispatch.lib.c
 
-#tranche include/dispatch.h
+#tranche dispatch.lib.h
 /*
   Runs a command or function as its own process.
 
@@ -41,7 +41,7 @@ struct dispatch_ctx{
 #include <stdio.h>
 #include <errno.h>
 
-#tranche include/dispatch.h
+#tranche dispatch.lib.h
 void dispatch_f_mess(char *fname, int err, char *dispatchee);
 #tranche-end
 void dispatch_f_mess(char *fname, int err, char *dispatchee){
@@ -76,7 +76,7 @@ void dispatch_f_mess(char *fname, int err, char *dispatchee){
 
 //--------------------------------------------------------------------------------
 // interface call point, dispatch a function
-#tranche include/dispatch.h
+#tranche dispatch.lib.h
 int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg);
 #tranche-end
 int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
@@ -99,7 +99,7 @@ int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
 //--------------------------------------------------------------------------------
 // interface call point, dispatch a function with a given euid/egid
 // of course this will only work if our euid is root in the first place
-#tranche include/dispatch.h
+#tranche dispatch.lib.h
 int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t euid, gid_t egid);
 #tranche-end
 int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t euid, gid_t egid){
@@ -128,7 +128,7 @@ int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t eu
 
 //--------------------------------------------------------------------------------
 // interface call point, dispatch a executable
-#tranche include/dispatch.h
+#tranche dispatch.lib.h
 int dispatch_exec(char **argv, char **envp);
 #tranche-end
 int dispatch_exec(char **argv, char **envp){

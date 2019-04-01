@@ -1,4 +1,5 @@
-MODULE=tranche
+
+MODULE=db
 
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
@@ -6,10 +7,12 @@ ECHO= echo
 
 # directories used by this makefile, these could all be set to dot for
 # the simplest source directory structure
-EXECDIR=exec
 
+# compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -ggdb -Werror -DDEBUG -DDEBUGDB 
+CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-Llib -L../share/lib/ -lda -ltranche
+LINKFLAGS=-Llib -ldb
+
+
 

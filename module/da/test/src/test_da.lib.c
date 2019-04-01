@@ -84,19 +84,19 @@ bool test_da_2(){
   Da da;
   da_alloc(&da, sizeof(char));
 
-  da_fgets(&da, file);
+  da_string_input(&da, file);
   bool f0 = !strcmp(da.base, "this is a test");
 
   char *old_base;
   da_pop(&da, NULL); // pop the prior null terminator
   char *s1 = da.end;
-  old_base = da_fgets(&da,file);
+  old_base = da_string_input(&da,file);
   da_rebase(&da, old_base, &s1);
   bool f1 = !strcmp(s1, "ends without a newline");
   
   da_pop(&da, NULL); // pop the prior null terminator
   char *s2 = da.end;
-  old_base = da_fgets(&da,file);
+  old_base = da_string_input(&da,file);
   da_rebase(&da, old_base, &s2);
   bool f2 = !strcmp(s2, "(setq mode-require-final-newline nil)");
 

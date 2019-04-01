@@ -3,6 +3,6 @@
 diff -q test2.c test2.c.expected
 diff -q test2.h test2.h.expected
 diff -q test2stdout.dat test2stdout.dat.expected
-rm test2.c test2.h
+rm test2.c test2.h test2stdout.dat.expected
 
 

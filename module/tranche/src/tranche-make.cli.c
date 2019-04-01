@@ -38,31 +38,36 @@ user does not want this behavior, give a value of "." for -sdir.
 
 int main(int argc, char **argv, char **envp){
 
-  char *src_file_path = 0;
+  int err = 0;
   char *sname = 0;
   char *tdir = 0;  
   char *mfile_path = 0; 
-
+  Da args; // we will queue the non option args here
+  Da *argsp = &args; // collection of the non-option non-option-value args
+  da_alloc(argsp, sizeof(char *));
   { // argument parse
-    Da args; // we will queue the non option args here
-    Da *argsp = &args;
-    da_alloc(argsp, sizeof(char *));
-
-    int err_cnt = 0;
-    char **pt = argv;
+    char **pt = argv + 1; // skip the command name
     char *option;
     char *value; // currently all our tranche options have exactly one value
     while(*pt){
       if( **pt == '-' ){
         option = *pt + 1;
+
+        // options that take no values:
         if(!*option){
           fprintf(stderr, "Currently there is no lone '-' option.\n");
-          err_cnt++;
+          err |= TRANCHE_ERR_ARG_PARSE;
           goto endif;
         }
+        if( !strcmp(option, "h") || !strcmp(option, "help") ){
+          err |= TRANCHE_ERR_HELP; // this will force the usage message, though it will also return an error
+          goto endif;
+        }
+
+        // options that take one value:
         pt++; if(!*pt || **pt == '-'){
           fprintf(stderr, "Missing value for option %s.\n", option);
-          err_cnt++;
+          err |= TRANCHE_ERR_ARG_PARSE;
           if(!*pt) break; // then nothing more to parse
           goto endif;
         }
@@ -73,6 +78,7 @@ int main(int argc, char **argv, char **envp){
         }
         if( !strcmp(option, "tdir") ){
           tdir = value;
+          path_trim_slashes(tdir);
           goto endif;
         }
         if( !strcmp(option, "sname") ){
@@ -80,72 +86,69 @@ int main(int argc, char **argv, char **envp){
           goto endif;
         }
         fprintf(stderr, "Unrecognized option %s.", option);
-        err_cnt++;
+        err |= TRANCHE_ERR_ARG_PARSE;
         goto endif;
       }
       // else clause
       da_push(argsp, pt);
     endif:
-    pt++;
+      pt++;
     }
-    int args_cnt = da_length(argsp);
-    if(args_cnt > 1) src_file_path = *(char **)da_index(argsp, 1);
-
-    // arg contracts
-    if(args_cnt > 2){
-      fprintf(stderr, "too many args\n");
-      err_cnt++;
+    if(da_emptyq(argsp) && !sname){
+      fprintf(stderr, "Must be given at least one source name argument or an sname option\n");
+      err |= TRANCHE_ERR_SNAME;
     }
-    if(!src_file_path && !sname){
-      fprintf(stderr, "must specify at least one of a src_file_path or an sname\n");
-      err_cnt++;
+    if(err){
+      fprintf(stderr, "usage: %s [<src_file_path>].. [-sname <sname>] [-tdir <dir>]\n", argv[0]);
+      return err;
     }
-    if(err_cnt > 0){
-      fprintf(stderr, "usage: %s [<src_file_path>] [-sname <sname>] [-tdir <dir>] [-mfile <mfile_path>]\n", argv[0]);
-      return TRANCHE_ERR_ARG_PARSE;
-    }
-    da_free(argsp); // this only frees the array itself, not the things it points to
-
   }// end of argument parse
  
-  FILE *src_file;
+  // open the output file
   int mfile_fd;
-  { //source and mfile open
-    if(!src_file_path)
-      src_file = stdin;
-    else
-      src_file = fopen(src_file_path, "r");
-
+  {
     if(mfile_path)
       mfile_fd = open(mfile_path, O_WRONLY | O_APPEND | O_CREAT, 0666);
     else
       mfile_fd = STDOUT_FILENO;
 
-    int err = 0;
-    if(!src_file){
-      fprintf(stderr,"could not open tranche source file %s\n", src_file_path);
-      err+= TRANCHE_ERR_SRC_OPEN;
-    }
     if(mfile_fd == -1){
       fprintf(stderr, "Could not open the dep file %s\n", mfile_path);
-      err+= TRANCHE_ERR_DST_OPEN;
+      err |= TRANCHE_ERR_DST_OPEN;
     }
-    if(err) return err;
   }
 
-  if(sname)src_file_path = sname;
-  path_trim_slashes(tdir);
-  tranche_make(src_file, src_file_path,  mfile_fd, tdir);
+  // The arguments are source file paths, but we process each one only once.
+  Da src_arr;
+  Da *src_arrp = &src_arr;
+  da_alloc(src_arrp, sizeof(char *));
+  da_strings_set_union(src_arrp, argsp, NULL); // NULL destructor
+  da_free(argsp);
 
-  { // deallocate resources instead of just existing, so as to catch any errors
-    int err_cnt = 0;
-    if(src_file != stdin)
-      if( fclose(src_file) ){perror(NULL); err_cnt++;}
-    if(mfile_fd != STDOUT_FILENO)
-      if( close(mfile_fd) == -1 ){perror(NULL); err_cnt++;}
-    if( err_cnt )
-      return TRANCHE_ERR_FCLOSE;
-    else
-      return 0;
+  char *src_file_path;
+  FILE *src_file;
+  if(da_emptyq(src_arrp))
+    tranche_make(stdin, sname,  mfile_fd, tdir);
+  else{
+    char *pt = src_arrp->base;
+    while( pt < src_arrp->end ){
+      src_file_path = *(char **)pt;
+      src_file = fopen(src_file_path, "r");
+      if(!src_file){
+        fprintf(stderr,"Could not open source file %s.\n", src_file_path);
+        err |= TRANCHE_ERR_SRC_OPEN;
+      }else{
+        tranche_make(src_file, src_file_path,  mfile_fd, tdir);
+        if( fclose(src_file) == -1 ){perror(NULL); err |= TRANCHE_ERR_FCLOSE;}
+      }
+    pt += src_arrp->element_size;
+    }
   }
+  da_free(src_arrp);
+
+  if(mfile_fd != STDOUT_FILENO && close(mfile_fd) == -1 ){
+    perror(NULL); 
+    err |= TRANCHE_ERR_FCLOSE;
+  }
+  return err;
 }

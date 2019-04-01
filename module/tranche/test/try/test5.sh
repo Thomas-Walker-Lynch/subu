@@ -1,4 +1,4 @@
-./tranche test1.dat test2.trc.c
+./tranche test1.dat test2.trc.c > /dev/null
 
 diff -q test11.dat test11.dat.expected
 diff -q test12.dat test12.dat.expected

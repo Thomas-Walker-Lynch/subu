@@ -41,23 +41,27 @@ static char *is_tranche_end(char *pt){
   return pt + tranche_end_tag_len;
 }
 
-static void parse_file_list(Da *file_names, char *pt0, char *tdir){
+static void parse_file_list(Da *file_names, char *pt, char *tdir){
   Da filename_arr;
   Da *fn_arrp = &filename_arr;
   da_alloc(fn_arrp,sizeof(char));
 
-  while( *pt0 && isspace(*pt0) ) pt0++;
-  if(tdir){
-    da_string_push(fn_arrp, tdir);
-    da_push(fn_arrp, &slash);
+  while( *pt && isspace(*pt) ) pt++;
+  while( *pt ){
+    if(tdir){
+      da_string_push(fn_arrp, tdir);
+      da_push(fn_arrp, &slash);
+    }
+    while( *pt && !isspace(*pt) ){
+      da_push(fn_arrp, pt);
+      pt += fn_arrp->element_size;
+    }
+    da_push(fn_arrp, &terminator);
+    char *file_name = strdup(fn_arrp->base);
+    da_rewind(fn_arrp);
+    da_push(file_names, &file_name);
+    while( *pt && isspace(*pt) ) pt++;
   }
-  while( *pt0 && !isspace(*pt0) ){
-    da_push(fn_arrp, *pt0);
-  }
-  da_push(fn_arrp, &terminator);
-
-  char *file_name = strdup(*(char **)fn_arrp->base);
-  da_push(file_names, &file_name);
 }
 
 //--------------------------------------------------------------------------------
@@ -148,7 +152,7 @@ int tranche_target(FILE *src, Da *target_arrp, char *tdir){
       parse_file_list(&file_name_arr, pt, tdir);
       da_strings_set_union(target_arrp, &file_name_arr, free);
       da_rewind(&file_name_arr);
-      tranche_target(src, target_arrp);
+      tranche_target(src, target_arrp, tdir);
     }
     da_rewind(&line);
   }
@@ -179,7 +183,7 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   Da ta;
   Da *tap=&ta; // target array pointer
   da_alloc(tap, sizeof(char *));
-  tranche_target(src_file, tap);
+  tranche_target(src_file, tap, tdir);
 
   // construct then output the dependency line ----------------------------------------
   Da dla;
@@ -187,10 +191,6 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   da_alloc(dlap, sizeof(char));
   char *pt = tap->base; // char * because it points to a byte in the array
   while( pt < tap->end ){
-    if(tdir){
-      da_string_push(dlap, tdir);
-      da_push(dlap, &slash);
-    }
     da_string_push(dlap, *(char **)pt);
     da_push(dlap, &sp);
   pt += tap->element_size;

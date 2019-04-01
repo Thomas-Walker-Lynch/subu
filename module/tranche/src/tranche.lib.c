@@ -11,8 +11,13 @@
 //--------------------------------------------------------------------------------
 // parsing
 
+char sp = ' ';
+char colon = ':';
+char slash = '/';
 char newline = '\n';
+char tab = '\t';
 char terminator = 0;
+
 
 char tranche_begin_tag[] = "#tranche";
 size_t tranche_begin_tag_len = 8;
@@ -36,17 +41,23 @@ static char *is_tranche_end(char *pt){
   return pt + tranche_end_tag_len;
 }
 
-static bool parse_file_list(Da *file_names, char *pt0){
-  char *pt1;
+static void parse_file_list(Da *file_names, char *pt0, char *tdir){
+  Da filename_arr;
+  Da *fn_arrp = &filename_arr;
+  da_alloc(fn_arrp,sizeof(char));
+
   while( *pt0 && isspace(*pt0) ) pt0++;
-  pt1 = pt0;
-  while( *pt0 ){
-    while( *pt1 && !isspace(*pt1) ) pt1++;
-    char *file_name = strndup(pt0, pt1 - pt0);
-    da_push(file_names, &file_name);
-    while( *pt1 && isspace(*pt1) ) pt1++;
-    pt0 = pt1;
+  if(tdir){
+    da_string_push(fn_arrp, tdir);
+    da_push(fn_arrp, &slash);
   }
+  while( *pt0 && !isspace(*pt0) ){
+    da_push(fn_arrp, *pt0);
+  }
+  da_push(fn_arrp, &terminator);
+
+  char *file_name = strdup(*(char **)fn_arrp->base);
+  da_push(file_names, &file_name);
 }
 
 //--------------------------------------------------------------------------------
@@ -99,7 +110,7 @@ int tranche_send(FILE *src, Da *arg_fdap){
     if( is_tranche_end(line.base) ) break;
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
-      parse_file_list(&file_name_arr, pt);
+      parse_file_list(&file_name_arr, pt, NULL);
       tranche_open_fds(&file_name_arr, &fda);
       da_free_elements(&file_name_arr);
       tranche_send(src, &fda);
@@ -123,7 +134,7 @@ int tranche_send(FILE *src, Da *arg_fdap){
 // returns a list of unique target file names from a tranche source
 
 // make a list of the unique tranche target files found in src
-int tranche_target(FILE *src, Da *target_arrp){
+int tranche_target(FILE *src, Da *target_arrp, char *tdir){
   char *pt;
   Da line; // buffer holding the characters from a line
   Da file_name_arr;// an array of file name parameters parsed from a #tranche line
@@ -134,7 +145,7 @@ int tranche_target(FILE *src, Da *target_arrp){
     if( is_tranche_end(line.base) ) break;
     pt = is_tranche_begin(line.base);
     if(pt){ // then this line is the start of a nested tranche block
-      parse_file_list(&file_name_arr, pt);
+      parse_file_list(&file_name_arr, pt, tdir);
       da_strings_set_union(target_arrp, &file_name_arr, free);
       da_rewind(&file_name_arr);
       tranche_target(src, target_arrp);
@@ -169,13 +180,6 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   Da *tap=&ta; // target array pointer
   da_alloc(tap, sizeof(char *));
   tranche_target(src_file, tap);
-
-  char sp = ' ';
-  char colon = ':';
-  char slash = '/';
-  char newline = '\n';
-  char tab = '\t';
-  char terminator = 0;
 
   // construct then output the dependency line ----------------------------------------
   Da dla;

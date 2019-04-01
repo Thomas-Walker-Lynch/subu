@@ -70,9 +70,11 @@ INCFILE=$(INCDIR)/$(MODULE).h
 # when local customizations set a TRCDIR, then these are the actual sources
 
 ifneq ($TRCDIR,)
-  TRCFILES= $(wildcard $(TRCDIR)/*.trc.c) $(wildcard $(TRCDIR)/*.trc.cc)
+  TRCSOURCES=$(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc)
+  TRCTARGETS=
 else
-  TRCFILES=
+  TRCSOURCES=
+  TRCTARGETS=
 endif
 
 
@@ -108,7 +110,7 @@ info:
 	@echo "DEPFILE: " $(DEPFILE)
 	@echo "LIBFILE: " $(LIBFILE)
 	@echo "INCFILE: " $(INCFILE)
-	@echo "TRCFILES: " $(TRCFILES)
+	@echo "TRCSOURCES: " $(TRCSOURCES)
 	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_LIB: " $(C_SOURCE_LIB)
 	@echo "C_SOURCE_CLI: " $(C_SOURCE_CLI)
@@ -140,9 +142,9 @@ setup:
 # gee this script could be better, particlarly in gathering the targets
 # it would be simplified if the tranche commands took multiple source arguments
 # if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
-# if [ ! -z "$(TRCFILES)" ]; then\
+# if [ ! -z "$(TRCSOURCES)" ]; then\
 #   targets="";\
-#   for i in $(TRCFILES); do\
+#   for i in $(TRCSOURCES); do\
 #     tranche-make $$i -tdir $(SRCDIR) -mfile $(DEPFILE);\
 #     targets+=$$(tranche-target $$i);\
 #     targets+=" ";\
@@ -154,13 +156,20 @@ setup:
 .PHONY: dep
 dep:
 	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
-	if [ ! -z "$(TRCFILES)" ]; then\
-	  tranche-make $(TRCFILES) -mfile $(DEPFILE);\
-	  $(MAKE) $(shell tranche-targets $(TRCFILES) -sep " ");\
-	fi       
-	if [ -z "$(CC)" ]; then\
+ifneq ($(TRCDIR),)
+	$(ECHO) TRC deps
+	@trcsources=$(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc);\
+	$(ECHO) $$trcsources;\
+	if [ ! -z "$$trcsources" ]; then\
+	  trctargets=$$(tranche-target $$trcsources -sep " ");\
+	  echo $$trctargets;\
+	  tranche-make $$trcsources -tdir $(SRCDIR) -mfile $(DEPFILE);\
+	  $(MAKE) $$trctargets;\
+	fi
+endif
+	@if [ -z "$(CC)" ]; then\
 	  if [ -z "$C()" ]; then\
-	    echo "No compiler specified";\
+	    $(ECHO) "No compiler specified";\
 	    exit 1;\
 	  else\
 	    echo "C compiler only deps" ;\

@@ -8,7 +8,7 @@ MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 -include makefile-flags
 
 .PHONY: all
-all: version dep lib exec
+all: version
 
 .PHONY: lib
 lib:

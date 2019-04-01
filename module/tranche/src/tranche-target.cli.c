@@ -21,6 +21,7 @@ int main(int argc, char **argv, char **envp){
 
   int err = 0;
   char *sep = 0;
+  char *tdir = 0;
   Da args; // we will queue the non option args here
   Da *argsp = &args; // collection of the non-option non-option-value args
   da_alloc(argsp, sizeof(char *));
@@ -55,6 +56,11 @@ int main(int argc, char **argv, char **envp){
           sep = value;
           goto endif;
         }
+        if( !strcmp(option, "tdir") ){
+          tdir = value;
+          path_trim_slashes(tdir);
+          goto endif;
+        }
         fprintf(stderr, "Unrecognized option %s.", option);
         err |= TRANCHE_ERR_ARG_PARSE;
         goto endif;
@@ -87,7 +93,7 @@ int main(int argc, char **argv, char **envp){
   char *src_file_path;
   FILE *src_file;
   if(da_emptyq(src_arrp))
-    tranche_target(stdin, target_arrp);
+    tranche_target(stdin, target_arrp, tdir);
   else{
     char *pt = src_arrp->base;
     while( pt < src_arrp->end ){
@@ -97,7 +103,7 @@ int main(int argc, char **argv, char **envp){
         fprintf(stderr,"Could not open source file %s.\n", src_file_path);
         err |= TRANCHE_ERR_SRC_OPEN;
       }else{
-        tranche_target(src_file, target_arrp);
+        tranche_target(src_file, target_arrp, tdir);
         if( fclose(src_file) == -1 ){perror(NULL); err |= TRANCHE_ERR_FCLOSE;}
       }
     pt += src_arrp->element_size;

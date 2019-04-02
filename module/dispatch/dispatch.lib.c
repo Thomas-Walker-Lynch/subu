@@ -45,7 +45,7 @@ void dispatch_f_mess(char *fname, int err, char *dispatchee){
 // interface call point, dispatch a function
 int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
   #ifdef DEBUG
-  dbprintf("%s %s\n", "dispatch_f", fname);
+  debug_printf("%s %s\n", "dispatch_f", fname);
   #endif
   pid_t pid = fork();
   if( pid == -1 ) return ERR_DISPATCH_F_FORK; // something went wrong and we are still in the parent process
@@ -65,7 +65,7 @@ int dispatch_f(char *fname, int (*f)(void *arg), void *f_arg){
 // of course this will only work if our euid is root in the first place
 int dispatch_f_euid_egid(char *fname, int (*f)(void *arg), void *f_arg, uid_t euid, gid_t egid){
   #ifdef DEBUG
-  dbprintf("%s %s as euid:%u egid:%u\n", "dispatch_f_euid_egid", fname, euid, egid);
+  debug_printf("%s %s as euid:%u egid:%u\n", "dispatch_f_euid_egid", fname, euid, egid);
   #endif
   pid_t pid = fork();
   if( pid == -1 ) return ERR_DISPATCH_F_FORK;
@@ -94,13 +94,13 @@ int dispatch_exec(char **argv, char **envp){
   {
     if( !argv || !argv[0] ) return ERR_DISPATCH_NULL_EXECUTABLE;
     #ifdef DEBUG
-      dbprintf("dispatch_exec:");
+      debug_printf("dispatch_exec:");
       char **apt = argv;
       while( *apt ){
-        dbprintf(" %s",*apt);
+        debug_printf(" %s",*apt);
         apt++;
       }
-      dbprintf("\n");
+      debug_printf("\n");
     #endif
     command = argv[0];
   }
@@ -109,7 +109,7 @@ int dispatch_exec(char **argv, char **envp){
   if( pid == 0 ){ // we are the child
     execvpe(command, argv, envp); // exec will only return if it has an error
     #ifdef DEBUG
-    dbprintf("dispatch_exec: exec returned, perror message:");
+    debug_printf("dispatch_exec: exec returned, perror message:");
     perror("dispatch_exec"); // our only chance to print this message, as this is the child process
     #endif
     fflush(stdout);

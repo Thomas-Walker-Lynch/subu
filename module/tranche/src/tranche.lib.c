@@ -203,7 +203,13 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   da_free_elements(tap);
   da_free(tap);
   
-  // output acction line ----------------------------------------
+  // output action lines ----------------------------------------
+  da_rewind(dlap); // reuse the line buffer
+  da_push(dlap, &tab);
+  da_string_push(dlap, "for i in $@; do rm $$i || true; done");
+  da_push(dlap, &newline);
+  write(mfile_fd, dlap->base, dlap->end - dlap->base);
+
   da_rewind(dlap); // reuse the line buffer
   da_push(dlap, &tab);
   da_string_push(dlap, "tranche $<");
@@ -214,7 +220,7 @@ void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
   da_push(dlap, &newline);
   da_push(dlap, &newline);
   write(mfile_fd, dlap->base, dlap->end - dlap->base);
-  da_free(dlap);
 
+  da_free(dlap);
   return;
 }

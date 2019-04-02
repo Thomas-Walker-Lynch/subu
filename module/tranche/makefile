@@ -17,7 +17,7 @@ dep:
 .PHONY: lib
 lib:
 	$(MAKE) $@
-	cp src/tranche.lib.h include/tranche.h
+	cp $(SRCDIR)/tranche.lib.h include/tranche.h
 
 .PHONY: exec
 exec:

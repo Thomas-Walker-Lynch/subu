@@ -35,8 +35,9 @@ dep:
 .PHONY: lib
 lib:
 	$(MAKE) $@
+	cp $(SRCDIR)/dispatch.lib.h $(INCDIR)/dispatch.h
 
-o%::
+%::
 	$(MAKE) $@
 
 

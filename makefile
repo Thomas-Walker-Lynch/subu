@@ -1,32 +1,38 @@
-#MAKEABLE=$(shell \
-#    find src-*\
-#	\( -name 'makefile' -o -name 'Makefile' \)\
-#	-printf "%h\n"\
-#    | grep -v deprecated | grep -v doc | sort -u | sed ':a;N;$!ba;s/\n/ /g' \
-#)
 
-MAKEABLE= module/da module/da/test module/db module/tranche module/dispatch
+MAKEABLE=\
+	module/da\
+	module/da/test\
+	module/debug\
+	module/tranche\
+	module/dispatch
 
-.PHONY: all info clean dist-clean
-
+.PHONY: all
 all:
 	$(foreach dir, $(MAKEABLE), \
-	  make -C $$dir
-	  -make -C $$dir stage
+	  -make -C $$dir dist-clean dep lib exec share
 	)
 
+.PHONY: all
+update:
+	$(foreach dir, $(MAKEABLE), \
+	  -make -C $$dir lib exec share
+	)
+
+.PHONY: info
 info:
 	@echo "SRCDIRS:" $(SRCDIRS)
 	@echo "MAKEABLE:" $(MAKEABLE)
 
+.PHONY: clean
 clean:
 	for dir in $(MAKEABLE); do pushd $$dir; make clean; popd; done
 
+.PHONY: dist-clean
 dist-clean : 
 	for dir in $(MAKEABLE); do pushd $$dir; make dist-clean; popd; done
-	for i in $(wildcard stage/lib/*); do rm $$i; done
-	for i in $(wildcard stage/inc/*); do rm $$i; done
-	for i in $(wildcard stage/bin/*); do rm $$i; done
+	for i in $(wildcard module/share/lib/*); do rm $$i; done
+	for i in $(wildcard module/share/inc/*); do rm $$i; done
+	for i in $(wildcard module/share/bin/*); do rm $$i; done
 
 
 

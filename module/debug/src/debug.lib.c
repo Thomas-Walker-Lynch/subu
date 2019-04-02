@@ -1,10 +1,10 @@
 
-#include "db.lib.h"
+#include "debug.lib.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 
-int dbprintf(const char *format, ...){
+int debug_printf(const char *format, ...){
   va_list args;
   va_start(args,format);  
   int ret = vfprintf(stdout, format, args);

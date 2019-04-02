@@ -283,7 +283,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
   rc = allowed_subuname(mess, subuname, &subuname_len);
   if(rc) return rc;
   #ifdef DEBUG
-  dbprintf("subuname is well formed\n");
+  debug_printf("subuname is well formed\n");
   #endif
 
   //--------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     set_euid = geteuid();
     set_egid = getegid();
     #ifdef DEBUG
-    dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
+    debug_printf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
     #endif
     if( masteru_uid == 0 || set_euid != 0 ) return SUBU_ERR_SETUID_ROOT;
   }
@@ -324,7 +324,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     ;
   if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
-  dbprintf("subu_username, subuland, subuhome: \"%s\"\"%s\"\"%s\"\n", subu_username, subuland, subuhome);
+  debug_printf("subu_username, subuland, subuhome: \"%s\"\"%s\"\"%s\"\n", subu_username, subuland, subuhome);
   #endif
 
   //--------------------------------------------------------------------------------
@@ -353,18 +353,18 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     }
   }
   #ifdef DEBUG
-  dbprintf("made directory \"%s\"\n", subuhome);
+  debug_printf("made directory \"%s\"\n", subuhome);
   #endif
 
   //--------------------------------------------------------------------------------
   //  Make the subservient user account, i.e. the subu
   {
     #ifdef DEBUG
-      dbprintf("making subu \"%s\" as user \"%s\"\n", subuname, subu_username);
+      debug_printf("making subu \"%s\" as user \"%s\"\n", subuname, subu_username);
     #endif
     #if BUG_SSS_CACHE_RUID
       #ifdef DEBUG
-        dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
+        debug_printf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
       if( setuid(0) == -1 ) RETURN(&resources, SUBU_ERR_BUG_SSS);
     #endif
@@ -396,13 +396,13 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
       RETURN(&resources, SUBU_ERR_FAILED_USERADD);
     }
     #ifdef DEBUG
-    dbprintf("added user \"%s\"\n", subu_username);
+    debug_printf("added user \"%s\"\n", subu_username);
     #endif
   }  
   
   //--------------------------------------------------------------------------------
   #ifdef DEBUG
-  dbprintf("setting the masteru_name, subuname, subu_username relation\n");
+  debug_printf("setting the masteru_name, subuname, subu_username relation\n");
   #endif
   {
     int rc = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
@@ -412,7 +412,7 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
     }
   }
   #ifdef DEBUG
-  dbprintf("finished subu-mk-0(%s)\n", subuname);
+  debug_printf("finished subu-mk-0(%s)\n", subuname);
   #endif
   RETURN(&resources, 0);
 }
@@ -430,7 +430,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   rc = allowed_subuname(mess, subuname, &subuname_len);
   if(rc) return rc;
   #ifdef DEBUG
-  dbprintf("subuname is well formed\n");
+  debug_printf("subuname is well formed\n");
   #endif
   
   //--------------------------------------------------------------------------------
@@ -444,7 +444,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     set_euid = geteuid();
     set_egid = getegid();
     #ifdef DEBUG
-    dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
+    debug_printf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
     #endif
     if( masteru_uid == 0 || set_euid != 0 ) return SUBU_ERR_SETUID_ROOT;
   }
@@ -468,7 +468,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     ;
   if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
-  dbprintf("masteru_home, subuhome: \"%s\", \"%s\"\n", masteru_home, subuhome);
+  debug_printf("masteru_home, subuhome: \"%s\", \"%s\"\n", masteru_home, subuhome);
   #endif
 
   //--------------------------------------------------------------------------------
@@ -496,7 +496,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
     RETURN(&resources, SUBU_ERR_DB_FILE);
   }
   #ifdef DEBUG
-  dbprintf("removed the masteru_name, subuname, subu_username relation\n");
+  debug_printf("removed the masteru_name, subuname, subu_username relation\n");
   #endif
   
   rc = db_commit(db);
@@ -515,7 +515,7 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   //
   {
     #ifdef DEBUG
-    dbprintf("as masteru, removing the directory \"%s\"\n", subuhome);
+    debug_printf("as masteru, removing the directory \"%s\"\n", subuhome);
     #endif
     int dispatch_err = dispatch_f_euid_egid
       (
@@ -538,11 +538,11 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
   //  Delete the subservient user account
   {
     #ifdef DEBUG
-    dbprintf("deleting user \"%s\"\n", subu_username);
+    debug_printf("deleting user \"%s\"\n", subu_username);
     #endif
     #if BUG_SSS_CACHE_RUID
       #ifdef DEBUG
-        dbprintf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
+        debug_printf("setting inherited real uid to 0 to accomodate SSS_CACHE UID BUG\n");
       #endif
       if( setuid(0) == -1 ){
         RETURN(&resources, SUBU_ERR_BUG_SSS);
@@ -565,12 +565,12 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
       RETURN(&resources, SUBU_ERR_FAILED_USERDEL);
     }
     #ifdef DEBUG
-    dbprintf("deleted user \"%s\"\n", subu_username);
+    debug_printf("deleted user \"%s\"\n", subu_username);
     #endif
   }  
 
   #ifdef DEBUG
-  dbprintf("finished subu-rm-0(%s)\n", subuname);
+  debug_printf("finished subu-rm-0(%s)\n", subuname);
   #endif
   RETURN(&resources, 0);
 }
@@ -621,7 +621,7 @@ int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuho
     RETURN(&resources, SUBU_ERR_BIND);
   }
   #ifdef DEBUG
-  dbprintf("mapped \"%s\" as \"%s\"\n", subu_user_home, subuhome);
+  debug_printf("mapped \"%s\" as \"%s\"\n", subu_user_home, subuhome);
   #endif
   RETURN(&resources, 0);
 }
@@ -644,7 +644,7 @@ int subu_bind_all(char **mess, sqlite3 *db){
     set_euid = geteuid();
     set_egid = getegid();
     #ifdef DEBUG
-    dbprintf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
+    debug_printf("masteru_uid %u, masteru_gid %u, set_euid %u set_egid %u\n", masteru_uid, masteru_gid, set_euid, set_egid);
     #endif
     if( masteru_uid == 0 || set_euid != 0 ) return SUBU_ERR_SETUID_ROOT;
   }
@@ -665,14 +665,14 @@ int subu_bind_all(char **mess, sqlite3 *db){
   if(rc) RETURN(&resources, rc);
   #ifdef DEBUG
   if(masteru_name)  
-    dbprintf("masteru_name: \"%s\"", masteru_name);
+    debug_printf("masteru_name: \"%s\"", masteru_name);
   else
-    dbprintf("masteru_name unknown");
+    debug_printf("masteru_name unknown");
   if(subuland)
-    dbprintf("subuland: \"%s\"", subuland);
+    debug_printf("subuland: \"%s\"", subuland);
   else
-    dbprintf("subuland unknown");
-  dbprintf("\n");
+    debug_printf("subuland unknown");
+  debug_printf("\n");
   #endif
 
   //--------------------------------------------------------------------------------
@@ -692,9 +692,9 @@ int subu_bind_all(char **mess, sqlite3 *db){
     rc = mk_subuhome(subuland, pt->subuname, &subuhome);
     #ifdef DEBUG
     if(subuhome)
-      dbprintf("subuhome: \"%s\"\n", subuhome);
+      debug_printf("subuhome: \"%s\"\n", subuhome);
     else
-      dbprintf("subuhome unknown \n");
+      debug_printf("subuhome unknown \n");
     #endif
     if(!rc) rc = subu_bind(NULL, masteru_name, pt->subu_username, subuhome);
     if(rc) err_cnt++;

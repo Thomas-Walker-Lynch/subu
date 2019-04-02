@@ -69,10 +69,18 @@ char *da_index(Da *dap, size_t i){
   return pt;
 }
 
-void da_push(Da *dap, void *element){
-  if( dap->end >= dap->base + dap->size ) da_expand(dap);
-  memcpy(dap->end, element, dap->element_size);
+// allocate space for a new element at the end of the array
+char *da_push_alloc(Da *dap){
+  size_t element_off = dap->end - dap->base;
   dap->end += dap->element_size;
+  if( dap->end > dap->base + dap->size ) da_expand(dap);
+  return dap->base + element_off;
+}
+
+char *da_push(Da *dap, void *element){
+  char *element_pt = da_push_alloc(dap);
+  memcpy(element_pt, element, dap->element_size);
+  return element_pt;
 }
 
 bool da_pop(Da *dap, void *element){

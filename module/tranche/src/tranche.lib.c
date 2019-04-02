@@ -179,48 +179,60 @@ void path_trim_slashes(char *path){
 // write a make file rule for making the tranche targets
 void tranche_make(FILE *src_file, char *src_name, int mfile_fd, char *tdir){
 
-  // target list
-  Da ta;
-  Da *tap=&ta; // target array pointer
-  da_alloc(tap, sizeof(char *));
-  tranche_target(src_file, tap, tdir);
+  // array of the target file names -----------------------------------------
+  Da target_arr;
+  Da *target_arrp=&target_arr; // target array pointer
+  da_alloc(target_arrp, sizeof(char *));
+  tranche_target(src_file, target_arrp, tdir);
+
+  // a space separated list of the target file names
+  Da target_arr_as_string;
+  Da *taasp = &target_arr_as_string;
+  da_alloc(taasp, sizeof(char));
+  char *pt = target_arrp->base; // char * because it points to a byte in the array
+  if( pt < target_arrp->end ){
+    da_string_push(taasp, *(char **)pt);
+  pt += target_arrp->element_size;
+  }
+  while( pt < target_arrp->end ){
+    da_push(taasp, &sp);
+    da_string_push(taasp, *(char **)pt);
+  pt += target_arrp->element_size;
+  }
+  da_free_elements(target_arrp);
+  da_free(target_arrp);
 
   // construct then output the dependency line ----------------------------------------
-  Da dla;
-  Da *dlap=&dla; // dependency line array pointer
-  da_alloc(dlap, sizeof(char));
-  char *pt = tap->base; // char * because it points to a byte in the array
-  while( pt < tap->end ){
-    da_string_push(dlap, *(char **)pt);
-    da_push(dlap, &sp);
-  pt += tap->element_size;
-  }
-  da_push(dlap, &colon);
-  da_push(dlap, &sp);
-  da_string_push(dlap, src_name);
-  da_push(dlap, &newline);
-  write(mfile_fd, dlap->base, dlap->end - dlap->base);
-  da_free_elements(tap);
-  da_free(tap);
+  Da make_line_string;
+  Da *mlsp = &make_line_string;
+  da_alloc(mlsp, sizeof(char));
+  da_cat(mlsp, taasp);
+  da_push(mlsp, &colon);
+  da_push(mlsp, &sp);
+  da_string_push(mlsp, src_name);
+  da_push(mlsp, &newline);
+  write(mfile_fd, mlsp->base, mlsp->end - mlsp->base);
   
   // output action lines ----------------------------------------
-  da_rewind(dlap); // reuse the line buffer
-  da_push(dlap, &tab);
-  da_string_push(dlap, "for i in $@; do rm $$i || true; done");
-  da_push(dlap, &newline);
-  write(mfile_fd, dlap->base, dlap->end - dlap->base);
+  da_rewind(mlsp); // reuse make line buffer
+  da_push(mlsp, &tab);
+  da_string_push(mlsp, "rm -f ");
+  da_cat(mlsp, taasp);
+  da_push(mlsp, &newline);
+  write(mfile_fd, mlsp->base, mlsp->end - mlsp->base);
 
-  da_rewind(dlap); // reuse the line buffer
-  da_push(dlap, &tab);
-  da_string_push(dlap, "tranche $<");
+  da_rewind(mlsp); // reuse the line buffer
+  da_push(mlsp, &tab);
+  da_string_push(mlsp, "tranche $<");
   if(tdir){
-    da_string_push(dlap, " -tdir ");
-    da_string_push(dlap, tdir);
+    da_string_push(mlsp, " -tdir ");
+    da_string_push(mlsp, tdir);
   }
-  da_push(dlap, &newline);
-  da_push(dlap, &newline);
-  write(mfile_fd, dlap->base, dlap->end - dlap->base);
+  da_push(mlsp, &newline);
+  da_push(mlsp, &newline);
+  write(mfile_fd, mlsp->base, mlsp->end - mlsp->base);
 
-  da_free(dlap);
+  da_free(taasp);
+  da_free(mlsp);
   return;
 }

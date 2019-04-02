@@ -1,8 +1,8 @@
+#tranche subu-mk-0.cli.c
 /*
   subu-mk-0 command
 
 */
-#include "subu-mk-0.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,3 +41,4 @@ int main(int argc, char **argv){
   return 0;
 
 }
+#tranche-end

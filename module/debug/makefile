@@ -16,8 +16,8 @@ dep:
 
 .PHONY: lib
 lib:
+	cp $(SRCDIR)/debug.lib.h $(INCDIR)/debug.h
 	$(MAKE) $@
-	cp $(SRCDIR)/db.lib.h $(INCDIR)/db.h
 
 %::
 	$(MAKE) $@

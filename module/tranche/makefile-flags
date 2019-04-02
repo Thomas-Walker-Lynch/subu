@@ -5,7 +5,7 @@ DOCDIR=doc
 EXECDIR=exec
 INCDIR=include
 LIBDIR=lib
-SHAREDIR=../share
+SHAREDIR=$(realpath $(PROJECT_SUBU)/module/share)
 SRCDIR=src
 TESTDIR=
 TMPDIR=tmp
@@ -21,7 +21,6 @@ ECHO= echo
 #ECHO= echo -e
 
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -Werror
-LINKFLAGS=-Llib -L../share/lib/ -lda -ltranche
+CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include -ggdb -Werror -DDEBUG -DDEBUGDB 
+LINKFLAGS=-L$(LIBDIR) -L$(SHAREDIR)/lib/ -l$(MODULE) -lda 
 

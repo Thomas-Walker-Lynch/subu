@@ -1,8 +1,8 @@
+#tranche subudb-subus.cli.c
 /*
 Set or get a new maximum subu number. Currently doesn't do the setting part.
 
 */
-#include "subudb-subus.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -45,3 +45,4 @@ int main(int argc, char **argv){
   return SUBU_ERR_DB_FILE;
 
 }
+#tranche-end

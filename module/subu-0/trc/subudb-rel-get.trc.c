@@ -1,9 +1,9 @@
+#tranche subudb-rel-get.cli.c
 /*
 get the username from the db file
 for testing subudb_Masteru_Subu_get_subu_username
 
 */
-#include "subudb-rel-get.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,3 +40,4 @@ int main(int argc, char **argv){
   }    
   return 0;
 }
+#tranche-end

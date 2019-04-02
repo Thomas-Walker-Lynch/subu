@@ -36,7 +36,7 @@ DOCDIR=doc
 EXECDIR=exec
 INCDIR=include
 LIBDIR=lib
-SHAREDIR=../share
+SHAREDIR=$(realpath $(PROJECT_SUBU)/module/share)
 SRCDIR=src
 TESTDIR=test
 TMPDIR=tmp
@@ -46,7 +46,6 @@ TRYDIR=try
 DEPFILE=$(TMPDIR)/makefile-cc.deps
 LIBFILE=$(LIBDIR)/lib$(MODULE).a
 INCFILE=$(INCDIR)/$(MODULE).h
-
 
 # a single space literal, for example if you wanted to subsitute commas to
 # spaces: $(subst $(space),;,$(string))
@@ -61,7 +60,8 @@ CC=
 # local customization
 #  user must define things needed by the local makefile, the compiler, and flags
 
--include makefile-flags
+include makefile-flags
+-include $(DEPFILE)
 
 #--------------------------------------------------------------------------------
 # targets
@@ -183,11 +183,10 @@ dist-clean: clean
 	rm $(LIBFILE) || true
 
 # recipes
--include $(DEPFILE)
-
-$(TMPDIR)/%.o : $(SRCDIR)/%.c
+ $(TMPDIR)/%.o : $(SRCDIR)/%.c
 	$(C) $(CFLAGS) -o $@ -c $<
 
-$(TMPDIR)/%.o : $(SRCDIR)/%.cc
+ $(TMPDIR)/%.o : $(SRCDIR)/%.cc
 	$(CC) $(CCFLAGS) -o $@ -c $<
+
 

@@ -1,22 +1,19 @@
-/*
-The db file is maintained in SQLite
+#tranche subudb.lib.c
+#tranche subudb.lib.h
+  /*
+  The db file is maintained in SQLite
 
-Because user names of are of limited length, subu user names are always named _s<number>.
-A separate table translates the numbers into the subu names.
+  Because linux user names are limited length, subu user names are of a compact
+  form: _s<number>.  A separate table translates the numbers into the subu names.
 
-The first argument is the biggest subu number in the system, or one minus an 
-starting point for subu numbering.
+  Each of these returns SQLITE_OK upon success
+  */
+  #include <sqlite3.h>
+#tranche-end
 
-currently a unit converted to base 10 will always fit in a 21 bit buffer.
-
-Each of these returns SQLITE_OK upon success
-*/
+#include <da.h>
+#include "common.lib.h"
 #include "subudb.lib.h"
-
-#if INTERFACE
-#include <sqlite3.h>
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -26,6 +23,11 @@ Each of these returns SQLITE_OK upon success
 // sqlite transactions don't nest.  There is a way to use save points, but still
 // we can't just nest transactions.  Instead use these wrappers around the whole
 // of something that needs to be in a transaction.
+#tranche subudb.lib.h
+  int db_begin(sqlite3 *db);
+  int db_commit(sqlite3 *db);
+  int db_rollback(sqlite3 *db);
+#tranche-end
 int db_begin(sqlite3 *db){
   return sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 }
@@ -37,6 +39,9 @@ int db_rollback(sqlite3 *db){
 }
 
 //--------------------------------------------------------------------------------
+#tranche subudb.lib.h
+  int subudb_schema(sqlite3 *db);
+#tranche-end
 int subudb_schema(sqlite3 *db){
   int rc;
 
@@ -63,6 +68,9 @@ int subudb_schema(sqlite3 *db){
 }
 
 //--------------------------------------------------------------------------------
+#tranche subudb.lib.h
+  int subudb_number_get(sqlite3 *db, int *n);
+#tranche-end
 int subudb_number_get(sqlite3 *db, int *n){
   char *sql = "SELECT value FROM Attribute_Int WHERE attribute = 'Max_Subunumber';";
   sqlite3_stmt *stmt;
@@ -80,6 +88,9 @@ int subudb_number_get(sqlite3 *db, int *n){
   return SQLITE_NOTFOUND; 
 }
 
+#tranche subudb.lib.h
+  int subudb_number_set(sqlite3 *db, int n);
+#tranche-end
 int subudb_number_set(sqlite3 *db, int n){
   int rc;
   char *sql = "UPDATE Attribute_Int SET value = ?1 WHERE attribute = 'Max_Subunumber';";
@@ -94,6 +105,9 @@ int subudb_number_set(sqlite3 *db, int n){
 
 //--------------------------------------------------------------------------------
 // put relation into Masteru_Subu table
+#tranche subudb.lib.h
+  int subudb_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username);
+#tranche-end
 int subudb_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
   char *sql = "INSERT INTO Masteru_Subu VALUES (?1, ?2, ?3);";
   sqlite3_stmt *stmt;
@@ -108,6 +122,9 @@ int subudb_Masteru_Subu_put(sqlite3 *db, char *masteru_name, char *subuname, cha
 }
 
 //--------------------------------------------------------------------------------
+#tranche subudb.lib.h
+  int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username);
+#tranche-end
 int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char *subuname, char **subu_username){
   char *sql = "SELECT subu_username FROM Masteru_Subu WHERE masteru_name = ?1 AND subuname = ?2;";
   size_t sql_len = strlen(sql);
@@ -131,21 +148,15 @@ int subudb_Masteru_Subu_get_subu_username(sqlite3 *db, char *masteru_name, char 
 }
 
 //--------------------------------------------------------------------------------
-
-// we return and array of subudb_subu_info
-#if INTERFACE
-struct subudb_subu_element{
-  char *subuname;
-  char *subu_username;
-};
-#endif
-
-int subudb_Masteru_Subu_get_subus
-(
- sqlite3 *db,
- char *masteru_name,
- da *subus
-){
+#tranche subudb.lib.h
+  typedef struct{
+    char *subuname; // the name that masteru chose for his or her subu
+    char *subu_username;  // the adduser name we gave it, typically of the s<number>
+  } subudb_subu_element;
+  int subudb_Masteru_Subu_get_subus(sqlite3 *db, char *masteru_name, Da *subus);
+#tranche-end
+//returns an array of subudb_subu_elements that correspond to the masteru_name
+int subudb_Masteru_Subu_get_subus(sqlite3 *db, char *masteru_name, Da *subusp){
   char *sql = "SELECT subuname, subu_username"
               " FROM Masteru_Subu"
               " WHERE masteru_name = ?1;";
@@ -156,18 +167,13 @@ int subudb_Masteru_Subu_get_subus
   if( rc != SQLITE_OK ) return rc;
   sqlite3_bind_text(stmt, 1, masteru_name, strlen(masteru_name), SQLITE_STATIC);
 
-  da_alloc(subus, sizeof(subudb_subu_element));
-  subudb_subu_element *pt = (subudb_subu_element *)subus->base;
+  subudb_subu_element *pt;
   rc = sqlite3_step(stmt);
   while( rc == SQLITE_ROW ){
-    if( da_boundq(subus, pt) ){
-      char *old_base = da_expand(subus);
-      da_rebase(subus, old_base, pt);
-    }
+    pt = (subudb_subu_element *)da_push_alloc(subusp);
     pt->subuname = strdup(sqlite3_column_text(stmt, 0));
     pt->subu_username = strdup(sqlite3_column_text(stmt, 1));
   rc = sqlite3_step(stmt);
-  pt++;
   }
   sqlite3_finalize(stmt);
   if( rc != SQLITE_DONE ) return rc;
@@ -175,6 +181,9 @@ int subudb_Masteru_Subu_get_subus
 }
 
 //--------------------------------------------------------------------------------
+#tranche subudb.lib.h
+  int subudb_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username);
+#tranche-end
 int subudb_Masteru_Subu_rm(sqlite3 *db, char *masteru_name, char *subuname, char *subu_username){
   char *sql = "DELETE FROM Masteru_Subu WHERE masteru_name = ?1 AND subuname = ?2 AND subu_username = ?3;";
   size_t sql_len = strlen(sql);

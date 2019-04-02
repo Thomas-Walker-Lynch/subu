@@ -24,10 +24,8 @@ ECHO= echo
 
 # compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -Werror
-
-LINKFLAGS=-L1_lib -lda 
+CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include  -ggdb -Werror -DDEBUG -DDEBUGDB 
+LINKFLAGS=-L$(LIBDIR) -L(SHAREDIR)/lib -ldebug
 
 
 

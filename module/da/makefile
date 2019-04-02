@@ -16,8 +16,8 @@ dep:
 
 .PHONY: lib
 lib:
-	$(MAKE) $@
 	cp $(SRCDIR)/da.lib.h $(INCDIR)/da.h
+	$(MAKE) $@
 
 .PHONY: exec
 exec:

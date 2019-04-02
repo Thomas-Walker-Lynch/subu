@@ -1,9 +1,9 @@
+#tranche subu-bind.cli.c
 /*
 mount a subu user directory into master's subuland
 uses unmount to undo this
 
 */
-#include "subu-bind.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,3 +23,4 @@ int main(int argc, char **argv){
   }
   return 0;
 }
+#tranche-end

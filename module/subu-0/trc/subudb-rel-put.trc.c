@@ -1,8 +1,8 @@
+#tranche subudb-rel-put.cli.c
 /*
 puts a relation in the masteru/subu table
 
 */
-#include "subudb-rel-rm.cli.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -24,12 +24,11 @@ int main(int argc, char **argv){
       return SUBU_ERR_DB_FILE;
     }}
 
-  int ret = subudb_Masteru_Subu_rm(db, masteru_name, subuname, subu_username);
-  if( ret != SQLITE_DONE ){
-    fprintf(stderr, "subudb_Masteru_Subu_rm indicates failure by returning %d\n",ret);
+  int ret = subudb_Masteru_Subu_put(db, masteru_name, subuname, subu_username);
+  if( ret != SQLITE_OK ){
+    fprintf(stderr, "subudb_Masteru_Subu_put indicates failure by returning %d\n",ret);
     fprintf(stderr, "sqlite3 issues message, %s\n", sqlite3_errmsg(db));
-    printf("put failed\n");
-    return 2;
+    return SUBU_ERR_DB_FILE;
   }
   ret = sqlite3_close(db);
   if( ret != SQLITE_OK ){
@@ -39,3 +38,4 @@ int main(int argc, char **argv){
   }    
   return 0;
 }
+#tranche-end

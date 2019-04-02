@@ -1,12 +1,12 @@
 
-MODULE=db
+MODULE=debug
 
 DEPRDIR=deprecated
 DOCDIR=doc
 EXECDIR=exec
 INCDIR=include
 LIBDIR=lib
-SHAREDIR=../share
+SHAREDIR=$(realpath $(PROJECT_SUBU)/module/share)
 SRCDIR=src
 TESTDIR=test
 TMPDIR=tmp
@@ -23,9 +23,8 @@ ECHO= echo
 
 # compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I. -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -Werror
-LINKFLAGS=-Llib -ldb
+CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include -ggdb -Werror -DDEBUG -DDEBUGDB 
+LINKFLAGS=-L$(LIBDIR) -l$(MODULE)
 
 
 

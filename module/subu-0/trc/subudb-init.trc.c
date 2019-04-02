@@ -1,8 +1,8 @@
+#tranche subudb-init.cli.c
 /*
 This command initializes the db file.
 
 */
-#include "subudb-init.cli.h"
 #include <stdio.h>
 
 int main(){
@@ -24,3 +24,4 @@ int main(){
   }    
   return 0;
 }
+#tranche-end

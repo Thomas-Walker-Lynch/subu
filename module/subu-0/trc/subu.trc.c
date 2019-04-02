@@ -1,3 +1,4 @@
+#tranche subu.lib.c
 /*
   sqllite3 is used to maintain the db file, which is currently compiled
   in as /etc/subu.db, (or just subu.db for testing).
@@ -18,6 +19,11 @@
   subu-mk-0 and subu-rm-0 are setuid root scripts.  
 
 */
+#include <da.h>
+#include <debug.h>
+#include <dispatch.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
 #include "subu.lib.h"
 
 // without this #define we get the warning: implicit declaration of function ‘seteuid’/‘setegid’
@@ -32,15 +38,18 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#if INTERFACE
-#include <stdbool.h>
-#include <errno.h>
-#include <sqlite3.h>
-#endif
+#tranche subu.lib.h
+  #include <stdbool.h>
+  #include <errno.h>
+  #include <sqlite3.h>
+#tranche-end
 
 //--------------------------------------------------------------------------------
 // dispatched command errors  .. should add mkdir and rmdir ...
 //
+#tranche subu.lib.h
+  char *useradd_mess(int err);
+#tranche-end
 char *useradd_mess(int err){
   if(err <= 0) return NULL;
   char *mess;
@@ -63,6 +72,9 @@ char *useradd_mess(int err){
   }
   return strdup(mess);
 }
+#tranche subu.lib.h
+  char *userdel_mess(int err);
+#tranche-end
 char *userdel_mess(int err){
   if(err <= 0) return NULL;
   char *mess;
@@ -87,24 +99,26 @@ char *userdel_mess(int err){
 
 //--------------------------------------------------------------------------------
 //
-#if INTERFACE
-#define SUBU_ERR_ARG_CNT 1
-#define SUBU_ERR_SETUID_ROOT 2
-#define SUBU_ERR_MALLOC 3
-#define SUBU_ERR_MKDIR_SUBUHOME 4
-#define SUBU_ERR_RMDIR_SUBUHOME 5
-#define SUBU_ERR_SUBUNAME_MALFORMED 6
-#define SUBU_ERR_HOMELESS 7
-#define SUBU_ERR_DB_FILE 8
-#define SUBU_ERR_SUBUHOME_EXISTS 9
-#define SUBU_ERR_BUG_SSS 10
-#define SUBU_ERR_FAILED_USERADD 11
-#define SUBU_ERR_FAILED_USERDEL 12
-#define SUBU_ERR_SUBU_NOT_FOUND 13
-#define SUBU_ERR_N 14
-#define SUBU_ERR_BIND 15
-#endif
-
+#tranche subu.lib.h
+  #define SUBU_ERR_ARG_CNT 1
+  #define SUBU_ERR_SETUID_ROOT 2
+  #define SUBU_ERR_MALLOC 3
+  #define SUBU_ERR_MKDIR_SUBUHOME 4
+  #define SUBU_ERR_RMDIR_SUBUHOME 5
+  #define SUBU_ERR_SUBUNAME_MALFORMED 6
+  #define SUBU_ERR_HOMELESS 7
+  #define SUBU_ERR_DB_FILE 8
+  #define SUBU_ERR_SUBUHOME_EXISTS 9
+  #define SUBU_ERR_BUG_SSS 10
+  #define SUBU_ERR_FAILED_USERADD 11
+  #define SUBU_ERR_FAILED_USERDEL 12
+  #define SUBU_ERR_SUBU_NOT_FOUND 13
+  #define SUBU_ERR_N 14
+  #define SUBU_ERR_BIND 15
+#tranche-end
+#tranche subu.lib.h
+  void subu_err(char *fname, int err, char *mess);
+#tranche-end
 void subu_err(char *fname, int err, char *mess){
   if(!mess) mess = "";
   switch(err){
@@ -271,11 +285,14 @@ static int mk_subuhome(char *subuland, char *subuname, char **subuhome){
 
 
 //===============================================================================
+#tranche subu.lib.h
+  int subu_mk_0(char **mess, sqlite3 *db, char *subuname);
+#tranche-end
 int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
 
   int rc;
   if(mess)*mess = 0;
-  da resources;
+  Da resources;
   da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
@@ -418,11 +435,14 @@ int subu_mk_0(char **mess, sqlite3 *db, char *subuname){
 }
 
 //================================================================================
+#tranche subu.lib.h
+  int subu_rm_0(char **mess, sqlite3 *db, char *subuname);
+#tranche-end
 int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 
   int rc;
   if(mess)*mess = 0;
-  da resources;
+  Da resources;
   da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
@@ -578,11 +598,14 @@ int subu_rm_0(char **mess, sqlite3 *db, char *subuname){
 //================================================================================
 // identifies masteru, the bindfs maps each subu_user's home to its mount point
 // in subuland.
+#tranche subu.lib.h
+  int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuhome);
+#tranche-end
 int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuhome){
 
   int rc;
   if(mess)*mess = 0;
-  da resources;
+  Da resources;
   da_alloc(&resources, sizeof(char *));
 
   // lookup the subu_user_home
@@ -626,11 +649,14 @@ int subu_bind(char **mess, char *masteru_name, char *subu_username, char *subuho
   RETURN(&resources, 0);
 }
 
+#tranche subu.lib.h
+  int subu_bind_all(char **mess, sqlite3 *db);
+#tranche-end
 int subu_bind_all(char **mess, sqlite3 *db){
 
   int rc;
   if(mess)*mess = 0;
-  da resources;
+  Da resources;
   da_alloc(&resources, sizeof(char *));
 
   //--------------------------------------------------------------------------------
@@ -676,8 +702,10 @@ int subu_bind_all(char **mess, sqlite3 *db){
   #endif
 
   //--------------------------------------------------------------------------------
-  da subus;
-  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, &subus);
+  Da subus;
+  Da *subusp = &subus;
+  da_alloc(subusp, sizeof(subudb_subu_element));
+  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, subusp);
   if( rc != SQLITE_OK ){
     if(mess)*mess = strdup("db access failed when fetching a list of subus");
     return rc;
@@ -687,8 +715,8 @@ int subu_bind_all(char **mess, sqlite3 *db){
   rc = 0; 
   char *subuhome = 0; // the name of the directory to put in subuland, not subu_user home dir
   uint err_cnt = 0;
-  subudb_subu_element *pt = (subudb_subu_element *)(subus.base);
-  while( !da_endq(&subus,pt) ){
+  subudb_subu_element *pt = (subudb_subu_element *)(subusp->base);
+  while( !da_endq(subusp,pt) ){
     rc = mk_subuhome(subuland, pt->subuname, &subuhome);
     #ifdef DEBUG
     if(subuhome)
@@ -711,3 +739,4 @@ int subu_bind_all(char **mess, sqlite3 *db){
   }
   RETURN(&resources, 0);
 }
+#tranche-end

@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-#include <db.h>
+#include <debug.h>
 #include "dispatch.lib.h"
 
 #tranche dispatch.lib.h

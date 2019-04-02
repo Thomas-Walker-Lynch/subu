@@ -2,10 +2,8 @@
 
 SHELL=/bin/bash
 MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
-#MAKE=/usr/bin/make -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 
 -include makefile-flags
-
 
 .PHONY: all 
 all: version
@@ -13,6 +11,7 @@ all: version
 .PHONY: info
 info:
 	@echo "TRCDIR: " $(TRCDIR)
+	@echo "SHAREDIR: " $(SHAREDIR)
 	$(MAKE) $@
 
 .PHONY: setup
@@ -23,21 +22,25 @@ setup:
 .PHONY: dep
 dep:
 	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
-	@trcsources=$(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc);\
+	trcsources=($(wildcard $(TRCDIR)/*.trc.c)$(wildcard $(TRCDIR)/*.trc.cc));\
 	if [ ! -z "$$trcsources" ]; then\
-	  trctargets=$$(tranche-target $$trcsources -sep " " -tdir $(SRCDIR) );\
-	  $(ECHO) $$trcsources;\
-	  tranche-make $$trcsources -tdir $(SRCDIR) -mfile $(DEPFILE);\
+	  trctargets=$$(tranche-target $${trcsources[@]} -sep " " -tdir $(SRCDIR) );\
+	  $(ECHO) "trcsources: " $${trcsources[@]};\
+	  $(ECHO) "trctargets: " $$trctargets;\
+	  tranche-make $${trcsources[@]} -tdir $(SRCDIR) -mfile $(DEPFILE);\
 	  $(MAKE) $$trctargets;\
 	fi
 	$(MAKE) $@
 
 .PHONY: lib
 lib:
+	cp $(SRCDIR)/common.lib.h $(INCDIR)/subu.h
+	cat $(SRCDIR)/subudb.lib.h >> $(INCDIR)/subu.h
+	cat $(SRCDIR)/subu.lib.h >> $(INCDIR)/subu.h
 	$(MAKE) $@
-	cp $(SRCDIR)/dispatch.lib.h $(INCDIR)/dispatch.h
 
 %::
+	@echo default target
 	$(MAKE) $@
 
 

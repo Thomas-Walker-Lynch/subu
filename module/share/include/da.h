@@ -12,7 +12,7 @@ typedef struct Da{
 } Da;
 
 #define RETURN(dap, r)                      \
-  { da_map(dap, da_free, NULL); return r; }
+  { da_free_elements(dap); return r; }
 
 
 void da_alloc(Da *dap, size_t element_size);
@@ -25,7 +25,8 @@ char *da_expand(Da *dap);
 bool da_boundq(Da *dap);
 
 char *da_index(Da *dap, size_t i);
-void da_push(Da *dap, void *element);
+char *da_push_alloc(Da *dap);
+char *da_push(Da *dap, void *element);
 bool da_pop(Da *dap, void *element);
 
 bool da_endq(Da *dap, void *pt);

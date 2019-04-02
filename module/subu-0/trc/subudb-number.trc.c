@@ -6,6 +6,9 @@ Set or get a new maximum subu number. Currently doesn't do the setting part.
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
 

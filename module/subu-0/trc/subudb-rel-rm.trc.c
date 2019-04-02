@@ -5,6 +5,9 @@ puts a relation in the masteru/subu table
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
 

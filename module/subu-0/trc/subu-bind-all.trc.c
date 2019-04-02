@@ -6,6 +6,8 @@ uses unmount to undo this
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
   if( argc != 1){

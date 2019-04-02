@@ -32,6 +32,10 @@ dep:
 	fi
 	$(MAKE) $@
 
+.PHONY: exec
+exec:
+	$(MAKE) $@
+
 .PHONY: lib
 lib:
 	cp $(SRCDIR)/common.lib.h $(INCDIR)/subu.h

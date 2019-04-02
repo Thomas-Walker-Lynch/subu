@@ -6,6 +6,9 @@ Set or get a new maximum subu number. Currently doesn't do the setting part.
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
 
@@ -24,14 +27,16 @@ int main(int argc, char **argv){
     return SUBU_ERR_DB_FILE;
   }
 
-  subudb_subu_element *sa;
-  subudb_subu_element *sa_end;
-  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, &sa, &sa_end);
+  Da subu_arr;
+  Da *subu_arrp = &subu_arr;
+  rc = subudb_Masteru_Subu_get_subus(db, masteru_name, subu_arrp);
   if( rc == SQLITE_OK ){
-    subudb_subu_element *pt = sa;
-    while( pt != sa_end ){
-      printf("%s %s\n", pt->subuname, pt->subu_username);
-    pt++;
+    char *pt = subu_arrp->base;
+    subudb_subu_element *pt1;
+    while( pt < subu_arrp->end ){
+      pt1 = (subudb_subu_element *)pt;
+      printf("%s %s\n", pt1->subuname, pt1->subu_username);
+    pt += subu_arrp->element_size;
     }
     rc = sqlite3_close(db);
     if( rc != SQLITE_OK ){

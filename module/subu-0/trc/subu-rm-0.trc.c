@@ -5,6 +5,8 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
   char *command = argv[0];

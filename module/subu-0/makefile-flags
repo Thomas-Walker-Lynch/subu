@@ -25,7 +25,4 @@ ECHO= echo
 # compiler and flags
 C=gcc
 CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include -ggdb -Werror -DDEBUG -DDEBUGDB 
-LINKFLAGS=-L$(LIBDIR) -L$(SHAREDIR)/lib/ -l$(MODULE) -lda -ltranche -ldispatch
-
-
-
+LINKFLAGS=-L$(LIBDIR) -L$(SHAREDIR)/lib/ -l$(MODULE) -lda -ldispatch -ldebug -lsqlite3

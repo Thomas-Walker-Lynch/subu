@@ -4,6 +4,9 @@ This command initializes the db file.
 
 */
 #include <stdio.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
+#include "subu.lib.h"
 
 int main(){
   sqlite3 *db;

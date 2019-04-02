@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-typedef struct Da{
+typedef struct{
   char *base;
   char *end; // one byte/one element off the end of the array
   size_t size; // size >= (end - base) + 1;

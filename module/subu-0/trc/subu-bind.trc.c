@@ -4,8 +4,11 @@ mount a subu user directory into master's subuland
 uses unmount to undo this
 
 */
+#include <subu.lib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
 

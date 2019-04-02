@@ -22,6 +22,11 @@ lib:
 exec:
 	$(MAKE) $@
 
+.PHONY: share
+share:
+	@echo "module/da/test nothing to share"
+
+
 %::
 	$(MAKE) $@
 

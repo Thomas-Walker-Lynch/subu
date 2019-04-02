@@ -6,6 +6,9 @@ for testing subudb_Masteru_Subu_get_subu_username
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
+#include "subu.lib.h"
 
 int main(int argc, char **argv){
 

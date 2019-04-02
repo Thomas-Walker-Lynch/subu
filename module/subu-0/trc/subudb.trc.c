@@ -8,16 +8,17 @@
 
   Each of these returns SQLITE_OK upon success
   */
+  #include <da.h>
   #include <sqlite3.h>
 #tranche-end
 
-#include <da.h>
-#include "common.lib.h"
-#include "subudb.lib.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <da.h>
+#include "common.lib.h"
+#include "subudb.lib.h"
 
 //--------------------------------------------------------------------------------
 // sqlite transactions don't nest.  There is a way to use save points, but still

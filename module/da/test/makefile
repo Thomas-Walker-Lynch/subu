@@ -6,17 +6,19 @@ MAKE=/usr/bin/make --no-print-directory -f $(PROJECT_SUBU)/tool/lib/makefile-cc
 
 -include makefile-flags
 
-.PHONY: all lib exec
-all: version deps lib exec
+.PHONY: all
+all: version
 
 .PHONY: dep
 dep:
 	if [ -e $(DEPFILE) ]; then rm $(DEPFILE); fi
 	$(MAKE) $@
 
+.PHONY: lib
 lib:
 	$(MAKE) $@
 
+.PHONY: exec
 exec:
 	$(MAKE) $@
 

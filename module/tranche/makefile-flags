@@ -1,15 +1,27 @@
 MODULE=tranche
 
+DEPRDIR=deprecated
+DOCDIR=doc
+EXECDIR=exec
+INCDIR=include
+LIBDIR=lib
+SHAREDIR=../share
+SRCDIR=src
+TESTDIR=
+TMPDIR=tmp
+TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
+TRYDIR=try
+
+DEPFILE=$(TMPDIR)/makefile-cc.deps
+LIBFILE=$(LIBDIR)/lib$(MODULE).a
+INCFILE=$(INCDIR)/$(MODULE).h
+
 # some versions of Linux need a -e option others complain if there is a -e .. and it isn't the binary for echo ..
 ECHO= echo
 #ECHO= echo -e
 
-# directories used by this makefile, these could all be set to dot for
-# the simplest source directory structure
-EXECDIR=exec
-
 C=gcc
 CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -ggdb -Werror -DDEBUG -DDEBUGDB 
-#CFLAGS=-std=gnu11 -fPIC -I. -Werror
+#CFLAGS=-std=gnu11 -fPIC -I. -I../share/include -Werror
 LINKFLAGS=-Llib -L../share/lib/ -lda -ltranche
 

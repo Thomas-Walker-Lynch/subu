@@ -31,7 +31,6 @@ EXEC= $(patsubst %, $(EXECDIR)/%, $(C_BASE_CLI) $(CC_BASE_CLI))
 
 # default directory seteup
 #
-
 DEPRDIR=deprecated
 DOCDIR=doc
 EXECDIR=exec
@@ -43,6 +42,10 @@ TESTDIR=test
 TMPDIR=tmp
 TOOLDIR=$(realpath $(PROJECT_SUBU)/tool)
 TRYDIR=try
+
+DEPFILE=$(TMPDIR)/makefile-cc.deps
+LIBFILE=$(LIBDIR)/lib$(MODULE).a
+INCFILE=$(INCDIR)/$(MODULE).h
 
 
 # a single space literal, for example if you wanted to subsitute commas to
@@ -59,11 +62,6 @@ CC=
 #  user must define things needed by the local makefile, the compiler, and flags
 
 -include makefile-flags
-
-DEPFILE=$(TMPDIR)/makefile-cc.deps
-LIBFILE=$(LIBDIR)/lib$(MODULE).a
-INCFILE=$(INCDIR)/$(MODULE).h
-
 
 #--------------------------------------------------------------------------------
 # targets

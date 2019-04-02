@@ -1,0 +1,42 @@
+2019-04-02T10:48:22Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> cat makefile 
+
+
+.PHONY: lib version
+
+version:
+	@echo "version 0.1"
+
+%::
+	@echo $@
+
+
+
+2019-04-02T10:48:27Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> mkdir version lib
+
+2019-04-02T10:48:38Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> ls
+lib  makefile  version
+
+2019-04-02T10:48:42Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> make version
+version 0.1
+
+2019-04-02T10:48:50Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> make code
+code
+
+2019-04-02T10:48:57Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> make lib
+make: Nothing to be done for 'lib'.
+
+2019-04-02T10:49:00Z
+user@host§~/subu_land/subu/try/phony_general_targets§
+> 

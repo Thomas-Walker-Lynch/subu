@@ -5,7 +5,7 @@
 #    | grep -v deprecated | grep -v doc | sort -u | sed ':a;N;$!ba;s/\n/ /g' \
 #)
 
-MAKEABLE= module/da module/da/test module/tranche module/dispatch
+MAKEABLE= module/da module/da/test module/db module/tranche module/dispatch
 
 .PHONY: all info clean dist-clean
 

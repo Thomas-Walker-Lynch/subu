@@ -1,5 +1,5 @@
 
-# nice idea, but the modules have to be made in the correct order, perhpas run this to check the module list
+# nice idea, but the modules have to be made in the correct order, perhaps run this to check the module list
 # MAKEABLE= $(shell find module tool -name 'makefile' | grep -v deprecated)
 
 CLEANABLE=\

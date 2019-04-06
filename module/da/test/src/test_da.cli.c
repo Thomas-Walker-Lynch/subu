@@ -11,8 +11,8 @@ int main(){
 
   // enumeration of tests
   typedef bool (*test_fun)();
-  test_fun tests[] = {test_da_0, test_da_1, test_da_2, test_da_3, test_da_4, NULL};
-  char *test_names[] = {"test_da_0", "test_da_1", "test_da_2", "test_da_3", "test_da_4", NULL};
+  test_fun tests[] = {test_da_0, test_da_1, test_da_2, test_da_3, test_da_4, test_da_5, NULL};
+  char *test_names[] = {"test_da_0", "test_da_1", "test_da_2", "test_da_3", "test_da_4", "test_da_5", NULL};
 
   // call tests
   test_fun *tfp = tests;
@@ -42,5 +42,12 @@ int main(){
     printf("failed %u of %u tests\n", failed, passed + failed);
 
   if( passed == 0 || failed != 0 ) return 1;
+
+
+
+
+
+
+
   return 0;
 }

@@ -165,6 +165,22 @@ bool test_da_4(){
   return result;
 }
 
+//Glenda's tests
 
-
-
+//tests da_rewind
+bool test_da_5(){
+  int i = 0;
+  Da dap;
+  da_alloc(&dap, sizeof(int));
+  while(i < 8){
+    da_push(&dap, &i);
+    ++i;
+  }
+  bool f = dap.end != dap.base;
+  da_rewind(&dap);
+  int j = *(dap.end);
+  bool g = dap.end == dap.base;
+  bool h = j == 0;
+  bool result = f && g && h;
+  return result;
+}

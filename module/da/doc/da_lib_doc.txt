@@ -1,0 +1,125 @@
+Explanations of primary goals and step-by-step actions of each function in da.lib.c.
+
+Currently needs editing because descriptions based on old functions. So, some are not up to date or even no longer existent.
+
+/*
+void da_alloc - The primary goal of this function is to allocate the initial Da in memory and assign the appropriate pointers that correspond. It is much like an initializer in a class. It makes an array large enough to hold 4 elements of the element size passed in as an argument.
+- This function takes a Da pointer called dap and a size_t called element_size.
+- It dereferences the Da pointer and assigns the value of the argument element_size to the element_size size_t variable in the Da.
+- Then it assigns 4 times the value of the argument element_size to the size size_t variable in the Da, thereby making the size of the array to be created large enough to hold 4 elements.
+- Then it uses malloc to allocate an array in memory of this size and pointed to by dap and assigns the pointer to the first element in the array to the char pointer labeled base in the dap Da.
+- Then it assigns the same address to the end pointer. This is just to start off, as the end pointer will be advanced as elements are inserted.
+
+void da_free - The primary goal of this function is to "free" the space in memory where the Da whose pointer is passed in is located. It does not actually delete the data in that location, but frees the memory to be reused by removing the tie between the address and the pointer and removing the span of memory assigned to the Da by setting its size to zero.
+- This function takes a Da pointer called dap.
+- It calls the C function free and passes it the base pointer (which has been assigned the address of first element in the array) of the Da.
+- Then it assigns the size variable in the Da the value of 0.
+
+void da_rewind - The primary goal of this function is to start over in inserting elements in this array. It "rewinds" the end pointer to the base so that, while it does not actually erase the data at those locations in memory, it acts as if there is nothing in the array. New elements will be inserted starting at the base again, overwriting whatever old data was there.
+- This function takes a Da pointer called dap.
+- It takes the value of the base variable of dap and assigns it to the end variable of dap.
+
+bool da_empty - The main goal of this function is to test whether a Da is empty. It will return true if there are no elements in the array and false if there are. For example, it should return true for a brand new Da or for one that has been rewinded, but not for one whose end pointer has moved due to element insertion.
+- This function takes a Da pointer called dap.
+- If the end pointer of dap is the same as the base pointer of dap, the function will return true (as a bool).
+
+size_t da_length - The primary goal of this function is to report how many elements are currently store in a Da.
+- This function takes a Da pointer called dap.
+- It returns the result of an operation that divides the distance from the end pointer to the base pointer of dap by its element size. 
+
+void da_rebase - The primary goal of this function is to redirect pointers that previous pointed into a Da to the new location of the array after it has been doubled. 
+- This function takes a Da pointer called dap, a char pointer called old_base (presumably the old base pointer from an expanded array), and a void pointer called pta.
+- It initializes a char pointer to a pointer called pt with a value of the pointer to the pointer to the void pointer pta. This would be like having a 2D array pointer because it points to the first element in an array of pointers. The pta would be a pointer to some other thing that had been making reference to dap before it was expanded and needs to be re-pointed into the new position of dap in memory.
+- It initializes a size_t variable called offset with a value of the difference between the pointer to the array pointer pt and the old_base passed in.
+- Then it assigns the pointer to pt with the sum of the base pointer of dap (presumably the new base after an expansion) and the offset.
+
+ char *da_expand - The primary goal of this function is to double the size of the array. It saves and "returns the old base so that existing pointers into the array can be moved to the new array" later. It doubles the size by allocating a new array with size of the variable new_size and copies the old data into it via memcpy with the old base, the end_offset it took from the old Da, and the corresponding element size. Then it frees the old pointer and reassigns all the variables and pointers to the newly allocated values.
+- This function takes a Da pointer called dap.
+- It initializes a size_t variable, declaring it to be named end_offset and assigning it the value of the difference between the pointer to the end of dap and the pointer to the base of dap, aka the current offset of the end pointer.
+- Then it initializesa char pointer called old base with value of the current address of the base of dap.
+- Then it initializes a size_t variable called new_size with the value of the size of dap multiplied by 2 (via left-shift 1, << 1).
+- Then it initializes a char pointer called new_base to a newly allocated array of the new size via the malloc C function.
+- It uses memcpy to copy the data from dap to the new Da by taking all the data withing the range from the old base to the end of the determined by the end offset and the element size of dap.
+- It calls the C function free to deallocate the old base pointer.
+- It changes the base pointer of dap to new_base and the end pointer of dap to where it is offset after the already inserted data.
+- It changes the size variable of dap to new_size.
+- It returns the old_base char pointer.
+
+**** No longer in code.
+bool da_endq -The primary goal of this function is to assure the pointer passed in has not "run off the end of the area currently allocated for the array," that is to say, the end of the data currently contained by the Da, the current address given by the end pointer.
+- This function takes a Da pointer called dap and a void pointer called pt.
+- It returns (bool) true if the char pointer passed in (pt) is greater than or equal to the end pointer of the Da.
+****
+
+bool da_boundq - The primary goal of this function is to assure that the end pointer has not "run off the end of the area allocated for the array," that is to say, the total area allocated for the container at full capacity.
+- This function takes a Da pointer called dap.
+- It returns true if the address referenced by the  end pointer of dap is greater than the address reached by adding the size of dap to its base pointer, the address of its first element.
+
+char *da_index - The main goal of this function is to locate a specific element within a Da by creating a pointer that is offset from the base to that element number's worth of element_sizes of data. This way we can put and take items directly from the list without moving the end pointer.
+- This function takes a Da called dap and a size_t called i.
+- It initializes a size_t called offset as i times the element size of dap.
+- It initializes a pointer called pt as the base of dap plus offset.
+- It returns the pointer pt.
+
+void da_push_alloc
+- This function takes a Da called dap.
+- It initializes a size_t called element_off as the difference between the end and base pointers of dap.
+- It adds one dap element_size's worth to the address of the end pointer of dap.
+- It then expands if the end pointer has run off the end of the currently allocated space for dap.
+- It returns a pointer to the address element_off's worth past the base of dap.
+
+void da_push - The primary goal of this function is to push elements into the array. It doubles the array if necessary, copies the information from the source, and moves the end pointer accordingly.
+- This function takes a Da pointer called dap and a void pointer called element.
+- If the end pointer is past the allocated size for the array, it doubles the array with da_expand.
+- It copies the information at the address of element (of the size of the element size of Da) at the location of the end pointer.
+- It then moves the end pointer of dap one element_size worth farther in memory.
+
+bool da_pop - The primary goal of this function is to pop the end pointer of a Da back one element. It takes precaution to ensure it will only go to the base of the Da. It returns a flag to confirm that a pop was performed. And it copies the information from the "deleted" element of the Da into an element pointer, if one was passed in.
+- This function takes a Da pointer called dap and a void pointer called element.
+- It flags (true bool) if the end pointer of dap is farther than one element_size past the base of dap. This ensures that there is actually somewhere to pop from and we won't be popping out of the allocated range of the Da.
+- If true, it removes one dap element_size worth's from the address of dap's end pointer. Then if there is an element pointer, it copies one element_size worth of data starting at the new end pointer into the address of element.
+- It returns the flag bool value to confirm whether or not a pop was performed.
+
+void da_map - The primary goal of this function is to create closure for the Da. It takes the results of functions for all the elements of a Da and copies them to a closure pointer to keep them at global scope even after exiting the namespace the function is in.
+- This function takes a Da pointer called cap, a void function pointer which takes two void pointer as arguments, and a void pointer called closure.
+- The arguments of f are intended to be an element pointer and another arg pointer.
+- It initializes a char pointer called pt with the address of the base pointer of dap.
+- As long as pt does not equal the end pointer of dap, it passes pt and closure as arguments to f. Then it adds a dap element_size worth to the pt address.
+
+static void da_free_element - The primary goal of this function is to free up space taken by a Da becuase these lists "are sometimes used as resource managers." It is one substep in the process, which is used by the da_map function during a closure procedure to free up the pointer.
+- This function takes two void pointers called pt and closure as arguments.
+- It frees the memory at the address of pt.
+
+void da_free_element - The primary goal of this function is to free up space taken by a Da because these lists "are sometimes used as resource managers." It is the main call for this function, sending the dap through the da_free_element function for every element and then rewinding the dap. This frees up the memory without deleting the Da itself.
+- This function takes a Da called dap as an argument.
+- It sends the dap pointer, the function da_free_element and the closure pointer of NULL to da_map.
+- It then sends dap to da_rewind.
+
+char *da_fgets - The primary goal of this function is to put text from a file into a dap, line by line, but not endlines of EOF. It preserves the old base, because da_push function will expand the Da if need be, but if not, the base won't have changed. "Use feof(FILE *stream) to test for EOF;"
+- This function takes a Da called dap and a FILE called fd as arguments.
+- It initializes a char pointer called old_base with the address of the base of dap.
+- It initializes an int called c with the value returned by running fd through the fgets C function.
+- As long as c is neither an EOF (end of file) character nor an endline character, it pushes c onto the dap list. Then it copies the result of fgetc(fd) into c again and continues.
+- It initializes an int called terminator with the value 0.
+- It pushes the terminator onto the dap.
+- This function returns the char pointer old_base "so that external pointers can be rebased" in the future.
+
+void da_ints_print
+- This function takes 
+
+
+void da_cat - The primary goal of this function is to concatenate the contents of one array onto another. It adds it right to the end of where the last started, doubling if need be. "If dap0 has had a terminatating zero added, that must be popped off before the call.  Similarly if a terminating zero is desired, it should be pushed after the call."
+- This function takes two Da pointers called dap0 and dap1 as arguments.
+- It returns if the end pointer of dap 1 already point to the same address as the end pointer of dap0. This prevents redundant concatenation.
+- It initializes a size_t called dap0_size with the difference between the end and base of dap0, then does the same thing for dap1.
+- It adds the size of dap1 to the end pointer of dap0.
+- If the end pointer of dap0 has now run off the edge of dap0's allocated size, it expands/doubles dap0 to accomodate.
+- It copies the contents of dap1 into dap0 starting dap0_size away from the base of dap0 (where the old end pointer would've been).
+
+
+
+
+*/
+
+
+

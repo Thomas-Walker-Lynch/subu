@@ -45,6 +45,7 @@ clean:
 
 .PHONY: dist-clean
 dist-clean : clean
+	for dir in $(CLEANABLE); do make -C $$dir dist-clean || true; done
 	for i in $(wildcard module/share/lib/*); do rm $$i; done
 	for i in $(wildcard module/share/inc/*); do rm $$i; done
 	for i in $(wildcard module/share/bin/*); do rm $$i; done

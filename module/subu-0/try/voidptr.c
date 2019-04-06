@@ -1,6 +1,6 @@
 /*
 They say a cast is not required passing a typed pointer to a void * argument,
-but What about void **?
+but What about void **? .. oop then it matters.
 
 gcc -std=gnu11 -o voidptr voidptr.c
 voidptr.c: In function ‘main’:

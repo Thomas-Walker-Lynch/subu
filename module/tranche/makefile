@@ -25,6 +25,10 @@ exec:
 
 .PHONY: share
 share:
+	@echo "instead of share, the 'install' target will put the execs in tools/bin"
+
+.PHONY: install
+install:
 	if [ -d $(EXECDIR) ]; then if [ ! -z "$(wildcard $(EXECDIR)/*)" ]; then cp $(EXECDIR)/* $(PROJECT_SUBU)/tool/bin; fi; fi
 
 %::

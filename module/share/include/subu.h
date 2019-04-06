@@ -20,6 +20,7 @@
 
   Each of these returns SQLITE_OK upon success
   */
+  #include <da.h>
   #include <sqlite3.h>
   int db_begin(sqlite3 *db);
   int db_commit(sqlite3 *db);

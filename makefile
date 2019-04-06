@@ -1,31 +1,47 @@
 
+# nice idea, but the modules have to be made in the correct order, perhpas run this to check the module list
+# MAKEABLE= $(shell find module tool -name 'makefile' | grep -v deprecated)
+
+CLEANABLE=\
+  module/da\
+  module/da/test\
+  module/tranche\
+  module/debug\
+  module/dispatch\
+  module/subu-0
+
 MAKEABLE=\
-	module/da\
-	module/da/test\
-	module/debug\
-	module/tranche\
-	module/dispatch\
-	module/subu-0
+  module/da\
+  module/da/test\
+  module/tranche\
+  module/debug\
+  module/dispatch\
+  module/subu-0
+
 
 .PHONY: all
 all:
-	for dir in $(MAKEABLE); do pushd $$dir; make dist-clean dep lib exec share; popd; done
-
-.PHONY: dep
-dep:
-	for dir in $(MAKEABLE); do pushd $$dir; make dep; popd; done
-
-.PHONY: update
-update:
-	for dir in $(MAKEABLE); do pushd $$dir; make lib exec share; popd; done
+	for dir in $(MAKEABLE); do make -C $$dir dist-clean dep lib exec share || true; done
 
 .PHONY: info
 info:
 	@echo "MAKEABLE:" $(MAKEABLE)
 
+.PHONY: setup
+setup:
+	for dir in $(MAKEABLE); do make -C $$dir setup || true; done
+
+.PHONY: dep
+dep:
+	for dir in $(MAKEABLE); do make -C $$dir dep || true; done
+
+.PHONY: update
+update:
+	for dir in $(MAKEABLE); do make -C $$dir lib exec share || true; done
+
 .PHONY: clean
 clean:
-	for dir in $(MAKEABLE); do pushd $$dir; make clean; popd; done
+	for dir in $(CLEANABLE); do make -C $$dir clean || true; done
 
 .PHONY: dist-clean
 dist-clean : clean

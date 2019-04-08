@@ -185,6 +185,7 @@ bool test_da_5(){
   return result;
 }
 
+/*
 //tests da_index
 bool test_da_6(){
   Da dap;
@@ -192,3 +193,4 @@ bool test_da_6(){
   int i = 0;
   da_push(&
 }
+*/

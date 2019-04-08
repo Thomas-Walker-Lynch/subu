@@ -184,3 +184,11 @@ bool test_da_5(){
   bool result = f && g && h;
   return result;
 }
+
+//tests da_index
+bool test_da_6(){
+  Da dap;
+  da_alloc(&dap, sizeof(int));
+  int i = 0;
+  da_push(&
+}

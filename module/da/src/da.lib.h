@@ -31,12 +31,14 @@ bool da_pop(Da *dap, void *element);
 
 bool da_endq(Da *dap, void *pt);
 void da_map(Da *dap, void f(void *, void *), void *closure);
-
+void test_map(void *pt, void *closure);
+  
 void da_free_elements(Da *dap);
 
 void da_ints_print(Da *dap, char *sep);
 
 void da_strings_print(Da *dap, char *sep);
+
 bool da_strings_exists(Da *string_arrp, char *test_string);
 void da_strings_set_insert(Da *string_arrp, char *proffered_string, void destruct(void *));
 void da_strings_set_union(Da *string_arrp, Da *proffered_string_arrp, void destruct(void *));

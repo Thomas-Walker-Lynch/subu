@@ -81,16 +81,16 @@ bool da_pop - The primary goal of this function is to pop the end pointer of a D
 - It returns the flag bool value to confirm whether or not a pop was performed.
 
 void da_map - The primary goal of this function is to create closure for the Da. It takes the results of functions for all the elements of a Da and copies them to a closure pointer to keep them at global scope even after exiting the namespace the function is in.
-- This function takes a Da pointer called cap, a void function pointer which takes two void pointer as arguments, and a void pointer called closure.
+- This function takes a Da pointer called dap, a pointer to a void function which takes two void pointers as arguments, and a void pointer called closure.
 - The arguments of f are intended to be an element pointer and another arg pointer.
 - It initializes a char pointer called pt with the address of the base pointer of dap.
-- As long as pt does not equal the end pointer of dap, it passes pt and closure as arguments to f. Then it adds a dap element_size worth to the pt address.
+- As long as pt does not equal the end pointer of dap, it passes pt and closure as arguments to f (which is intended to be da_free_element as passed in by da_free_elements). Then it adds a dap element_size worth to the pt address.
 
 static void da_free_element - The primary goal of this function is to free up space taken by a Da becuase these lists "are sometimes used as resource managers." It is one substep in the process, which is used by the da_map function during a closure procedure to free up the pointer.
 - This function takes two void pointers called pt and closure as arguments.
 - It frees the memory at the address of pt.
 
-void da_free_element - The primary goal of this function is to free up space taken by a Da because these lists "are sometimes used as resource managers." It is the main call for this function, sending the dap through the da_free_element function for every element and then rewinding the dap. This frees up the memory without deleting the Da itself.
+void da_free_elements - The primary goal of this function is to free up space taken by a Da because these lists "are sometimes used as resource managers." It is the main call for this function, sending the dap through the da_free_element function for every element and then rewinding the dap. This frees up the memory without deleting the Da itself.
 - This function takes a Da called dap as an argument.
 - It sends the dap pointer, the function da_free_element and the closure pointer of NULL to da_map.
 - It then sends dap to da_rewind.
@@ -110,7 +110,7 @@ void da_ints_print
 
 void da_cat - The primary goal of this function is to concatenate the contents of one array onto another. It adds it right to the end of where the last started, doubling if need be. "If dap0 has had a terminatating zero added, that must be popped off before the call.  Similarly if a terminating zero is desired, it should be pushed after the call."
 - This function takes two Da pointers called dap0 and dap1 as arguments.
-- It returns if the end pointer of dap 1 already point to the same address as the end pointer of dap0. This prevents redundant concatenation.
+- It returns if the end pointer of dap 1 already points to the same address as the end pointer of dap0. This prevents redundant concatenation.
 - It initializes a size_t called dap0_size with the difference between the end and base of dap0, then does the same thing for dap1.
 - It adds the size of dap1 to the end pointer of dap0.
 - If the end pointer of dap0 has now run off the edge of dap0's allocated size, it expands/doubles dap0 to accomodate.

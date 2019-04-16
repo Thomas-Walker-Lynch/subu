@@ -23,7 +23,7 @@ ECHO= echo
 
 # compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include -ggdb -Werror -DDEBUG -DDEBUGDB 
+CFLAGS=-std=gnu11 -fPIC -I$(SRCDIR) -I$(INCDIR) -I$(SHAREDIR)/include -ggdb -O0 -Werror -DDEBUG -DDEBUGDB 
 LINKFLAGS=-L$(LIBDIR) -l$(MODULE)
 
 

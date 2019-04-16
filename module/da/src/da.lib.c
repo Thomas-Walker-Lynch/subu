@@ -2,7 +2,6 @@
 Dynamic Array
 
 */
-
 #include "da.lib.h"
 
 #include<stdlib.h>
@@ -57,7 +56,7 @@ char *da_expand(Da *dap){
 
 // true when end has run off the allocated area
 bool da_boundq(Da *dap){
-  return dap->end >= dap->base + dap->size;
+  return dap->end > (dap->base + dap->size);
 }
 
 //--------------------------------------------------------------------------------
@@ -111,6 +110,12 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
   }
 }
 
+void test_map(void *pt, void *closure){
+  bool *f1 = (bool *)closure;
+  *f1 = true;
+}
+
+
 //--------------------------------------------------------------------------------
 // da being used as a resource manager
 
@@ -119,6 +124,7 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
 static void da_free_element(void *pt, void *closure){
   free(*(char **)pt); // free does not care about the pointer type
 }
+
 void da_free_elements(Da *dap){
   da_map(dap, da_free_element, NULL);
   da_rewind(dap);
@@ -162,12 +168,25 @@ typedef struct {
   bool found;
 } da_strings_exists_closure;
 static void string_equal(void *sp, void *closure){
+  const char *string_element = *(char **)sp;
+  da_strings_exists_closure *ss = (da_strings_exists_closure *)closure;
+  const char *str = ss->string;
+  if( ss->found ) return;
+  ss->found = !strcmp(string_element, str);
+  return;
+}
+//added consts to see if it was a strcmp syntax issue
+
+/*original
+static void string_equal(void *sp, void *closure){
   char *string_element = *(char **)sp;
   da_strings_exists_closure *ss = (da_strings_exists_closure *)closure;
   if( ss->found ) return;
   ss->found = !strcmp(string_element, ss->string);
   return;
 }
+*/
+
 bool da_strings_exists(Da *string_arrp, char *test_string){
   da_strings_exists_closure sec;
   sec.string = test_string;

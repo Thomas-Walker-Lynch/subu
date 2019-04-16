@@ -4,15 +4,41 @@
 #include "test_da.lib.h"
 
 int main(){
-  bool da_0_passed = test_da_0();
+  bool da_0_passed = test_da_push_0();
 
   unsigned int passed = 0;
   unsigned int failed = 0;
 
   // enumeration of tests
   typedef bool (*test_fun)();
-  test_fun tests[] = {test_da_0, test_da_1, test_da_2, test_da_3, test_da_4, test_da_5, NULL};
-  char *test_names[] = {"test_da_0", "test_da_1", "test_da_2", "test_da_3", "test_da_4", "test_da_5", NULL};
+  test_fun tests[] =
+    {
+      test_da_push_0,
+      test_da_expand_0,
+      test_da_string_input_0,
+      test_da_pop_0,
+      test_da_cat_0,
+      test_da_cat_1,
+      test_da_rewind_0,
+      test_da_index_0,
+      test_da_rebase_0,
+      test_da_boundq_0,
+      test_da_map_0,
+      NULL};
+  char *test_names[] =
+    {
+      "test_da_push_0",
+      "test_da_expand_0",
+      "test_da_string_input_0",
+      "test_da_pop_0",
+      "test_da_cat_0",
+      "test_da_cat_1",
+      "test_da_rewind_0",
+      "test_da_index_0",
+      "test_da_rebase_0",
+      "test_da_boundq_0",
+      "test_da_map_0",
+      NULL};
 
   // call tests
   test_fun *tfp = tests;

@@ -289,7 +289,6 @@ bool da_equal(Da *da_el, Da *test_el){
   
 bool da_exists (Da **dar, int dar_size, Da *dap){
   da_exists_closure dec;
-  Da *da_first = *dar;
   dec.da = dap;
   dec.found = false;
   da_big_map(dar, dar_size, da_present, &dec);
@@ -297,10 +296,10 @@ bool da_exists (Da **dar, int dar_size, Da *dap){
 }
 
 void da_big_map(Da **dar, int dar_size, void f(void *, void *), void *closure){
-  Da *pt = *dar;
+  Da **pt = dar;
   int i = 0;
   while( i < dar_size ){
-    f(pt, closure);
+    f(*pt, closure);
     pt++;
     i++;
   }
@@ -310,14 +309,15 @@ void da_big_map(Da **dar, int dar_size, void f(void *, void *), void *closure){
 //∀, AND map
 //checks that all Das are present in Da of Das
 bool da_all (Da **dar, int dar_size, Da **dap){
-  da_exists_closure dec;
-  dec.da = *dap;
-  dec.found = true;
+  Da **tdar = dap;
+  Da *test_da = *tdar;
+  bool result = true;
   int i = 0;
-  while(dec.found && (i < dar_size)){
-    da_big_map(dar, dar_size, da_present, &dec);
-    dec.da++;
+  while(result && (i < dar_size)){
+    result = da_exists(dar, dar_size, test_da);
+    tdar++;
+    test_da = *tdar;
     i++;
   }
-  return dec.found;
+  return result;
 }

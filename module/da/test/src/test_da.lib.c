@@ -385,25 +385,25 @@ bool test_da_exists_0(){
   Da *dap0;
   {
     da_alloc(dap0, sizeof(char));
-    //char a = 'y';
-    //da_push(dap0, &a);
+    char a = 'y';
+    da_push(dap0, &a);
   }
   
   Da *dap1;
   {
     da_alloc(dap1, sizeof(char));
-    //char a = 'u';
-    //da_push(dap1, &a);
+    char a = 'u';
+    da_push(dap1, &a);
   }
   
   Da *dap2;
   {
     da_alloc(dap2, sizeof(char));
-    //char a = 'n';
-    //da_push(dap2, &a);
+    char a = 'n';
+    da_push(dap2, &a);
   }
 
-  void *darr[3];
+  Da *darr[3];
   int dar_size = 0;
 
   //add dap0, dap1 to darr
@@ -412,9 +412,9 @@ bool test_da_exists_0(){
   
 
   //test that dap0 and dap1 exist in darr but not dap2
-  bool f1 = da_exists((Da **)darr, dar_size, dap0);
-  bool f2 = da_exists((Da **)darr, dar_size, dap1);
-  bool f3 = !da_exists((Da **)darr, dar_size, dap2);
+  bool f1 = da_exists(darr, dar_size, dap0);
+  bool f2 = da_exists(darr, dar_size, dap1);
+  bool f3 = !da_exists(darr, dar_size, dap2);
 
   //add dap2 to darr
   darr[dar_size] = dap2; dar_size++;
@@ -427,9 +427,56 @@ bool test_da_exists_0(){
   
 //tests da_all
 bool test_da_all_0(){
-  return true;
-}
+  Da *dap0;
+  {
+    da_alloc(dap0, sizeof(char));
+    char a = 'y';
+    da_push(dap0, &a);
+  }
   
+   Da *dap1;
+   {
+     da_alloc(dap1, sizeof(char));
+     char a = 'u';
+     da_push(dap1, &a);
+   }
+
+   Da *dap2;
+   {
+     da_alloc(dap2, sizeof(char));
+     char a = 'n';
+     da_push(dap2, &a);
+   }
+   
+   Da **darr0 = malloc(3 * sizeof(Da *));
+   int dar_size0 = 0;
+   
+   //add dap0, dap1 to darr0 (array being tested)
+   darr0[dar_size0] = dap0; dar_size0++;
+   darr0[dar_size0] = dap1; dar_size0++;
+   darr0[dar_size0] = dap0;
+   //has to have same amount of elements as test array or will core dump
+   
+
+   Da **darr1 = malloc(3 * sizeof(Da *));
+   int dar_size1 = 0;
+   //add dap0,1,2 to darr1 (test array, to test against)
+   darr1[dar_size1] = dap0; dar_size1++;
+   darr1[dar_size1] = dap1; dar_size1++;
+   darr1[dar_size1] = dap2; dar_size1++;
+   
+   //tests that darr0 doesn't have all (dap0,1,2)
+   bool f1 = !da_all(darr0, dar_size1, darr1);
+
+   //add dap2 to darr0
+   darr0[dar_size0] = dap2; dar_size0++;
+   
+   //tests that darr0 has all (dap0,1,2)
+   bool f2 = da_all(darr0, dar_size1, darr1);
+   
+   return f1 && f2;
+}
+
 
 /*
   Functions               

@@ -13,5 +13,7 @@ bool test_da_index_0();
 bool test_da_rebase_0();
 bool test_da_boundq_0();
 bool test_da_map_0();
+bool test_da_exists_0();
+bool test_da_all_0();
 
 #endif

@@ -24,6 +24,8 @@ int main(){
       test_da_rebase_0,
       test_da_boundq_0,
       test_da_map_0,
+      test_da_exists_0,
+      test_da_all_0,
       NULL};
   char *test_names[] =
     {
@@ -38,6 +40,8 @@ int main(){
       "test_da_rebase_0",
       "test_da_boundq_0",
       "test_da_map_0",
+      "test_da_exists_0",
+      "test_da_all_0",
       NULL};
 
   // call tests

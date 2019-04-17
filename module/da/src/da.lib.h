@@ -31,7 +31,7 @@ bool da_pop(Da *dap, void *element);
 
 bool da_endq(Da *dap, void *pt);
 void da_map(Da *dap, void f(void *, void *), void *closure);
-void test_map(void *pt, void *closure);
+void da_test_map(void *pt, void *closure);
   
 void da_free_elements(Da *dap);
 
@@ -48,6 +48,12 @@ char *da_string_input(Da *dap, FILE *file);
 void da_string_push(Da *dap0, char *string);
 
 void da_cat(Da *dap_base, Da *dap_cat);
+
+void da_present(void *da_el, void *closure);
+bool da_equal(Da *da_el, Da *test_el);
+void da_big_map(Da **dar, int dar_size, void f(void *,void*), void *closure);
+bool da_exists(Da **dar, int dar_size, Da *dap);
+bool da_all(Da **dar, int dar_size, Da **dap);
 
 #endif
 

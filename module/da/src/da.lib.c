@@ -110,7 +110,7 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
   }
 }
 
-void test_map(void *pt, void *closure){
+void da_test_map(void *pt, void *closure){
   bool *f1 = (bool *)closure;
   *f1 = true;
 }
@@ -260,4 +260,64 @@ void da_cat(Da *dap0, Da *dap1){
   memcpy(dap0->base + dap0_size, dap1->base, dap1_size);
 }
 
+//array of Das
 
+//∃, OR map
+//checks that some Da is present in Da of Das
+
+typedef struct{
+  Da *da;
+  bool found;
+} da_exists_closure;
+
+void da_present(void *da_el, void *closure){
+  Da *da_element = (Da *)da_el;
+  da_exists_closure *dd = (da_exists_closure *)closure;
+  Da *test_element = dd->da;
+  if (dd->found) return;
+  dd->found = da_equal(da_element, test_element);
+  return;
+}//may need to be static?
+
+bool da_equal(Da *da_el, Da *test_el){
+  bool f1 = da_el->base == test_el->base;
+  bool f2 = da_el->end == test_el->end;
+  bool f3 = da_el->size == test_el->size;
+  bool f4 = da_el->element_size == test_el->element_size;
+  return f1 && f2 && f3 && f4;
+}
+  
+bool da_exists (Da **dar, int dar_size, Da *dap){
+  da_exists_closure dec;
+  Da *da_first = *dar;
+  dec.da = dap;
+  dec.found = false;
+  da_big_map(dar, dar_size, da_present, &dec);
+  return dec.found;
+}
+
+void da_big_map(Da **dar, int dar_size, void f(void *, void *), void *closure){
+  Da *pt = *dar;
+  int i = 0;
+  while( i < dar_size ){
+    f(pt, closure);
+    pt++;
+    i++;
+  }
+  return;
+}
+
+//∀, AND map
+//checks that all Das are present in Da of Das
+bool da_all (Da **dar, int dar_size, Da **dap){
+  da_exists_closure dec;
+  dec.da = *dap;
+  dec.found = true;
+  int i = 0;
+  while(dec.found && (i < dar_size)){
+    da_big_map(dar, dar_size, da_present, &dec);
+    dec.da++;
+    i++;
+  }
+  return dec.found;
+}

@@ -367,10 +367,10 @@ bool test_da_map_0(){
 
   bool *closure;
   bool result = true;
-  {//tests map via test_map
+  {//tests map via da_test_map
     int i = 0;
     while (result && i<4){
-      da_map(&dar, test_map, closure);
+      da_map(&dar, da_test_map, closure);
       result = *closure;
       i++;
       *closure = false;
@@ -379,7 +379,56 @@ bool test_da_map_0(){
   
   return result;
 }
+
+//tests da_exists
+bool test_da_exists_0(){
+  Da *dap0;
+  {
+    da_alloc(dap0, sizeof(char));
+    //char a = 'y';
+    //da_push(dap0, &a);
+  }
   
+  Da *dap1;
+  {
+    da_alloc(dap1, sizeof(char));
+    //char a = 'u';
+    //da_push(dap1, &a);
+  }
+  
+  Da *dap2;
+  {
+    da_alloc(dap2, sizeof(char));
+    //char a = 'n';
+    //da_push(dap2, &a);
+  }
+
+  void *darr[3];
+  int dar_size = 0;
+
+  //add dap0, dap1 to darr
+  darr[dar_size] = dap0; dar_size++;
+  darr[dar_size] = dap1; dar_size++;
+  
+
+  //test that dap0 and dap1 exist in darr but not dap2
+  bool f1 = da_exists((Da **)darr, dar_size, dap0);
+  bool f2 = da_exists((Da **)darr, dar_size, dap1);
+  bool f3 = !da_exists((Da **)darr, dar_size, dap2);
+
+  //add dap2 to darr
+  darr[dar_size] = dap2; dar_size++;
+    
+  //test that dap2 exists in darr
+  bool f4 = da_exists((Da **)darr, dar_size, dap2);
+
+  return f1 && f2 && f3 && f4;
+}
+  
+//tests da_all
+bool test_da_all_0(){
+  return true;
+}
   
 
 /*
@@ -397,7 +446,7 @@ da_push_alloc
 -da_push                   
 -da_pop                    
 da_endq                     
--da_map           Had to put test_map function in da src code...
+-da_map           Had to put da_test_map function in da src code...
 da_free_elements            
 da_ints_print               
 da_strings_print            
@@ -407,13 +456,16 @@ da_strings_set_union
 -da_string_input           
 da_string_push              
 -da_cat                    
+da_exists
+da_all
+
 
 test first
-map
-boundq
+-map
+-boundq
 
 add
-da_exists (OR map, ∃)
-da_all (AND map, ∀)
+-da_exists (OR map, ∃)
+-da_all (AND map, ∀)
 
 */

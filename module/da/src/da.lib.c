@@ -289,23 +289,25 @@ void da_matrix_map(Da **dar, int dar_size, void f(void *, void *), void *closure
   return;
 }
 
-//∀, AND map
-//checks that all Das are present in Da of Das
 
-
-
-
-/*bool da_all (Da **dar, int dar_size, Da **dap){
-  Da **tdar = dap;
-  Da *test_da = *tdar;
-  bool result = true;
-  int i = 0;
-  while(result && (i < dar_size)){
-    result = da_exists(dar, dar_size, test_da);
-    tdar++;
-    test_da = *tdar;
-    i++;
+//∃, OR map
+bool da_exists(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = false;
+  while( !result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
   }
   return result;
 }
-*/
+
+//∀, AND map
+bool da_all(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = true;
+  while( result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
+  }
+  return result;
+}

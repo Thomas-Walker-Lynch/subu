@@ -474,8 +474,67 @@ bool test_da_present_0(){
   return result;
 }
 
+bool test_exists(void *pt, void *closure){
+  bool result = *(int*)pt == *(int *)closure;
+  return result;
+}
 
+//test da_exists
+bool test_da_exists_0(){
+  Da dar;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(int));
 
+  int i[5] = {5,6,7,8,9};
+  
+  {//pushes ints 5-8 onto dar
+    int j = 0;
+    while (j < 4){
+      int *i_pt = &i[j];
+      da_push(dar_pt, i_pt);
+      j++;
+    } 
+  }
+  
+  bool f[5];
+  {//tests da_exists
+    int j = 0;
+    while(j < 5){
+      int *i_pt = &i[j];
+      f[j] = da_exists(dar_pt, test_exists, i_pt);
+      j++;
+    }
+  }
+
+  bool result = f[0] && f[1] && f[2] && f[3] && !f[4];
+  
+  return result;
+}
+
+//test da_all
+bool test_da_all_0(){
+Da dar;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(int));
+
+  int i = 5;
+  int *i_pt = &i;
+  //push 5 onto dar 4 times
+  da_push(dar_pt, i_pt);
+  da_push(dar_pt, i_pt);
+  da_push(dar_pt, i_pt);
+  da_push(dar_pt, i_pt);
+  
+  //tests da_all is true
+  bool f1 = da_all(dar_pt, test_exists, i_pt);
+
+  da_pop(dar_pt, NULL);
+  i = 6;
+  //tests da_all is false
+  bool f2 = !da_all(dar_pt, test_exists, i_pt);
+  
+  return f1 && f2;
+}
 
 /*
   Functions               
@@ -493,18 +552,18 @@ da_push_alloc
 -da_push                   
 -da_pop                    
 da_endq                     
--da_map           Had to put da_test_map function in da src code...
+-da_map           
 da_free_elements            
 da_ints_print               
 da_strings_print            
-da_strings_exists           
+-da_strings_exists           
 da_strings_set_insert       
 da_strings_set_union        
 -da_string_input           
 da_string_push              
 -da_cat                    
-da_exists
-da_all
+-da_exists
+-da_all
 
 */
 
@@ -524,5 +583,6 @@ test_da_rebase_0
 test_da_boundq_0
 test_da_map_0
 test_da_present_0
-
+test_da_exists_0
+test_da_all_0
 */

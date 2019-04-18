@@ -51,6 +51,10 @@ void da_cat(Da *dap_base, Da *dap_cat);
 void da_present(Da **dar, int dar_size, void *closure);
 bool da_equal(Da *da_el, Da *test_el);
 void da_matrix_map(Da **dar, int dar_size, void f(void *,void*), void *closure);
+
+bool da_exists(Da *dap, bool f(void *, void*), void *closure);
+bool da_all(Da *dap, bool f(void *, void*), void *closure);
+
 /*
 bool da_exists(Da **dar, int dar_size, Da *dap);
 bool da_all(Da **dar, int dar_size, int dap_size, Da **dap);

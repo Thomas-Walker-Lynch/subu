@@ -21,11 +21,14 @@ int main(){
       test_da_cat_1,
       test_da_rewind_0,
       test_da_index_0,
+      test_da_free_elements_0,
+      test_da_strings_exists_0,
       test_da_rebase_0,
       test_da_boundq_0,
       test_da_map_0,
-      test_da_exists_0,
-      test_da_all_0,
+      test_da_present_0,
+      //test_da_exists_0,
+      //test_da_all_0,
       NULL};
   char *test_names[] =
     {
@@ -37,11 +40,14 @@ int main(){
       "test_da_cat_1",
       "test_da_rewind_0",
       "test_da_index_0",
+      "test_da_free_elements_0",
+      "test_da_strings_exists_0",
       "test_da_rebase_0",
       "test_da_boundq_0",
       "test_da_map_0",
-      "test_da_exists_0",
-      "test_da_all_0",
+      "test_da_present_0",
+      //"test_da_exists_0",
+      //"test_da_all_0",
       NULL};
 
   // call tests

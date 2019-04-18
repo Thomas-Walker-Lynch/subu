@@ -23,7 +23,7 @@ ECHO= echo
 
 # compiler and flags
 C=gcc
-CFLAGS=-std=gnu11 -fPIC -Iinclude -I../include -ggdb -Werror -DDEBUG -DDEBUGDB 
+CFLAGS=-std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB 
 #CFLAGS=-std=gnu11 -fPIC -Iinclude -I../include -Werror
 LINKFLAGS= -Llib -L../lib -ltest -lda
 

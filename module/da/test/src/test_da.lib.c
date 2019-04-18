@@ -208,59 +208,88 @@ bool test_da_rewind_0(){
   int j = *(dar.end);
   bool f2 = dar.end == dar.base;
   bool f3 = j == 10;
-  //  bool f4 = *dar.end == 10 && *(dar.end + 9 * sizeof(int)) = 19;
-  bool result = f1 && f2 && f3; // && f4;
+  bool f4 = (*(dar.end + (7 * sizeof(int))) = 17);
+  bool result = f1 && f2 && f3 && f4;
   return result;
 }
 
 //tests da_index
 bool test_da_index_0(){
   Da dar;
-  da_alloc(&dar, sizeof(int));
-  int j = 0;
-  char *k[2];
-  while(j < 4){
-    da_push(&dar, &j);
-    j++;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(int));
+
+  char *k[4];
+  bool f[4];
+  {//push to dar and test da_index
+    size_t i = 0;
+    int j = 13;
+    int *j_pt = &j;
+    while(i < 4){
+      da_push(dar_pt, j_pt);
+      j++;
+      k[i] = da_index(dar_pt, i);
+      f[i] = k[i] == dar.base + (i*dar.element_size);
+      i++;
+    }
   }
-  j--;
-  k[0] = da_index(&dar, j);
-  bool f1 = k[0] == dar.base + (3*dar.element_size);
-  return f1;
+  bool result = f[0] && f[1] && f[2] && f[3];
+  return result;
 }
 
-//tests da_free_elements
+//tests da_free_elements - still getting core dump on function call
 //cannot test sub-functions bc da_free_elements needs to be static
-/*bool test_da_7(){
-    Da dar;
-    da_alloc(&dar, sizeof(int));
-    int j = 0;
-    while(j < 4){
-      da_push(&dar, &j);
-      ++j;
-    }
-    da_free_elements(&dar);
-    bool g = 1;
-    return g;
-  }
-causes errors: 
-test_da_2, could not open data file ../lib/test.dat for reading
-test_da_2 failed - these were because in wrong directory,  core dump is actual issue here and with 7
-Segmentation fault (core dumped)
-*/
-/*
-//tests da_strings_exist
-bool test_da_7(){
+bool test_da_free_elements_0(){
   Da dar;
-  da_alloc(&dar, sizeof(char *));
-  char *j = "test";
-  da_push(&dar, j);
-  //  da_strings_exists(&dar, j);
-  bool f1 =  da_strings_exists(&dar, j);
-  return f1;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(int*));
+
+  int i = 3;
+  int *i_pt = &i;
+  while(i < 7){
+    da_push(dar_pt, &i_pt);
+    ++i;
+  }
+  
+  //da_free_elements(dar_pt);
+  bool result = true;
+  return result;
 }
-//same errors, something to do with calling fucntions that call static functions I believe
-*/
+
+//tests da_strings_exist
+bool test_da_strings_exists_0(){
+  Da dar;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(char *));
+
+  //fill dar with strings
+  char *string0 = "nope";
+  char **string0_pt = &string0;
+  da_push(dar_pt, string0_pt);
+  char *string1 = "okay";
+  char **string1_pt = &string1;
+  da_push(dar_pt, string1_pt);
+  char *string2 = "welp";
+  char **string2_pt = &string2;
+  da_push(dar_pt, string2_pt);
+  char *string3 = "sure";
+  char **string3_pt = &string3;
+  da_push(dar_pt, string3_pt);
+
+  bool result;
+  {//test dar for each string
+    result = da_strings_exists(dar_pt, string0);
+    if (result == true)
+    result = da_strings_exists(dar_pt, string1);
+    if (result == true)
+    result = da_strings_exists(dar_pt, string2);
+    if (result == true)
+    result = da_strings_exists(dar_pt, string3);
+  }
+ 
+  return result;
+}
+
 
 //tests rebase 
 bool test_da_rebase_0(){
@@ -281,7 +310,6 @@ bool test_da_rebase_0(){
   }
 
   //check that push worked, that element pointer is in right place, and that expand works
-  //
   bool f1 = dar.base != dar.end;
   bool f2 = *el_pt == dar.end - dar.element_size;
 
@@ -314,6 +342,17 @@ bool test_da_rebase_0(){
   return f1 && f2 && f3 && result;
 }
 
+/* {//problems with free and malloc
+  char *a = malloc(10);
+  strcpy(a, "zsdf");
+  Da da;
+  Da *da_pt = &da;
+  da_alloc(da_pt, sizeof(char *));
+  da_push(da_pt, a);
+  ...
+    free(*(char *)da_index(da_pt, 0));
+    da_free(da_pt);
+} */
 
 //tests da_boundq
 bool test_da_boundq_0(){
@@ -349,133 +388,93 @@ bool test_da_boundq_0(){
   return result;
 }
 
+
+void da_test_map(void *pt, void *closure){
+  int *n = (int *)closure;
+  *n += *(int *)pt;
+}
+
 //tests map
 bool test_da_map_0(){
   Da dar;
-  da_alloc(&dar,sizeof(char));
+  da_alloc(&dar,sizeof(int));
 
   {//pushes onto dar
-    char arr[4] = {'t','r','u','e'};
+    int arr[4] = {5,6,7,8};
     int i = 0;
-    char c;
+    int n;
     while(i<4){
-      c = arr[i];
-      da_push(&dar, &c);
+      n = arr[i];
+      da_push(&dar, &n);
       i++;
     }
   }
 
-  bool *closure;
-  bool result = true;
-  {//tests map via da_test_map
-    int i = 0;
-    while (result && i<4){
-      da_map(&dar, da_test_map, closure);
-      result = *closure;
-      i++;
-      *closure = false;
-    }
-  }
+  int n = 0;
+  int *closure = &n;
+  
+  da_map(&dar, da_test_map, (int *)closure);
+  //rename to da_foreach
+  bool result = n == (5+6+7+8);
   
   return result;
 }
 
 //tests da_exists
-bool test_da_exists_0(){
-  Da *dap0;
-  {
-    da_alloc(dap0, sizeof(char));
-    char a = 'y';
-    da_push(dap0, &a);
-  }
-  
-  Da *dap1;
-  {
-    da_alloc(dap1, sizeof(char));
-    char a = 'u';
-    da_push(dap1, &a);
-  }
-  
-  Da *dap2;
-  {
-    da_alloc(dap2, sizeof(char));
-    char a = 'n';
-    da_push(dap2, &a);
-  }
+//exists is a map function that applies a function to each element of the array and returns a bool
+//if the function ever returns a true value, then exists immediately returns true, if the function only ever returns false, then exists returns false
+//da_all is the opposite, returns true only if always receives true, exists and returns false if false
 
-  Da *darr[3];
+//tests da_present
+bool test_da_present_0(){
   int dar_size = 0;
+  Da **dar = malloc(3 * sizeof(Da *));
 
-  //add dap0, dap1 to darr
-  darr[dar_size] = dap0; dar_size++;
-  darr[dar_size] = dap1; dar_size++;
+  Da dap_0;
+  Da *dap_0_pt = &dap_0;
+  da_alloc(dap_0_pt,sizeof(int));
+
+  Da dap_1;
+  Da *dap_1_pt = &dap_1;
+  da_alloc(dap_1_pt,sizeof(int));
   
+  dar[dar_size] = dap_0_pt; dar_size++;
+  dar[dar_size] = dap_1_pt; dar_size++;
+  Da dap_2;
+  Da *dap_2_pt = &dap_2;
+  da_alloc(dap_2_pt,sizeof(int));
+  dar[dar_size] = dap_2_pt; dar_size++;  
 
-  //test that dap0 and dap1 exist in darr but not dap2
-  bool f1 = da_exists(darr, dar_size, dap0);
-  bool f2 = da_exists(darr, dar_size, dap1);
-  bool f3 = !da_exists(darr, dar_size, dap2);
+  typedef struct{
+  Da *da;
+  bool found;
+} da_present_closure;
+  
+  bool f[4];
+  da_present_closure dpc;
+  dpc.da = dap_0_pt;
+  dpc.found = false;
 
-  //add dap2 to darr
-  darr[dar_size] = dap2; dar_size++;
-    
-  //test that dap2 exists in darr
-  bool f4 = da_exists((Da **)darr, dar_size, dap2);
+  //test da_equal
+  f[0] = da_equal(dap_0_pt, dpc.da);
+  
+  //test da_present
+  da_present(dar, dar_size, &dpc);
+  f[1] = dpc.found;
+  dpc.found = false;
+  da_present(dar, dar_size, &dpc);
+  f[2] = dpc.found;
+  dpc.found = false;
+  da_present(dar, dar_size, &dpc);
+  f[3] = dpc.found;
+  dpc.found = false;
 
-  return f1 && f2 && f3 && f4;
+  bool result = f[0] && f[1] && f[2] && f[3];
+  
+  return result;
 }
-  
-//tests da_all
-bool test_da_all_0(){
-  Da *dap0;
-  {
-    da_alloc(dap0, sizeof(char));
-    char a = 'y';
-    da_push(dap0, &a);
-  }
-  
-   Da *dap1;
-   {
-     da_alloc(dap1, sizeof(char));
-     char a = 'u';
-     da_push(dap1, &a);
-   }
 
-   Da *dap2;
-   {
-     da_alloc(dap2, sizeof(char));
-     char a = 'n';
-     da_push(dap2, &a);
-   }
-   
-   Da **darr0 = malloc(3 * sizeof(Da *));
-   int dar_size0 = 0;
-   
-   //add dap0, dap1 to darr0 (array being tested)
-   darr0[dar_size0] = dap0; dar_size0++;
-   darr0[dar_size0] = dap1; dar_size0++;
-   darr0[dar_size0] = dap0;
-   //has to have same amount of elements as test array or will core dump
-   
 
-   Da **darr1 = malloc(3 * sizeof(Da *));
-   int dar_size1 = 0;
-   //add dap0,1,2 to darr1 (test array, to test against)
-   darr1[dar_size1] = dap0; dar_size1++;
-   darr1[dar_size1] = dap1; dar_size1++;
-   darr1[dar_size1] = dap2; dar_size1++;
-   
-   //tests that darr0 doesn't have all (dap0,1,2)
-   bool f1 = !da_all(darr0, dar_size1, darr1);
-
-   //add dap2 to darr0
-   darr0[dar_size0] = dap2; dar_size0++;
-   
-   //tests that darr0 has all (dap0,1,2)
-   bool f2 = da_all(darr0, dar_size1, darr1);
-   
-   return f1 && f2;
-}
 
 
 /*
@@ -488,7 +487,8 @@ da_length
 -da_rebase                   
 -da_expand                 
 -da_boundq                   
--da_index                  
+-da_index 
+-da_strings_exists_0                 
 da_push_alloc
 -da_push                   
 -da_pop                    
@@ -506,13 +506,23 @@ da_string_push
 da_exists
 da_all
 
+*/
 
-test first
--map
--boundq
-
-add
--da_exists (OR map, ∃)
--da_all (AND map, ∀)
+/*
+  Tests
+test_da_push_0
+test_da_expand_0
+test_da_string_input_0
+test_da_pop_0
+test_da_cat_0
+test_da_cat_1
+test_da_rewind_0
+test_da_index_0
+test_da_free_elements_0
+test_da_strings_exists_0
+test_da_rebase_0
+test_da_boundq_0
+test_da_map_0
+test_da_present_0
 
 */

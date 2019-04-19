@@ -72,13 +72,9 @@ all: version
 .PHONY: version
 version:
 	@echo makefile version 6.0
-	@echo "PWD: " $(PWD)
-	@echo "MAKEFILE_LIST: " $(MAKEFILE_LIST)
-	@echo "C: " $(C)
-	@echo "CFLAGS: " $(CFLAGS)
-	@echo "CC: " $(CC)
-	@echo "CCFLAGS: " $(CCFLAGS)
-	@echo "LINKFLAGS: " $(LINKFLAGS)
+	gcc -v
+	g++ -v
+	make -v
 
 .PHONY: info
 info:

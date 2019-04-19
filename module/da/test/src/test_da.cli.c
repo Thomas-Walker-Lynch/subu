@@ -4,11 +4,6 @@
 #include "test_da.lib.h"
 
 int main(){
-  bool da_0_passed = test_da_push_0();
-
-  unsigned int passed = 0;
-  unsigned int failed = 0;
-
   // enumeration of tests
   typedef bool (*test_fun)();
   test_fun tests[] =
@@ -51,6 +46,9 @@ int main(){
       NULL};
 
   // call tests
+  bool da_0_passed = true;
+  unsigned int passed = 0;
+  unsigned int failed = 0;
   test_fun *tfp = tests;
   char **tnp = test_names;
   while(*tfp){
@@ -67,7 +65,6 @@ int main(){
   }
 
   // summarize results
-
   if( passed == 0 && failed == 0)
     printf("no tests ran\n");
   else if( passed == 0 )
@@ -77,13 +74,7 @@ int main(){
   else
     printf("failed %u of %u tests\n", failed, passed + failed);
 
+
   if( passed == 0 || failed != 0 ) return 1;
-
-
-
-
-
-
-
   return 0;
 }

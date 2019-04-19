@@ -1,0 +1,12 @@
+
+2019-04-19T09:34:21Z
+
+da_erase  ; same as da_free, don't tell anyone
+
+da_integer_repeats ; all items in the array are equal
+da_integer_sum ; sum all elements
+da_integer_transpose  ; matrix transpose
+da_integer_repeats_column ; all columns are equal
+
+da_every_column ;  like every but for columns instead of elements
+da_every_row    ;  like every but for rows

@@ -142,6 +142,29 @@ void da_ints_print(Da *dap, char *sep){
       pt += dap->element_size;
     }}}
 
+bool da_integer_repeats(Da *dap){//all items in the array are equal
+  int *pt = dap->base;
+  int n = *pt;
+  bool flag = true;
+  while(flag && pt != dap->end){
+    flag = n == *pt;
+  pt++;
+  }
+  return flag;
+}
+
+int da_integer_sum(Da *dap){//sum all elements
+  int *pt = dap->base;
+  int sum = 0;
+  while(pt != dap->end){
+    sum += *(pt);
+  pt++;
+  }
+  return sum;
+}
+
+
+
 
 //--------------------------------------------------------------------------------
 // da is an array of strings
@@ -245,10 +268,10 @@ void da_cat(Da *dap0, Da *dap1){
   memcpy(dap0->base + dap0_size, dap1->base, dap1_size);
 }
 
-//array of Das
 
-//∃, OR map
-//checks that some Da is present in Da of Das
+//------------------------------------
+
+//first pass at array of Das, exists, etc turned into this
 
 typedef struct{
   Da *da;
@@ -289,6 +312,7 @@ void da_matrix_map(Da **dar, int dar_size, void f(void *, void *), void *closure
   return;
 }
 
+//-----------------------------------------------------
 
 //∃, OR map
 bool da_exists(Da *dap, bool f(void *, void*), void *closure){
@@ -310,4 +334,87 @@ bool da_all(Da *dap, bool f(void *, void*), void *closure){
     pt += dap->element_size;
   }
   return result;
+}
+
+//-------------------------------------------------------
+
+// all things Da matrix
+// a DaMa (Doubling array Matrix) is a Da whose elements are Da's
+// forms a matrix if you treat what's pointed to by base pointers of the elements of the DaMa as the first row of elements and fill in each column with the contents of the Das
+/* Example: 
+Da dar0; Da *dap0 = &dar0; da_alloc(dap0, sizeof(int)); 
+Da dar1; Da *dap1 = &dar1; da_alloc(dap1, sizeof(int)); 
+Da dama; Da *damp = &dama; da_alloc(damp, sizeof(Da));
+da_push(damp, dap0);
+da_push(damp, dap1);
+*/
+
+void da_erase(Da *damp){//same as da_free, don't tell anyone
+  free(damp->base);
+  damp->size = 0;
+}
+
+//do you mean like map? Are we renaming map every? Instead of foreach?
+/* Would be for every element in every row/column:
+Da *dpt = damp->base;
+  char *ept = dpt->base;
+  while (dpt != damp->end){
+    while (ept != dpt->end){
+      f(ept, closure);
+    ept+=dpt->element_size;
+    }
+  dpt++;
+  }
+*/
+
+void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
+  Da *dpt = damp->base;
+  char *ept = dpt->base;
+  while (dpt != damp->end){
+    f(dpt, closure);
+  dpt++;
+    }
+}
+
+void da_every_row(){//like every but for rows instead of elements
+  Da *dpt = damp->base;
+  size_t columns = damp->size/damp->element_size;
+  char *ept;
+  int i = 0;
+  while (i < columns) {
+    *ept = (dpt->base)+(dpt->element_size);
+  ept += dpt->element_size;
+  i++;
+  }
+  ...hmm
+}
+
+
+//--------------------------------------------------------------------
+// DaMa is a matrix of Das of integers
+Da *da_integer_transpose(Da *damp){//matrix transpose
+  Da *matrix = damp;
+  Da transpose;
+  Da *tran;
+  da_alloc(tran, sizeof(matrix->element_size));
+  tran->size = damp->size;
+  
+  //also not done
+  
+  return transpose;
+}
+
+bool da_integer_repeats_column(Da *damp){//all columns are equal
+  Da *dpt = damp->base;
+  int *npt = dpt->base;
+  bool flag = true;
+  while(flag && dpt != damp->end){
+    while(flag && npt != dpt->end){
+      flag = 
+    npt++;
+    }
+    
+    //also not done
+  }
+  return flag;
 }

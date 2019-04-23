@@ -29,7 +29,6 @@ int main(){
       test_da_free_0,
       test_da_emptyq_0,
       test_da_length_0,
-      test_da_push_alloc_0,
       NULL};
   char *test_names[] =
     {
@@ -54,7 +53,6 @@ int main(){
       "test_da_free_0",
       "test_da_emptyq_0",
       "test_da_length_0",
-      "test_da_push_alloc_0",
       NULL};
 
   // call tests

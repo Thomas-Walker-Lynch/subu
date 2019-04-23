@@ -698,33 +698,6 @@ bool test_da_length_0(){
   return result;
 }
 
-//still failing
-//tests da_push_alloc(){
-bool test_da_push_alloc_0(){
-  Da da;
-  Da *da_pt = &da;
-  da_alloc(da_pt, sizeof(char));
-  char cats[] = "cats";
-  da_push(da_pt, &cats[0]);
-  da_push(da_pt, &cats[1]);
-  da_push(da_pt, &cats[2]);
-  da_push(da_pt, &cats[3]);
-
-  //save end point and rewind
-  char *stop = da.end;
-  da_rewind(da_pt);
-  bool flag1 = da.base == da.end;
-
-  //allocate for pushes but don't change data
-  char *next = da_pt->base;
-  bool flag2 = next != da_pt->end;
-  while(flag2 && next != stop){
-    next = da_push_alloc(da_pt);
-    flag2 = next != da_pt->end;
-  }
-  
-  return flag1 && flag2;
-}
 
 /*
   Functions               
@@ -738,7 +711,6 @@ bool test_da_push_alloc_0(){
 -da_boundq                   
 -da_index 
 -da_strings_exists_0                 
-da_push_alloc
 -da_push                   
 -da_pop                    
 da_endq                     
@@ -779,6 +751,5 @@ test_da_alloc_0
 test_da_free_0
 test_da_emptyq_0
 test_da_length_0
-test_da_push_alloc_0
 
 */

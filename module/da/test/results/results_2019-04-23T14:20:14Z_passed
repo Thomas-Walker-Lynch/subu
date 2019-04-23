@@ -1,0 +1,25 @@
+Hello Emacs
+
+
+2019-04-23T14:20:14Z
+glendawest045@phoenix§~/subu/module/da/test§
+> make lib exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+make[1]: Nothing to be done for 'lib'.
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc exec
+make sub_exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc sub_exec
+make[3]: Nothing to be done for 'sub_exec'.
+
+2019-04-23T14:20:40Z
+glendawest045@phoenix§~/subu/module/da/test§
+> cd exec/
+
+2019-04-23T14:20:45Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> ./test_da 
+passed all 21 tests
+
+2019-04-23T14:20:47Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> 

@@ -1,0 +1,78 @@
+Hello Emacs
+
+2019-04-19T09:46:09Z
+glendawest045@phoenix§~/subu/module/da§
+> make dist-clean dep lib
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dist-clean
+for i in tmp/da.lib.o tmp/makefile-cc.deps; do rm $i || true; done 
+for i in ; do [ -e $i ] && rm $i || true; done 
+rm include/da.h || true
+rm lib/libda.a || true
+if [ -e tmp/makefile-cc.deps ]; then rm tmp/makefile-cc.deps; fi
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dep
+C compiler only deps
+deps for C linking
+cp src/da.lib.h include/da.h
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+gcc -std=gnu11 -fPIC -Isrc -Iinclude -I/home/glendawest045/subu/module/share/include -ggdb -O0 -Werror -DDEBUG -DDEBUGDB  -o tmp/da.lib.o -c src/da.lib.c
+ar rcs lib/libda.a  tmp/da.lib.o
+
+2019-04-19T09:46:27Z
+glendawest045@phoenix§~/subu/module/da§
+> cd test/
+
+2019-04-19T09:47:29Z
+glendawest045@phoenix§~/subu/module/da/test§
+> make dist-clean lib exec 
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dist-clean
+for i in tmp/test_da.cli.o tmp/makefile-cc.deps tmp/test_da.lib.o; do rm $i || true; done 
+for i in  exec/test_da; do [ -e $i ] && rm $i || true; done 
+rm include/test.h || true
+rm: cannot remove 'include/test.h': No such file or directory
+rm lib/libtest.a || true
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+gcc -std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB  -o tmp/test_da.lib.o -c src/test_da.lib.c
+ar rcs lib/libtest.a  tmp/test_da.lib.o
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc exec
+make sub_exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc sub_exec
+make[3]: *** No rule to make target 'exec/test_da', needed by 'sub_exec'.  Stop.
+make[2]: *** [makefile:31: sub_exec] Error 2
+make[1]: *** [/home/glendawest045/subu/tool/lib/makefile-cc:164: exec] Error 2
+make: *** [makefile:23: exec] Error 2
+
+2019-04-19T09:47:43Z
+glendawest045@phoenix§~/subu/module/da/test§
+> make dist-clean dep lib exec 
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dist-clean
+for i in tmp/test_da.lib.o; do rm $i || true; done 
+for i in  exec/test_da; do [ -e $i ] && rm $i || true; done 
+rm include/test.h || true
+rm: cannot remove 'include/test.h': No such file or directory
+rm lib/libtest.a || true
+if [ -e tmp/makefile-cc.deps ]; then rm tmp/makefile-cc.deps; fi
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dep
+C compiler only deps
+deps for C linking
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+gcc -std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB  -o tmp/test_da.lib.o -c src/test_da.lib.c
+ar rcs lib/libtest.a  tmp/test_da.lib.o
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc exec
+make sub_exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc sub_exec
+gcc -std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB  -o tmp/test_da.cli.o -c src/test_da.cli.c
+gcc -o exec/test_da tmp/test_da.cli.o -Llib -L../lib -ltest -lda
+
+2019-04-19T09:48:09Z
+glendawest045@phoenix§~/subu/module/da/test§
+> cd exec/
+
+2019-04-19T09:48:12Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> ./test_da 
+test_da_push_alloc_0 failed
+failed 1 of 21 tests
+
+2019-04-19T09:48:14Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> 

@@ -16,6 +16,12 @@ bool test_da_boundq_0();
 bool test_da_map_0();
 bool test_da_present_0();
 bool test_da_exists_0();
+bool test_da_exists_1();
 bool test_da_all_0();
+bool test_da_alloc_0();
+bool test_da_free_0();
+bool test_da_emptyq_0();
+bool test_da_length_0();
+bool test_da_push_alloc_0();
 
 #endif

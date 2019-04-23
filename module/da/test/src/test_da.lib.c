@@ -23,19 +23,19 @@ bool test_da_push_0(){
   pt++;
   }
 
-  bool f0 = da.size == sizeof(int) * 16;
-  bool f1 = 10 == (da.end - da.base) / sizeof(int);
-  bool f2 = true;
+  bool flag0 = da.size == sizeof(int) * 16;
+  bool flag1 = 10 == (da.end - da.base) / sizeof(int);
+  bool flag2 = true;
   pt = (int *)da.base;
   i = 0;
   while( i < 10 ){
-    f2 = f2 && *pt == i && !da_endq(&da, pt);
+    flag2 = flag2 && *pt == i && !da_endq(&da, pt);
   i++;
   pt++;
   }
-  bool f3 = da_endq(&da, pt);
+  bool flag3 = da_endq(&da, pt);
 
-  return f0 && f1 && f2 && f3;
+  return flag0 && flag1 && flag2 && flag3;
 }
 
 // tests manual expansion
@@ -56,19 +56,19 @@ bool test_da_expand_0(){
   pt++;
   }
 
-  bool f0 = da.size == sizeof(int) * 16;
-  bool f1 = 10 == (da.end - da.base) / sizeof(int);
-  bool f2 = true;
+  bool flag0 = da.size == sizeof(int) * 16;
+  bool flag1 = 10 == (da.end - da.base) / sizeof(int);
+  bool flag2 = true;
   pt = (int *)da.base;
   i = 0;
   while( i < 10 ){
-    f2 = f2 && *pt == i && !da_endq(&da, pt);
+    flag2 = flag2 && *pt == i && !da_endq(&da, pt);
   i++;
   pt++;
   }
-  bool f3 = da_endq(&da, pt);
+  bool flag3 = da_endq(&da, pt);
 
-  return f0 && f1 && f2 && f3;
+  return flag0 && flag1 && flag2 && flag3;
 }
 
 // da_fgets via da_string_input
@@ -85,25 +85,25 @@ bool test_da_string_input_0(){
   da_alloc(&da, sizeof(char));
 
   da_string_input(&da, file);
-  bool f0 = !strcmp(da.base, "this is a test");
+  bool flag0 = !strcmp(da.base, "this is a test");
 
   char *old_base;
   da_pop(&da, NULL); // pop the prior null terminator
   char *s1 = da.end;
   old_base = da_string_input(&da,file);
   da_rebase(&da, old_base, &s1);
-  bool f1 = !strcmp(s1, "ends without a newline");
+  bool flag1 = !strcmp(s1, "ends without a newline");
   
   da_pop(&da, NULL); // pop the prior null terminator
   char *s2 = da.end;
   old_base = da_string_input(&da,file);
   da_rebase(&da, old_base, &s2);
-  bool f2 = !strcmp(s2, "(setq mode-require-final-newline nil)");
+  bool flag2 = !strcmp(s2, "(setq mode-require-final-newline nil)");
 
-  bool f3 = !strcmp(da.base, "this is a testends without a newline(setq mode-require-final-newline nil)");
+  bool flag3 = !strcmp(da.base, "this is a testends without a newline(setq mode-require-final-newline nil)");
 
   fclose(file);
-  return f0 && f1 && f2 && f3;
+  return flag0 && flag1 && flag2 && flag3;
 }
 
 // da_pop
@@ -120,12 +120,12 @@ bool test_da_pop_0(){
   da_push(&da, &i);
 
   int j;
-  bool f0 = da_pop(&da, &j) && j == 7;
-  bool f1 = da_pop(&da, &j) && j == 6;
-  bool f2 = da_pop(&da, NULL);
-  bool f3 = !da_pop(&da, &j);
+  bool flag0 = da_pop(&da, &j) && j == 7;
+  bool flag1 = da_pop(&da, &j) && j == 6;
+  bool flag2 = da_pop(&da, NULL);
+  bool flag3 = !da_pop(&da, &j);
 
-  return f0 && f1 && f2 && f3;
+  return flag0 && flag1 && flag2 && flag3;
 }
 
 // da_cat
@@ -147,18 +147,18 @@ bool test_da_cat_0(){
 
   da_cat(&da0, &da1);
 
-  bool f[6];
+  bool flag[6];
   int j;
   int k = 0;
   while(k < 6){
-    f[k] = da_pop(&da0, &j) && (j == 10 - k);
+    flag[k] = da_pop(&da0, &j) && (j == 10 - k);
   k++;
   }
 
-  bool result = f[0];
+  bool result = flag[0];
   k = 1;
   while(result && k < 6){
-    result = f[k];
+    result = flag[k];
   k++;
   }
 
@@ -171,23 +171,27 @@ bool test_da_cat_1(){
   Da dar1;
   da_alloc(&dar0, sizeof(int));
   da_alloc(&dar1, sizeof(int));
-  int a = 2;
-  for (int b=0; b<4; b++){
-    da_push(&dar0, &a);
-    a+=2;
+  int n = 2;
+  {
+    int m = 0;
+    while(m < 4){
+      da_push(&dar0, &n);
+    n+=2;
+    m++;
+    }
   }
   size_t off0 = dar0.end - dar0.base;
-  bool f1 = dar0.base != dar0.end;
-  for (int b=0; b<4; b++){
-    da_push(&dar1, &a);
-    a+=2;
+  bool flag1 = dar0.base != dar0.end;
+  for (int m=0; m<4; m++){
+    da_push(&dar1, &n);
+    n+=2;
   }
   size_t off1 = dar1.end - dar1.base;
-  bool f2 = dar1.base != dar1.end;
+  bool flag2 = dar1.base != dar1.end;
   da_cat(&dar0, &dar1);
-  bool f3 = dar0.end == dar0.base + off0 +off1;
-  bool f4 = *(dar0.base + (5*dar0.element_size)) == *(dar1.base + dar1.element_size);
-  return f1 && f2 && f3 && f4;
+  bool flag3 = dar0.end == dar0.base + off0 +off1;
+  bool flag4 = *(dar0.base + (5*dar0.element_size)) == *(dar1.base + dar1.element_size);
+  return flag1 && flag2 && flag3 && flag4;
 }
 
 
@@ -201,15 +205,15 @@ bool test_da_rewind_0(){
   da_alloc(&dar, sizeof(int));
   while(i < 18){
     da_push(&dar, &i);
-    ++i;
+  ++i;
   }
-  bool f1 = dar.end != dar.base;
+  bool flag1 = dar.end != dar.base;
   da_rewind(&dar);
-  int j = *(dar.end);
-  bool f2 = dar.end == dar.base;
-  bool f3 = j == 10;
-  bool f4 = (*(dar.end + (7 * sizeof(int))) = 17);
-  bool result = f1 && f2 && f3 && f4;
+  int n = *(dar.end);
+  bool flag2 = dar.end == dar.base;
+  bool flag3 = n == 10;
+  bool flag4 = (*(dar.end + (7 * sizeof(int))) = 17);
+  bool result = flag1 && flag2 && flag3 && flag4;
   return result;
 }
 
@@ -219,21 +223,22 @@ bool test_da_index_0(){
   Da *dar_pt = &dar;
   da_alloc(dar_pt, sizeof(int));
 
-  char *k[4];
-  bool f[4];
+  
+  bool flag[4];
   {//push to dar and test da_index
+    char *a[4];
     size_t i = 0;
-    int j = 13;
-    int *j_pt = &j;
+    int n = 10;
+    int *n_pt = &n;
     while(i < 4){
-      da_push(dar_pt, j_pt);
-      j++;
-      k[i] = da_index(dar_pt, i);
-      f[i] = k[i] == dar.base + (i*dar.element_size);
-      i++;
+      da_push(dar_pt, n_pt);
+      a[i] = da_index(dar_pt, i);
+      flag[i] = a[i] == dar.base + (i*dar.element_size);
+    i++;
+    n++;
     }
   }
-  bool result = f[0] && f[1] && f[2] && f[3];
+  bool result = flag[0] && flag[1] && flag[2] && flag[3];
   return result;
 }
 
@@ -248,7 +253,7 @@ bool test_da_free_elements_0(){
   int *i_pt = &i;
   while(i < 7){
     da_push(dar_pt, &i_pt);
-    ++i;
+  ++i;
   }
   
   //da_free_elements(dar_pt);
@@ -301,45 +306,45 @@ bool test_da_rebase_0(){
     int i = 0;
     char arr[4] = {'t','e','s','t'};
     while(i<4){
-      char c = arr[i];
+      char c = *(arr+i);
       *el_pt = da_push(&dar, &c);
-      el_pt++;
-      i++;
+    el_pt++;
+    i++;
     }
     el_pt--;
   }
 
   //check that push worked, that element pointer is in right place, and that expand works
-  bool f1 = dar.base != dar.end;
-  bool f2 = *el_pt == dar.end - dar.element_size;
+  bool flag1 = dar.base != dar.end;
+  bool flag2 = *el_pt == dar.end - dar.element_size;
 
   char *obase = dar.base;
   char *old_base = da_expand(&dar);
-  bool f3 = obase == old_base;
+  bool flag3 = obase == old_base;
 
-  bool f4[4];
+  bool flag4[4];
   {//check that each pointer is properly rebased
     int i = 0;
     while(i<4 && *el_pt >= old_base){
       size_t old_offset = *el_pt - old_base;
       da_rebase(&dar, old_base, el_pt);
       size_t new_offset = *el_pt - dar.base;
-      f4[i] = old_offset == new_offset;
-      el_pt--;
-      i++;
+      flag4[i] = old_offset == new_offset;
+    el_pt--;
+    i++;
     }
   }
   
-  bool result = f4[0];
+  bool result = flag4[0];
   {//now check that all pointers are properly rebased
     int i = 1;
     while(result && i < 4){
-      result = f4[i];
-      i++;
+      result = flag4[i];
+    i++;
     }
   }
   
-  return f1 && f2 && f3 && result;
+  return flag1 && flag2 && flag3 && result;
 }
 
 /* {//problems with free and malloc
@@ -359,7 +364,7 @@ bool test_da_boundq_0(){
   Da dar;
   da_alloc(&dar,sizeof(char));
 
-  bool f[5];
+  bool flag[5];
   {//pushes onto dar and tests no runoff
     char arr[4] = {'r','e','s','t'};
     int i = 0;
@@ -367,34 +372,32 @@ bool test_da_boundq_0(){
     while(i<4){
       c = arr[i];
       da_push(&dar, &c);
-      f[i] = (dar.end != dar.base) && !da_boundq(&dar);
-      i++;
+      flag[i] = (dar.end != dar.base) && !da_boundq(&dar);
+    i++;
     }
   }
 
   //makes end pointer run off allocated area, tests boundq detects runoff
   dar.end++; // = dar.base + dar.size;
-  f[4] = da_boundq(&dar);
+  flag[4] = da_boundq(&dar);
 
   bool result = true;
   {//check all test results
     int i = 0;
     while (result && i < 5){
-      result = f[i];
-      i++;
+      result = flag[i];
+    i++;
     }
   }
   
   return result;
 }
 
-
-void da_test_map(void *pt, void *closure){
+//tests map
+static void test_da_map_0_helper(void *pt, void *closure){
   int *n = (int *)closure;
   *n += *(int *)pt;
 }
-
-//tests map
 bool test_da_map_0(){
   Da dar;
   da_alloc(&dar,sizeof(int));
@@ -402,28 +405,22 @@ bool test_da_map_0(){
   {//pushes onto dar
     int arr[4] = {5,6,7,8};
     int i = 0;
-    int n;
     while(i<4){
-      n = arr[i];
-      da_push(&dar, &n);
-      i++;
+      da_push(&dar, arr+i);
+    i++;
     }
   }
 
   int n = 0;
   int *closure = &n;
   
-  da_map(&dar, da_test_map, (int *)closure);
+  da_map(&dar, test_da_map_0_helper, (int *)closure);
   //rename to da_foreach
   bool result = n == (5+6+7+8);
   
   return result;
 }
 
-//tests da_exists
-//exists is a map function that applies a function to each element of the array and returns a bool
-//if the function ever returns a true value, then exists immediately returns true, if the function only ever returns false, then exists returns false
-//da_all is the opposite, returns true only if always receives true, exists and returns false if false
 
 //tests da_present
 bool test_da_present_0(){
@@ -436,113 +433,306 @@ bool test_da_present_0(){
 
   Da dap_1;
   Da *dap_1_pt = &dap_1;
-  da_alloc(dap_1_pt,sizeof(int));
+  da_alloc(dap_1_pt,sizeof(char));
   
   dar[dar_size] = dap_0_pt; dar_size++;
   dar[dar_size] = dap_1_pt; dar_size++;
   Da dap_2;
   Da *dap_2_pt = &dap_2;
-  da_alloc(dap_2_pt,sizeof(int));
+  da_alloc(dap_2_pt,sizeof(char *));
   dar[dar_size] = dap_2_pt; dar_size++;  
-
+  /*
+  Da ;
+  Da *matrix = ;
+  da_alloc(dar, sizeof(Dap *));
+  */
   typedef struct{
   Da *da;
   bool found;
 } da_present_closure;
   
-  bool f[4];
+  bool flag[4];
   da_present_closure dpc;
   dpc.da = dap_0_pt;
   dpc.found = false;
 
   //test da_equal
-  f[0] = da_equal(dap_0_pt, dpc.da);
+  flag[0] = da_equal(dap_0_pt, dpc.da);
   
   //test da_present
   da_present(dar, dar_size, &dpc);
-  f[1] = dpc.found;
+  flag[1] = dpc.found;
   dpc.found = false;
   da_present(dar, dar_size, &dpc);
-  f[2] = dpc.found;
+  flag[2] = dpc.found;
   dpc.found = false;
   da_present(dar, dar_size, &dpc);
-  f[3] = dpc.found;
+  flag[3] = dpc.found;
   dpc.found = false;
 
-  bool result = f[0] && f[1] && f[2] && f[3];
+  bool result = flag[0] && flag[1] && flag[2] && flag[3];
   
   return result;
 }
+
+//tests for da_exists and all
 
 bool test_exists(void *pt, void *closure){
   bool result = *(int*)pt == *(int *)closure;
   return result;
 }
 
-//test da_exists
+//tests da_exists
 bool test_da_exists_0(){
   Da dar;
   Da *dar_pt = &dar;
   da_alloc(dar_pt, sizeof(int));
 
-  int i[5] = {5,6,7,8,9};
+  int n[5] = {5,6,7,8,9};
   
   {//pushes ints 5-8 onto dar
     int j = 0;
-    while (j < 4){
-      int *i_pt = &i[j];
-      da_push(dar_pt, i_pt);
-      j++;
+    while (j < 5){
+      if (j != 3){
+        int *n_pt = n+j;
+        da_push(dar_pt, n_pt);
+      }
+    j++;
     } 
   }
   
-  bool f[5];
+  bool flag[5];
   {//tests da_exists
     int j = 0;
     while(j < 5){
-      int *i_pt = &i[j];
-      f[j] = da_exists(dar_pt, test_exists, i_pt);
-      j++;
+      int *n_pt = n+j;
+      flag[j] = da_exists(dar_pt, test_exists, n_pt);
+    j++;
     }
   }
 
-  bool result = f[0] && f[1] && f[2] && f[3] && !f[4];
+  bool result_1 = flag[0] && flag[1] && flag[2] && !flag[3] && flag[4];
   
-  return result;
+  {//add 8
+    int *n_pt = n+3;
+    da_push(dar_pt, n_pt);
+  }  
+
+  {//tests da_exists
+    int j = 0;
+    while(j < 5){
+      int *n_pt = n+j;
+      flag[j] = da_exists(dar_pt, test_exists, n_pt);
+    j++;
+    }
+  }
+
+  bool result_2 = flag[0] && flag[1] && flag[2] && flag[3] && flag[4];
+    
+  return result_1 && result_2;
+}
+bool test_da_exists_1(){//tests that expansion doesn't change results
+  Da dar;
+  Da *dar_pt = &dar;
+  da_alloc(dar_pt, sizeof(int));
+  
+  int n[8] = {20,21,22,23,24,25,26,27};
+  
+  {//pushes 20-27 onto dar except 23 and 26 
+    int j = 0;
+    while (j < 8){
+      if (j != 3 && j != 6){
+        int *n_pt = n+j;
+        da_push(dar_pt, n_pt);
+      }
+    j++;
+    } 
+  }
+  
+ bool flag[8];
+  {//tests da_exists
+    int j = 0;
+    while(j < 8){
+      int *n_pt = n+j;
+      flag[j] = da_exists(dar_pt, test_exists, n_pt);
+    j++;
+    }
+  }
+
+  bool result_1 =
+    flag[0] && flag[1] && flag[2] && !flag[3] && flag[4] && flag[5]
+    && !flag[6] && flag[7];
+  
+  {//add 23 and 26
+    int *n_pt = n+3;
+    da_push(dar_pt, n_pt);
+    n_pt = n+6;
+    da_push(dar_pt, n_pt);
+  }  
+
+  {//tests da_exists
+    int j = 0;
+    while(j < 8){
+      int *n_pt = n+j;
+      flag[j] = da_exists(dar_pt, test_exists, n_pt);
+    j++;
+    }
+  }
+
+  bool result_2 =
+      flag[0] && flag[1] && flag[2] && flag[3] && flag[4] && flag[5]
+    && flag[6] && flag[7];
+    
+  return result_1 && result_2;
 }
 
-//test da_all
+
+
+//tests da_all
 bool test_da_all_0(){
-Da dar;
+  Da dar;
   Da *dar_pt = &dar;
   da_alloc(dar_pt, sizeof(int));
 
-  int i = 5;
-  int *i_pt = &i;
+  int n = 5;
+  int *n_pt = &n;
   //push 5 onto dar 4 times
-  da_push(dar_pt, i_pt);
-  da_push(dar_pt, i_pt);
-  da_push(dar_pt, i_pt);
-  da_push(dar_pt, i_pt);
+  da_push(dar_pt, n_pt);
+  da_push(dar_pt, n_pt);
+  da_push(dar_pt, n_pt);
+  da_push(dar_pt, n_pt);
   
   //tests da_all is true
-  bool f1 = da_all(dar_pt, test_exists, i_pt);
+  bool flag1 = da_all(dar_pt, test_exists, n_pt);
 
   da_pop(dar_pt, NULL);
-  i = 6;
+  n = 6;
   //tests da_all is false
-  bool f2 = !da_all(dar_pt, test_exists, i_pt);
+  bool flag2 = !da_all(dar_pt, test_exists, n_pt);
   
-  return f1 && f2;
+  return flag1 && flag2;
+}
+
+
+
+//tests da_alloc
+bool test_da_alloc_0(){
+  Da da0;    Da *da0_pt = &da0;    da_alloc(da0_pt, sizeof(char));
+  Da da1;    Da *da1_pt = &da1;    da_alloc(da1_pt, sizeof(int));
+  Da da2;    Da *da2_pt = &da2;    da_alloc(da2_pt, sizeof(char *));
+  bool flag[6];
+
+  //check that da is allocated as array of 4 chars
+  flag[0] = da0_pt->element_size == 1;
+  flag[1] = da0_pt->size == 4;
+  
+  //check that da is allocated as array of 4 ints
+  flag[2] = da1_pt->element_size == 4;
+  flag[3] = da1_pt->size == 16;
+
+  //check that da is allocated as array of 4 char *s
+  flag[4] = da2_pt->element_size == 8;
+  flag[5] = da2_pt->size == 32;
+
+  bool result =
+    flag[0] && flag[1] && flag[2] && flag[3] && flag[4] && flag[5];
+  return result;
+}
+
+//tests da_free
+bool test_da_free_0(){
+  Da da;
+  Da *da_pt = &da;
+  da_alloc(da_pt, sizeof(int));
+
+  //store location of da
+  Da *keep = da_pt;
+  Da *save = da_pt;
+  
+  //free da
+  da_free(da_pt);
+
+  //re-allocate memory to dew da of chars
+  da_alloc(keep, sizeof(char));
+
+    //test that same memory is properly re-allocated 
+  bool flag1 = keep == save;
+  bool flag2 = keep->element_size == 1;
+  
+  return flag1 && flag2;
+}
+
+//tests da_emptyq
+bool test_da_emptyq_0(){
+  int i = 6;
+  Da da;
+  Da *da_pt = &da;
+  da_alloc(da_pt, sizeof(int));
+  while(i < 11){
+    da_push(da_pt, &i);
+  ++i;
+  }
+  bool flag1 = !da_emptyq(da_pt);
+  da_rewind(da_pt);
+  bool flag2 = da_emptyq(da_pt);
+
+  return flag1 && flag2;
+}
+
+//tests da_length
+bool test_da_length_0(){
+ int i = 1;
+  Da da;
+  Da *da_pt = &da;
+  da_alloc(da_pt, sizeof(int));
+
+  //test da_length, even pushing past expansions
+  bool result = true;
+  while(result && i < 15){
+    da_push(da_pt, &i);
+    size_t length = da_length(da_pt);
+    result = length == i;
+  ++i;
+  }
+    
+  return result;
+}
+
+//still failing
+//tests da_push_alloc(){
+bool test_da_push_alloc_0(){
+  Da da;
+  Da *da_pt = &da;
+  da_alloc(da_pt, sizeof(char));
+  char cats[] = "cats";
+  da_push(da_pt, &cats[0]);
+  da_push(da_pt, &cats[1]);
+  da_push(da_pt, &cats[2]);
+  da_push(da_pt, &cats[3]);
+
+  //save end point and rewind
+  char *stop = da.end;
+  da_rewind(da_pt);
+  bool flag1 = da.base == da.end;
+
+  //allocate for pushes but don't change data
+  char *next = da_pt->base;
+  bool flag2 = next != da_pt->end;
+  while(flag2 && next != stop){
+    next = da_push_alloc(da_pt);
+    flag2 = next != da_pt->end;
+  }
+  
+  return flag1 && flag2;
 }
 
 /*
   Functions               
-da_alloc                    
-da_free                     
+-da_alloc                    
+-da_free                     
 -da_rewind                 
-da_emptyq                   
-da_length                   
+-da_emptyq                   
+-da_length                   
 -da_rebase                   
 -da_expand                 
 -da_boundq                   
@@ -585,4 +775,10 @@ test_da_map_0
 test_da_present_0
 test_da_exists_0
 test_da_all_0
+test_da_alloc_0
+test_da_free_0
+test_da_emptyq_0
+test_da_length_0
+test_da_push_alloc_0
+
 */

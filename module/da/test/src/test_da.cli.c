@@ -77,7 +77,6 @@ int main(){
   }
 
   // summarize results
-
   if( passed == 0 && failed == 0)
     printf("no tests ran\n");
   else if( passed == 0 )
@@ -87,13 +86,7 @@ int main(){
   else
     printf("failed %u of %u tests\n", failed, passed + failed);
 
+
   if( passed == 0 || failed != 0 ) return 1;
-
-
-
-
-
-
-
   return 0;
 }

@@ -35,8 +35,8 @@ void da_map(Da *dap, void f(void *, void *), void *closure);
 void da_free_elements(Da *dap);
 
 void da_ints_print(Da *dap, char *sep);
-void da_integer_repeats(Da *dap);
-void da_integer_sum(Da *dap);
+bool da_integer_repeats(Da *dap);
+int da_integer_sum(Da *dap);
 
 
 void da_strings_print(Da *dap, char *sep);
@@ -61,8 +61,13 @@ bool da_all(Da *dap, bool f(void *, void*), void *closure);
 //matrix functions
 void da_erase(Da *damp);
 void da_every_column();
+Da *da_longer(Da *dap0, Da *dap1);
+Da *da_longest(Da *damp);
 void da_every_row();
-Da *da_integer_transpose(Da *damp);
+int *da_integer_matrix(Da *damp);
+int *da_integer_transpose(Da *damp);
+bool da_length_equal(Da *dap0, Da *dap1);
+bool da_rectangle(Da *damp);
 bool da_integer_repeats_column(Da *damp);
 
 

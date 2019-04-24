@@ -143,22 +143,22 @@ void da_ints_print(Da *dap, char *sep){
     }}}
 
 bool da_integer_repeats(Da *dap){//all items in the array are equal
-  int *pt = dap->base;
-  int n = *pt;
+  int n = *(dap->base);
+  char *pt = dap->base;
   bool flag = true;
   while(flag && pt != dap->end){
-    flag = n == *pt;
-  pt++;
+    flag = *pt == n;
+  pt+=dap->element_size;
   }
   return flag;
 }
 
 int da_integer_sum(Da *dap){//sum all elements
-  int *pt = dap->base;
+  char *pt = dap->base;
   int sum = 0;
   while(pt != dap->end){
     sum += *(pt);
-  pt++;
+  pt+=dap->element_size;
   }
   return sum;
 }
@@ -340,7 +340,7 @@ bool da_all(Da *dap, bool f(void *, void*), void *closure){
 
 // all things Da matrix
 // a DaMa (Doubling array Matrix) is a Da whose elements are Da's
-// forms a matrix if you treat what's pointed to by base pointers of the elements of the DaMa as the first row of elements and fill in each column with the contents of the Das
+// forms a matrix if you treat what's pointed to by base pointers of the elements of the DaMa as the first column of elements and fill in each row with the contents of the Das
 /* Example: 
 Da dar0; Da *dap0 = &dar0; da_alloc(dap0, sizeof(int)); 
 Da dar1; Da *dap1 = &dar1; da_alloc(dap1, sizeof(int)); 
@@ -354,8 +354,8 @@ void da_erase(Da *damp){//same as da_free, don't tell anyone
   damp->size = 0;
 }
 
-//do you mean like map? Are we renaming map every? Instead of foreach?
-/* Would be for every element in every row/column:
+//When you say "like every" do you mean like map? Are we renaming map every? Instead of foreach?
+/* Would be for every element in every row:
 Da *dpt = damp->base;
   char *ept = dpt->base;
   while (dpt != damp->end){
@@ -367,54 +367,118 @@ Da *dpt = damp->base;
   }
 */
 
-void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
-  Da *dpt = damp->base;
-  char *ept = dpt->base;
-  while (dpt != damp->end){
+void da_every_row(Da *damp, void f(void *, void *), void *closure){//like every but for rows instead of elements
+  Da *dpt = (Da *)(damp->base);
+  while (dpt != (Da *)damp->end){
     f(dpt, closure);
   dpt++;
     }
 }
 
-void da_every_row(){//like every but for rows instead of elements
-  Da *dpt = damp->base;
-  size_t columns = damp->size/damp->element_size;
-  char *ept;
-  int i = 0;
-  while (i < columns) {
-    *ept = (dpt->base)+(dpt->element_size);
-  ept += dpt->element_size;
-  i++;
+// da_every_column uses da_longest and therefore da_longer, written for the purpose of terminating the while loop in the appropriate place
+
+// will return dap1 if equal, cannot determine equality
+Da *da_longer(Da *dap0, Da *dap1){
+  if (da_length(dap0) > da_length(dap1)) return dap0;
+  else return dap1;
+}
+// returns Da in DaMa with longest length
+Da *da_longest(Da *damp){
+  Da *dap = (Da *)damp->base;
+  Da *longest = (Da *)(damp->base) + damp->element_size;
+  while (dap != (Da *)(damp->end)){
+    longest = da_longer(dap,longest);
+  dap++;
   }
-  ...hmm
+  return longest;
+}
+void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
+  Da *dpt = (Da *)(damp->base);
+  size_t rows = damp->size/damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  size_t j = 0;
+  while (j < columns){
+    int *col = malloc(sizeof(rows*sizeof(int)));
+    size_t i = 0;
+    while (i < rows) {
+      if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
+           *(col+i) = 0;
+      else *(col+i) = *(dpt->base + j*(dpt->element_size));
+    dpt++;
+    i++;
+    }
+    f(col, closure);
+  j++;
+  }
 }
 
 
 //--------------------------------------------------------------------
-// DaMa is a matrix of Das of integers
-Da *da_integer_transpose(Da *damp){//matrix transpose
-  Da *matrix = damp;
-  Da transpose;
-  Da *tran;
-  da_alloc(tran, sizeof(matrix->element_size));
-  tran->size = damp->size;
-  
-  //also not done
-  
+// DaMa is a matrix of integers (stored in Das as columns)
+int *da_integer_matrix(Da *damp){
+  size_t rows = damp->size / damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  int *matrix = malloc(sizeof(rows*columns));//[rows][columns]
+  int i = 0;
+  Da *dpt = (Da *)(damp->base); 
+  while(i<rows)
+    {
+      int *ept = (int *)(dpt->base);
+      int j = 0;
+      while (j < columns)
+        {//matrix[i][j]
+           if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
+             *(matrix + (i*columns + j)*sizeof(int)) = 0;
+           else *(matrix + (i*columns + j)*sizeof(int)) = *(ept);
+        ept++;
+        j++;
+        }
+    dpt++;
+    i++;
+    }
+  return matrix;
+}
+int *da_integer_transpose(Da *damp){//matrix transpose
+  size_t rows = damp->size/damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  int *matrix = da_integer_matrix(damp);//[rows][columns]
+  int *transpose = malloc(sizeof(columns*rows));
+  int i, j;
+  for(i=0;i<rows;i++)
+    {
+        for(j=0;j<columns;j++)
+          {//transpose[j][i]=matrix[i][j];
+            *(transpose + (j*rows + i)*sizeof(int)) =
+            *(matrix + (i*columns + j)*sizeof(int));
+          }
+    }
   return transpose;
 }
 
-bool da_integer_repeats_column(Da *damp){//all columns are equal
-  Da *dpt = damp->base;
-  int *npt = dpt->base;
+bool da_length_equal(Da *dap0, Da *dap1){
+  return da_length(dap0) == da_length(dap1);
+}
+bool da_rectangle(Da *damp){
+  Da *dap = (Da *)(damp->base);
+  Da *pt = dap;
   bool flag = true;
-  while(flag && dpt != damp->end){
-    while(flag && npt != dpt->end){
-      flag = 
-    npt++;
-    }
-    
-    //also not done
+  while (flag && pt != (Da *)(damp->end)){
+    flag = da_length_equal(dap, pt);
   }
   return flag;
 }
+bool da_integer_repeats_column(Da *damp){//all columns are equal
+  Da *dpt = (Da *)(damp->base);
+  bool flag = false;
+  if (da_rectangle((Da *)damp))
+    {
+      flag = true;
+      while(flag && dpt != (Da *)(damp->end)){
+        flag = da_integer_repeats(dpt);
+      dpt++;
+      }
+      return flag;
+    }
+  else return flag;
+}
+

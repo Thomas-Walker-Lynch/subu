@@ -22,5 +22,8 @@ bool test_da_alloc_0();
 bool test_da_free_0();
 bool test_da_emptyq_0();
 bool test_da_length_0();
+bool test_da_push_row_0();
+bool test_da_erase_0();
+bool test_da_longer_0();
 
 #endif

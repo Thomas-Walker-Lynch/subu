@@ -144,9 +144,9 @@ void da_ints_print(Da *dap, char *sep){
 
 bool da_integer_repeats(Da *dap){//all items in the array are equal
   int n = *(dap->base);
-  char *pt = dap->base;
+  char *pt = dap->base + dap->element_size;
   bool flag = true;
-  while(flag && pt != dap->end){
+  while( flag && pt != dap->end ){
     flag = *pt == n;
   pt+=dap->element_size;
   }
@@ -156,7 +156,7 @@ bool da_integer_repeats(Da *dap){//all items in the array are equal
 int da_integer_sum(Da *dap){//sum all elements
   char *pt = dap->base;
   int sum = 0;
-  while(pt != dap->end){
+  while( pt != dap->end ){
     sum += *(pt);
   pt+=dap->element_size;
   }
@@ -269,6 +269,261 @@ void da_cat(Da *dap0, Da *dap1){
 }
 
 
+//-----------------------------------------------------
+
+//∃, OR map
+bool da_exists(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = false;
+  while( !result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
+  }
+  return result;
+}
+
+//∀, AND map
+bool da_all(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = true;
+  while( result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
+  }
+  return result;
+}
+
+//-------------------------------------------------------
+
+// all things Da matrix
+// a DaMa (Doubling array Matrix) is a Da whose elements are Da's
+// forms a matrix if you treat what's pointed to by base pointers of the elements of the DaMa as the first column of elements and fill in each row with the contents of the Das
+// The "row major" nomenclature is used to remain consistent with database logic.
+/* Example: 
+Da dar0; Da *dap0 = &dar0; da_alloc(dap0, sizeof(int)); 
+Da dar1; Da *dap1 = &dar1; da_alloc(dap1, sizeof(int)); 
+Da dama; Da *damp = &dama; da_alloc(damp, sizeof(Da));
+da_push(damp, dap0);
+da_push(damp, dap1);
+*/
+
+void da_erase(Da *damp){//same as da_free, don't tell anyone
+  free(damp->base);
+  damp->size = 0;
+}
+
+Da *da_push_row_alloc(Da *damp){
+  size_t row_off = (Da *)(damp->end) - (Da *)(damp->base);
+  damp->end += damp->element_size;
+  if( damp->end > damp->base + damp->size ) da_expand(damp);
+  return (Da *)(damp->base) + row_off;
+}
+Da *da_push_row(Da *damp, Da *dap){// Dama won't track changes to Das after pushing onto rows
+  Da *row_pt = da_push_row_alloc(damp);
+  memcpy(row_pt, dap, damp->element_size);
+  return row_pt;
+}
+
+void da_push_column(Da *damp, Da *dap, void *fill){
+  Da *tran = da_matrix_transpose(damp, fill);
+  da_push_row(tran, dap);
+  Da *new_dama = da_matrix_transpose(tran, fill);
+  //add protection against memory overwrite - expand if necessary
+  memcpy(damp, new_dama, new_dama->size);
+}
+
+void da_every_row(Da *damp, void f(void *, void *), void *closure){//like every but for rows instead of elements
+  Da *dpt = (Da *)(damp->base);
+  while( dpt != (Da *)damp->end ){
+    f(dpt, closure);
+  dpt++;
+    }
+}
+
+// da_every_column uses da_longest and therefore da_longer, written for the purpose of terminating the while loop in the appropriate place
+// will return dap1 if equal, cannot determine equality
+Da *da_longer(Da *dap0, Da *dap1){
+  if (da_length(dap0) > da_length(dap1)) return dap0;
+  else return dap1;
+}
+// returns Da in DaMa with longest length
+Da *da_longest(Da *damp){
+  Da *dap = (Da *)damp->base;
+  Da *longest = (Da *)(damp->base) + damp->element_size;
+  while( dap != (Da *)(damp->end) ){
+    longest = da_longer(dap,longest);
+  dap++;
+  }
+  return longest;
+}
+void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
+  Da *dpt = (Da *)(damp->base);
+  size_t rows = damp->size/damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  size_t j = 0;
+  while( j < columns ){
+    int *col = malloc(sizeof(rows*sizeof(int)));
+    size_t i = 0;
+    while( i < rows ) {
+      if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
+           *(col+i) = 0;
+      else *(col+i) = *(dpt->base + j*(dpt->element_size));
+    dpt++;
+    i++;
+    }
+    f(col, closure);
+  j++;
+  }
+}
+
+Da *da_matrix_transpose(Da *damp, void *fill){// all Das must have same element type, will sort to integer, char, or char * transpose function
+  Da *dap = (Da *)(damp->base);
+  Da tran;    da_alloc(&tran, sizeof(damp->element_size));
+  Da *transpose = &tran;
+  if( dap->element_size == sizeof(int) ){
+    int *filler = (int *)fill;
+    transpose = da_integer_transpose(damp, filler);
+  }
+  /*else if( dap->element_size == sizeof(char) ){
+    char *filler = (char *)fill;
+    transpose = da_character_transpose(damp, filler);
+  }
+  else if( dap->element_size == sizeof(char *) ){
+    char **filler = (char **)fill;
+    transpose = da_c_string_transpose(damp, filler);
+    }*/
+  //else error?
+  return transpose;
+}
+
+
+//--------------------------------------------------------------------
+// DaMa is a matrix of integers (stored in Das as columns)
+
+// integer repeats across columns
+bool da_length_equal(Da *dap0, Da *dap1){
+  return da_length(dap0) == da_length(dap1);
+}
+bool da_all_rows_same_length(Da *damp){
+  Da *dap = (Da *)(damp->base);
+  Da *pt = dap;
+  bool flag = true;
+  while( flag && pt != (Da *)(damp->end) ){
+    flag = da_length_equal(dap, pt);
+  }
+  return flag;
+}
+bool da_integer_all_rows_repeat(Da *damp){// if rows are made of repeating integers, then all columns read the same thing
+  Da *dpt = (Da *)(damp->base);
+  bool flag = false;
+  if( da_all_rows_same_length((Da *)damp) ){// columns can't be equal if rows not all same length, will return false
+    flag = true;
+    while( flag && dpt != (Da *)(damp->end) ){
+      flag = da_integer_repeats(dpt); // in "da is array of integers" section
+    dpt++;
+    }
+    return flag;
+  }
+  else return flag;
+}
+bool da_integer_all_columns_repeat(Da *damp){// rows are repeating in transpose = columns are repeating
+  int x = 0; //have to pass in fill for transpose, this nullifies effect same_length test
+  Da *test_da = da_matrix_transpose(damp, &x);
+  return da_integer_all_rows_repeat(test_da);
+}
+bool da_integer_repeats_matrix(Da *damp){// all elements in matrix are same
+  bool flag1 = da_integer_all_rows_repeat(damp);
+  bool flag2 = da_integer_all_columns_repeat(damp);
+  return flag1 && flag2;
+}
+
+// to transpose directly from one DaMa to another
+Da *da_integer_transpose(Da *damp, int *fill){
+  size_t rows = damp->size/damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  Da *matrix = damp;
+  Da tran;
+  da_alloc(&tran, sizeof(Da));
+  Da *transpose = &tran;
+  
+  Da *dpt = (Da *)(matrix->base);
+  int i = 0, j = 0;
+  while( j < columns ){
+    Da new_row;    da_alloc(&new_row, sizeof(int));
+    int *ept = fill;
+    while( i < rows ){
+      if( !da_endq(dpt, (dpt->base + j*(dpt->element_size))) ){
+        *ept = *(dpt->base + j*(dpt->element_size));
+    }
+      da_push(&new_row, ept);
+    dpt++;
+    i++;
+    }
+    da_push_row(transpose, &new_row);
+    j++;
+  }
+  return transpose;
+}
+
+//to create raw matrix image in memory, no longer a Da struct
+int *da_integer_to_raw_image_matrix(Da *damp, int fill){
+  size_t rows = damp->size / damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  int *matrix = malloc(sizeof(rows*columns));//[rows][columns]
+  int i = 0;
+  Da *dpt = (Da *)(damp->base); 
+  while( i < rows )
+    {
+      int *ept = (int *)(dpt->base);
+      int j = 0;
+      while( j < columns )
+        {//matrix[i][j]
+           if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
+             *(matrix + (i*columns + j)*sizeof(int)) = fill;
+           else *(matrix + (i*columns + j)*sizeof(int)) = *(ept);
+        ept++;
+        j++;
+        }
+    dpt++;
+    i++;
+    }
+  return matrix;
+}
+int *da_integer_to_raw_image_transpose(Da *damp, int fill){
+  size_t rows = damp->size/damp->element_size;
+  size_t columns = da_length(da_longest(damp));
+  int *matrix = da_integer_to_raw_image_matrix(damp, fill);//[rows][columns]
+  int *transpose = malloc(sizeof(columns*rows));
+  int i, j;
+  for(i=0;i<rows;i++)
+    {
+        for(j=0;j<columns;j++)
+          {//transpose[j][i]=matrix[i][j];
+            *(transpose + (j*rows + i)*sizeof(int)) =
+            *(matrix + (i*columns + j)*sizeof(int));
+          }//
+    }
+  return transpose;
+}
+
+
+
+
+
+//When you say "like every" do you mean like map? Are we renaming map every? Instead of foreach?
+/* Would be for every element in every row:
+Da *dpt = damp->base;
+  char *ept = dpt->base;
+  while( dpt != damp->end ){
+    while( ept != dpt->end ){
+      f(ept, closure);
+    ept+=dpt->element_size;
+    }
+  dpt++;
+  }
+*/
+
+
 //------------------------------------
 
 //first pass at array of Das, exists, etc turned into this
@@ -311,174 +566,3 @@ void da_matrix_map(Da **dar, int dar_size, void f(void *, void *), void *closure
   }
   return;
 }
-
-//-----------------------------------------------------
-
-//∃, OR map
-bool da_exists(Da *dap, bool f(void *, void*), void *closure){
-  char *pt = dap->base;
-  bool result = false;
-  while( !result && (pt != dap->end) ){
-    result = f(pt, closure);
-    pt += dap->element_size;
-  }
-  return result;
-}
-
-//∀, AND map
-bool da_all(Da *dap, bool f(void *, void*), void *closure){
-  char *pt = dap->base;
-  bool result = true;
-  while( result && (pt != dap->end) ){
-    result = f(pt, closure);
-    pt += dap->element_size;
-  }
-  return result;
-}
-
-//-------------------------------------------------------
-
-// all things Da matrix
-// a DaMa (Doubling array Matrix) is a Da whose elements are Da's
-// forms a matrix if you treat what's pointed to by base pointers of the elements of the DaMa as the first column of elements and fill in each row with the contents of the Das
-/* Example: 
-Da dar0; Da *dap0 = &dar0; da_alloc(dap0, sizeof(int)); 
-Da dar1; Da *dap1 = &dar1; da_alloc(dap1, sizeof(int)); 
-Da dama; Da *damp = &dama; da_alloc(damp, sizeof(Da));
-da_push(damp, dap0);
-da_push(damp, dap1);
-*/
-
-void da_erase(Da *damp){//same as da_free, don't tell anyone
-  free(damp->base);
-  damp->size = 0;
-}
-
-//When you say "like every" do you mean like map? Are we renaming map every? Instead of foreach?
-/* Would be for every element in every row:
-Da *dpt = damp->base;
-  char *ept = dpt->base;
-  while (dpt != damp->end){
-    while (ept != dpt->end){
-      f(ept, closure);
-    ept+=dpt->element_size;
-    }
-  dpt++;
-  }
-*/
-
-void da_every_row(Da *damp, void f(void *, void *), void *closure){//like every but for rows instead of elements
-  Da *dpt = (Da *)(damp->base);
-  while (dpt != (Da *)damp->end){
-    f(dpt, closure);
-  dpt++;
-    }
-}
-
-// da_every_column uses da_longest and therefore da_longer, written for the purpose of terminating the while loop in the appropriate place
-
-// will return dap1 if equal, cannot determine equality
-Da *da_longer(Da *dap0, Da *dap1){
-  if (da_length(dap0) > da_length(dap1)) return dap0;
-  else return dap1;
-}
-// returns Da in DaMa with longest length
-Da *da_longest(Da *damp){
-  Da *dap = (Da *)damp->base;
-  Da *longest = (Da *)(damp->base) + damp->element_size;
-  while (dap != (Da *)(damp->end)){
-    longest = da_longer(dap,longest);
-  dap++;
-  }
-  return longest;
-}
-void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
-  Da *dpt = (Da *)(damp->base);
-  size_t rows = damp->size/damp->element_size;
-  size_t columns = da_length(da_longest(damp));
-  size_t j = 0;
-  while (j < columns){
-    int *col = malloc(sizeof(rows*sizeof(int)));
-    size_t i = 0;
-    while (i < rows) {
-      if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
-           *(col+i) = 0;
-      else *(col+i) = *(dpt->base + j*(dpt->element_size));
-    dpt++;
-    i++;
-    }
-    f(col, closure);
-  j++;
-  }
-}
-
-
-//--------------------------------------------------------------------
-// DaMa is a matrix of integers (stored in Das as columns)
-int *da_integer_matrix(Da *damp){
-  size_t rows = damp->size / damp->element_size;
-  size_t columns = da_length(da_longest(damp));
-  int *matrix = malloc(sizeof(rows*columns));//[rows][columns]
-  int i = 0;
-  Da *dpt = (Da *)(damp->base); 
-  while(i<rows)
-    {
-      int *ept = (int *)(dpt->base);
-      int j = 0;
-      while (j < columns)
-        {//matrix[i][j]
-           if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
-             *(matrix + (i*columns + j)*sizeof(int)) = 0;
-           else *(matrix + (i*columns + j)*sizeof(int)) = *(ept);
-        ept++;
-        j++;
-        }
-    dpt++;
-    i++;
-    }
-  return matrix;
-}
-int *da_integer_transpose(Da *damp){//matrix transpose
-  size_t rows = damp->size/damp->element_size;
-  size_t columns = da_length(da_longest(damp));
-  int *matrix = da_integer_matrix(damp);//[rows][columns]
-  int *transpose = malloc(sizeof(columns*rows));
-  int i, j;
-  for(i=0;i<rows;i++)
-    {
-        for(j=0;j<columns;j++)
-          {//transpose[j][i]=matrix[i][j];
-            *(transpose + (j*rows + i)*sizeof(int)) =
-            *(matrix + (i*columns + j)*sizeof(int));
-          }
-    }
-  return transpose;
-}
-
-bool da_length_equal(Da *dap0, Da *dap1){
-  return da_length(dap0) == da_length(dap1);
-}
-bool da_rectangle(Da *damp){
-  Da *dap = (Da *)(damp->base);
-  Da *pt = dap;
-  bool flag = true;
-  while (flag && pt != (Da *)(damp->end)){
-    flag = da_length_equal(dap, pt);
-  }
-  return flag;
-}
-bool da_integer_repeats_column(Da *damp){//all columns are equal
-  Da *dpt = (Da *)(damp->base);
-  bool flag = false;
-  if (da_rectangle((Da *)damp))
-    {
-      flag = true;
-      while(flag && dpt != (Da *)(damp->end)){
-        flag = da_integer_repeats(dpt);
-      dpt++;
-      }
-      return flag;
-    }
-  else return flag;
-}
-

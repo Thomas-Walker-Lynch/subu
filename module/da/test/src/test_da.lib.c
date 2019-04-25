@@ -698,6 +698,106 @@ bool test_da_length_0(){
   return result;
 }
 
+//------------------------------------------------
+// Matrix function tests
+
+//tests da_push_row
+bool test_da_push_row_0(){
+  Da dama;   da_alloc(&dama, sizeof(Da));   Da *damp = &dama;
+  Da row0;   da_alloc(&row0, sizeof(int));  da_push_row(damp, &row0);
+  Da row1;   da_alloc(&row1, sizeof(int));  da_push_row(damp, &row1);
+  Da row2;   da_alloc(&row2, sizeof(int));  da_push_row(damp, &row2);
+
+  bool flag0 = da_equal(&row0, (Da *)(damp->base));
+  bool flag1 = da_equal(&row1, (Da *)(damp->base + damp->element_size));
+  bool flag2 = da_equal(&row2, (Da *)(damp->base + 2*(damp->element_size)));
+  int n = 5;
+  while( n < 8 ){
+    da_push(&row0, &n);
+  n++;
+  }
+  //  bool flag3 = da_equal(&row0, (Da *)(damp->base));
+  //  Dama won't track changes to Das after pushing onto rows
+  return flag0 && flag1 && flag2;// && flag3;
+}
+
+//tests da_erase
+bool test_da_erase_0(){
+  Da dama;   da_alloc(&dama, sizeof(Da));   Da *damp = &dama;
+  Da row0;   da_alloc(&row0, sizeof(int));  da_push_row(damp, &row0);
+  Da row1;   da_alloc(&row1, sizeof(int));  da_push_row(damp, &row1);
+  Da row2;   da_alloc(&row2, sizeof(int));  da_push_row(damp, &row2);
+
+  //store location of da
+  Da *keep = damp;
+  Da *save = damp;
+  
+  //free da
+  da_erase(damp);
+
+  //re-allocate memory to dew da of chars
+  da_alloc(keep, sizeof(char));
+
+    //test that same memory is properly re-allocated 
+  bool flag1 = keep == save;
+  bool flag2 = keep->element_size == 1;
+  
+  return flag1 && flag2;
+}
+
+//test da_longer
+bool test_da_longer_0(){
+  Da dama;   Da *damp = &dama;  da_alloc(damp, sizeof(Da));
+  
+  Da row0;   Da *r0 = &row0;    da_alloc(r0, sizeof(int));  
+  {//fills first row with 4 integers
+    int i = 10;
+    while(i<14){
+      da_push(r0, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r0);
+  
+  Da row1;   Da *r1 = &row1;    da_alloc(r1, sizeof(int));  
+  {//fills second row with 4 different integers
+    int i = 20;
+    while(i<24){
+      da_push(r1, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r1);
+
+  Da row2;   Da *r2 = &row2;    da_alloc(r2, sizeof(int)); 
+  {//fills third row with 6 integers
+    int i = 30;
+    while(i<36){
+      da_push(r2, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r2);
+  
+  //plain test for which is Da is longer
+  Da *test1 = da_longer(r0, r1);
+  Da *test2 = da_longer(r0, r2);
+  /* 
+  //tests from dama which row is longer
+  Da *dr0 = (Da *)(damp->base);
+  Da *dr1 = (Da *)(damp->base)+(damp->element_size);
+  Da *dr2 = (Da *)(damp->base)+(2*(damp->element_size)); 
+  Da *test3 = da_longer(dr0, dr1);
+  //Da *test4 = da_longer((Da *)(damp->base), ((Da *)(damp->base)+((damp->element_size)*2))); // Is second or third row of dama longer? Should be third.
+  */
+  bool flag1 = test1 == r1;
+  bool flag2 = test2 == r2;
+  //bool flag3 = test3 == dr1;
+  //bool flag4 = test4 == r2;
+  
+  return flag1 && flag2;// && flag3 && flag4; 
+}
+
 
 /*
   Functions               
@@ -716,7 +816,8 @@ bool test_da_length_0(){
 da_endq                     
 -da_map           
 da_free_elements            
-da_ints_print               
+da_ints_print
+da_integer_repeats               
 da_strings_print            
 -da_strings_exists           
 da_strings_set_insert       
@@ -726,6 +827,29 @@ da_string_push
 -da_cat                    
 -da_exists
 -da_all
+
+//matrix
+-da_erase
+da_push_row_alloc
+-da_push_row
+da_push_column
+
+da_every_row
+da_longer
+da_longest
+da_every_column
+
+da_matrix_transpose
+
+da_length_equal
+da_all_rows_same_length
+da_integer_all_rows_repeat
+da_integer_all_columns_repeat
+da_integer_repeats_matrix
+
+da_integer_transpose
+da_integer_to_raw_image_matrix
+da_integer_to_raw_image_transpose
 
 */
 
@@ -746,10 +870,14 @@ test_da_boundq_0
 test_da_map_0
 test_da_present_0
 test_da_exists_0
+test_da_exists_1
 test_da_all_0
 test_da_alloc_0
 test_da_free_0
 test_da_emptyq_0
 test_da_length_0
 
+//matrix
+da_push_row_0
+da_erase_0
 */

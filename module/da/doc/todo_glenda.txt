@@ -5,8 +5,31 @@ da_erase  ; same as da_free, don't tell anyone
 
 da_integer_repeats ; all items in the array are equal
 da_integer_sum ; sum all elements
-da_integer_transpose  ; matrix transpose
+               da_integer_transpose  ; matrix transpose
 da_integer_repeats_column ; all columns are equal
 
 da_every_column ;  like every but for columns instead of elements
 da_every_row    ;  like every but for rows
+
+
+
+
+
+da_push_row ; push rows/vectors/das onto dama
+da_integer_repeats_row ; transpose and call repeats column
+
+
+transpose needs to output a DaMa, not a raw image matrix, though it can use one to get there if need be
+
+then add integer repeats row which will use transpose and column repeats to do its job
+
+then add da_push_row to add Das to DaMa
+
+then test starting with helper functions
+
+
+
+
+got through each row and push values onto columns or vice versa?
+how to construct new Da's
+how to fill - integers only?

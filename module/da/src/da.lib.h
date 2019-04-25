@@ -60,15 +60,27 @@ bool da_all(Da *dap, bool f(void *, void*), void *closure);
 
 //matrix functions
 void da_erase(Da *damp);
-void da_every_column();
+Da *da_push_row_alloc(Da *damp);
+Da *da_push_row(Da *damp, Da *dap);
+void da_push_column(Da *damp, Da *dap, void *fill);
+
+void da_every_row(Da *damp, void f(void *, void *), void *closure);
 Da *da_longer(Da *dap0, Da *dap1);
 Da *da_longest(Da *damp);
-void da_every_row();
-int *da_integer_matrix(Da *damp);
-int *da_integer_transpose(Da *damp);
+void da_every_column(Da *damp, void f(void *, void *), void *closure);
+
+Da *da_matrix_transpose(Da *damp, void *fill);
+
 bool da_length_equal(Da *dap0, Da *dap1);
-bool da_rectangle(Da *damp);
-bool da_integer_repeats_column(Da *damp);
+bool da_all_rows_same_length(Da *damp);
+bool da_integer_all_rows_repeat(Da *damp);
+bool da_integer_all_columns_repeat(Da *damp);
+bool da_integer_repeats_matrix(Da *damp);
+
+Da *da_integer_transpose(Da *damp, int *fill);
+int *da_integer_to_raw_image_matrix(Da *damp, int fill);
+int *da_integer_to_raw_image_transpose(Da *damp, int fill);
+
 
 
 #endif

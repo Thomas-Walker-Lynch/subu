@@ -745,7 +745,7 @@ bool test_da_erase_0(){
   return flag1 && flag2;
 }
 
-//test da_longer
+//tests da_longer
 bool test_da_longer_0(){
   Da dama;   Da *damp = &dama;  da_alloc(damp, sizeof(Da));
   
@@ -782,21 +782,68 @@ bool test_da_longer_0(){
   //plain test for which is Da is longer
   Da *test1 = da_longer(r0, r1);
   Da *test2 = da_longer(r0, r2);
-  /* 
+  
   //tests from dama which row is longer
   Da *dr0 = (Da *)(damp->base);
-  Da *dr1 = (Da *)(damp->base)+(damp->element_size);
-  Da *dr2 = (Da *)(damp->base)+(2*(damp->element_size)); 
+  Da *dr1 = (Da *)((damp->base)+sizeof(Da *));
+  Da *dr2 = (Da *)((damp->base)+(2*sizeof(Da *)));
   Da *test3 = da_longer(dr0, dr1);
-  //Da *test4 = da_longer((Da *)(damp->base), ((Da *)(damp->base)+((damp->element_size)*2))); // Is second or third row of dama longer? Should be third.
-  */
+  Da *test4 = da_longer(dr0, dr2);
+  
   bool flag1 = test1 == r1;
   bool flag2 = test2 == r2;
-  //bool flag3 = test3 == dr1;
-  //bool flag4 = test4 == r2;
+  bool flag3 = test3 == dr1;
+  bool flag4 = test4 == dr2;
   
-  return flag1 && flag2;// && flag3 && flag4; 
+  return flag1 && flag2 && flag3 && flag4; 
 }
+
+//tests da_longest
+bool test_da_longest_0(){
+
+  Da dama;   Da *damp = &dama;  da_alloc(damp, sizeof(Da));
+  
+  Da row0;   Da *r0 = &row0;    da_alloc(r0, sizeof(int));  
+  {//fills first row with 4 integers
+    int i = 10;
+    while(i<14){
+      da_push(r0, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r0);
+  
+  Da row1;   Da *r1 = &row1;    da_alloc(r1, sizeof(int));  
+  {//fills second row with 4 different integers
+    int i = 20;
+    while(i<24){
+      da_push(r1, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r1);
+
+  Da row2;   Da *r2 = &row2;    da_alloc(r2, sizeof(int)); 
+  {//fills third row with 6 integers
+    int i = 30;
+    while(i<36){
+      da_push(r2, &i);
+    i++;
+    }
+  }
+  da_push_row(damp, r2);
+
+  
+  Da *dr0 = (Da *)(damp->base);
+  Da *dr1 = (Da *)((damp->base)+sizeof(Da));
+  Da *dr2 = (Da *)((damp->base)+(2*sizeof(Da)));
+  Da *test = da_longest(damp);
+  
+  bool flag = test == dr2;
+  
+  return flag; 
+}
+
 
 
 /*
@@ -835,8 +882,8 @@ da_push_row_alloc
 da_push_column
 
 da_every_row
-da_longer
-da_longest
+-da_longer
+-da_longest
 da_every_column
 
 da_matrix_transpose
@@ -880,4 +927,7 @@ test_da_length_0
 //matrix
 da_push_row_0
 da_erase_0
+test_da_longer_0
+test_da_longest_0
+
 */

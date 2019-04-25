@@ -25,5 +25,6 @@ bool test_da_length_0();
 bool test_da_push_row_0();
 bool test_da_erase_0();
 bool test_da_longer_0();
+bool test_da_longest_0();
 
 #endif

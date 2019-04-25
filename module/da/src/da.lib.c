@@ -348,11 +348,11 @@ Da *da_longer(Da *dap0, Da *dap1){
 }
 // returns Da in DaMa with longest length
 Da *da_longest(Da *damp){
-  Da *dap = (Da *)damp->base;
-  Da *longest = (Da *)(damp->base) + damp->element_size;
-  while( dap != (Da *)(damp->end) ){
+  Da *dap = (Da *)(damp->base);
+  Da *longest = (Da *)((damp->base) + sizeof(Da));
+  while( dap < (Da *)(damp->end) ){
     longest = da_longer(dap,longest);
-  dap++;
+    dap++;
   }
   return longest;
 }

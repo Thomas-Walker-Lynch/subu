@@ -32,6 +32,7 @@ int main(){
       test_da_push_row_0,
       test_da_erase_0,
       test_da_longer_0,
+      test_da_longest_0,
       NULL};
   char *test_names[] =
     {
@@ -59,6 +60,7 @@ int main(){
       "test_da_push_row_0",
       "test_da_erase_0",
       "test_da_longer_0",
+      "test_da_longest_0",
       NULL};
 
   // call tests

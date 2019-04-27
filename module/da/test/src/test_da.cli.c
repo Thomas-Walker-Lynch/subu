@@ -2,10 +2,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "test_da.lib.h"
+#include <da.h>
+
 
 int main(){
   // enumeration of tests
   typedef bool (*test_fun)();
+  da_start_heap_counter();
   test_fun tests[] =
     {
       test_da_push_0,
@@ -33,6 +36,7 @@ int main(){
       test_da_erase_0,
       test_da_longer_0,
       test_da_longest_0,
+      da_result_heap_counter,
       NULL};
   char *test_names[] =
     {
@@ -61,6 +65,7 @@ int main(){
       "test_da_erase_0",
       "test_da_longer_0",
       "test_da_longest_0",
+      "da_result_heap_counter",
       NULL};
 
   // call tests

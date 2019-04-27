@@ -10,17 +10,67 @@ Cannot expand an empty array.
 #include<stdbool.h>
 #include<string.h>
 
+
+//------------------------------------------------------------------
+//FREE and MALLOC 
+
+static bool counting = false;
+void da_start_heap_counter(){//assigns properties of heap_counter, must be called before other code to be used
+  heap_count.element_size = sizeof(void *);
+  heap_count.size = 4*sizeof(void *);
+  heap_count.base = malloc(heap_count.size);
+  heap_count.end = heap_count.base;
+  counting = true;
+}
+static char *da_count_expand(Da *dap){//these are redefined with malloc instead of MALLOC becuase da_malloc_counted will not make it past the push once heap_count needs to expand
+  char *old_base = dap->base;
+  size_t end_offset = dap->end - old_base;
+  size_t new_size = dap->size << 1;
+  char *new_base = malloc( new_size );
+  memcpy( new_base, old_base, end_offset + dap->element_size);
+  free(old_base);
+  dap->base = new_base;
+  dap->end = new_base + end_offset;
+  dap->size = new_size;
+  return old_base;
+}
+static char *da_count_push_alloc(Da *dap){
+  size_t element_off = dap->end - dap->base;
+  dap->end += dap->element_size;
+  if( dap->end > dap->base + dap->size ) da_count_expand(dap);
+  return dap->base + element_off;
+}
+static char *da_count_push(Da *dap, void *element){
+  char *element_pt = da_count_push_alloc(dap);
+  memcpy(element_pt, element, dap->element_size);
+  return element_pt;
+}
+void *da_malloc_counted(size_t mem_size){//pushed pointer onto heap_count
+  void *temp = malloc(mem_size);
+  if( counting == true ) da_count_push(&heap_count, temp);
+  return (void *)temp;
+}
+void da_free_counted(void *pt){//pops pointer from heap_count
+  if( counting == true ) da_pop(&heap_count, pt);
+  free(pt);
+}
+bool da_result_heap_counter(){//returns false if heap_count is not empty or if it was not being used
+  if ( counting == true ){
+  return heap_count.base == heap_count.end;
+  } else return false;
+}
+
 //--------------------------------------------------------------------------------
 // allocation
 
 void da_alloc(Da *dap, size_t element_size){
   dap->element_size = element_size;
   dap->size = 4 * element_size;
-  dap->base = malloc(dap->size);
+  dap->base = MALLOC(dap->size);
   dap->end = dap->base;
 }
 void da_free(Da *dap){
-  free(dap->base);
+  FREE(dap->base);
   dap->size = 0;
 }
 void da_rewind(Da *dap){
@@ -47,9 +97,9 @@ char *da_expand(Da *dap){
   char *old_base = dap->base;
   size_t end_offset = dap->end - old_base;
   size_t new_size = dap->size << 1;
-  char *new_base = malloc( new_size );
+  char *new_base = MALLOC( new_size );
   memcpy( new_base, old_base, end_offset + dap->element_size);
-  free(old_base);
+  FREE(old_base);
   dap->base = new_base;
   dap->end = new_base + end_offset;
   dap->size = new_size;
@@ -117,9 +167,9 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
 // da being used as a resource manager
 
 
-// elements were malloced, now they will all be freed
+// elements were MALLOCed, now they will all be FREEd
 static void da_free_element(void *pt, void *closure){
-  free(*(char **)pt); // free does not care about the pointer type
+  FREE(*(char **)pt); // FREE does not care about the pointer type
 }
 
 void da_free_elements(Da *dap){
@@ -308,7 +358,7 @@ da_push(damp, dap1);
 */
 
 void da_erase(Da *damp){//same as da_free, don't tell anyone
-  free(damp->base);
+  FREE(damp->base);
   damp->size = 0;
 }
 
@@ -362,7 +412,7 @@ void da_every_column(Da *damp, void f(void *, void *), void *closure){//like eve
   size_t columns = da_length(da_longest(damp));
   size_t j = 0;
   while( j < columns ){
-    int *col = malloc(sizeof(rows*sizeof(int)));
+    int *col = MALLOC(sizeof(rows*sizeof(int)));
     size_t i = 0;
     while( i < rows ) {
       if (da_endq(dpt,(dpt->base + j*(dpt->element_size))))
@@ -469,7 +519,7 @@ Da *da_integer_transpose(Da *damp, int *fill){
 int *da_integer_to_raw_image_matrix(Da *damp, int fill){
   size_t rows = damp->size / damp->element_size;
   size_t columns = da_length(da_longest(damp));
-  int *matrix = malloc(sizeof(rows*columns));//[rows][columns]
+  int *matrix = MALLOC(sizeof(rows*columns));//[rows][columns]
   int i = 0;
   Da *dpt = (Da *)(damp->base); 
   while( i < rows )
@@ -493,7 +543,7 @@ int *da_integer_to_raw_image_transpose(Da *damp, int fill){
   size_t rows = damp->size/damp->element_size;
   size_t columns = da_length(da_longest(damp));
   int *matrix = da_integer_to_raw_image_matrix(damp, fill);//[rows][columns]
-  int *transpose = malloc(sizeof(columns*rows));
+  int *transpose = MALLOC(sizeof(columns*rows));
   int i, j;
   for(i=0;i<rows;i++)
     {

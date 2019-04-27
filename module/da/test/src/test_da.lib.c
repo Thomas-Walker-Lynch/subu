@@ -301,7 +301,7 @@ bool test_da_rebase_0(){
   Da dar;
   da_alloc(&dar,sizeof(char));
 
-  char **el_pt = (char **)malloc(4*(sizeof(char*)));
+  char **el_pt = (char **)MALLOC(4*(sizeof(char*)));
   {//push 2-5 into dar, leave with pointer to last element
     int i = 0;
     char arr[4] = {'t','e','s','t'};
@@ -347,15 +347,15 @@ bool test_da_rebase_0(){
   return flag1 && flag2 && flag3 && result;
 }
 
-/* {//problems with free and malloc
-  char *a = malloc(10);
+/* {//problems with FREE and MALLOC
+  char *a = MALLOC(10);
   strcpy(a, "zsdf");
   Da da;
   Da *da_pt = &da;
   da_alloc(da_pt, sizeof(char *));
   da_push(da_pt, a);
   ...
-    free(*(char *)da_index(da_pt, 0));
+    FREE(*(char *)da_index(da_pt, 0));
     da_free(da_pt);
 } */
 
@@ -425,7 +425,7 @@ bool test_da_map_0(){
 //tests da_present
 bool test_da_present_0(){
   int dar_size = 0;
-  Da **dar = malloc(3 * sizeof(Da *));
+  Da **dar = MALLOC(3 * sizeof(Da *));
 
   Da dap_0;
   Da *dap_0_pt = &dap_0;
@@ -649,7 +649,7 @@ bool test_da_free_0(){
   Da *keep = da_pt;
   Da *save = da_pt;
   
-  //free da
+  //FREE da
   da_free(da_pt);
 
   //re-allocate memory to dew da of chars
@@ -732,7 +732,7 @@ bool test_da_erase_0(){
   Da *keep = damp;
   Da *save = damp;
   
-  //free da
+  //FREE da
   da_erase(damp);
 
   //re-allocate memory to dew da of chars

@@ -1,5 +1,5 @@
-#ifndef DA_LIB_H
-#define DA_LIB_H
+#ifndef TEST_DA_LIB_H
+#define TEST_DA_LIB_H
 
 bool test_da_push_0();
 bool test_da_expand_0();

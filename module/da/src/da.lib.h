@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#define MALLOC da_malloc_counted
+#define FREE da_free_counted
 
-typedef struct Da{
+typedef struct {
   char *base;
   char *end; // one byte/one element off the end of the array
   size_t size; // size >= (end - base) + 1;
@@ -14,6 +16,13 @@ typedef struct Da{
 #define RETURN(dap, r)                      \
   { da_free_elements(dap); return r; }
 
+// assuring we freed everything we allocated
+
+Da heap_count;
+void da_start_heap_counter(void);
+void *da_malloc_counted(size_t mem_size);
+void da_free_counted(void *pt);
+bool da_result_heap_counter(void);
 
 void da_alloc(Da *dap, size_t element_size);
 void da_free(Da *dap);

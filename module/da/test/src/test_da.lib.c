@@ -34,7 +34,7 @@ bool test_da_push_0(){
   pt++;
   }
   bool flag3 = da_endq(&da, pt);
-
+  da_free(&da);
   return flag0 && flag1 && flag2 && flag3;
 }
 
@@ -67,7 +67,7 @@ bool test_da_expand_0(){
   pt++;
   }
   bool flag3 = da_endq(&da, pt);
-
+  da_free(&da);
   return flag0 && flag1 && flag2 && flag3;
 }
 
@@ -103,6 +103,7 @@ bool test_da_string_input_0(){
   bool flag3 = !strcmp(da.base, "this is a testends without a newline(setq mode-require-final-newline nil)");
 
   fclose(file);
+  da_free(&da);
   return flag0 && flag1 && flag2 && flag3;
 }
 
@@ -124,7 +125,7 @@ bool test_da_pop_0(){
   bool flag1 = da_pop(&da, &j) && j == 6;
   bool flag2 = da_pop(&da, NULL);
   bool flag3 = !da_pop(&da, &j);
-
+  da_free(&da);
   return flag0 && flag1 && flag2 && flag3;
 }
 
@@ -161,7 +162,8 @@ bool test_da_cat_0(){
     result = flag[k];
   k++;
   }
-
+  da_free(&da0);
+  da_free(&da1);
   return result;
 }
 
@@ -191,6 +193,8 @@ bool test_da_cat_1(){
   da_cat(&dar0, &dar1);
   bool flag3 = dar0.end == dar0.base + off0 +off1;
   bool flag4 = *(dar0.base + (5*dar0.element_size)) == *(dar1.base + dar1.element_size);
+  da_free(&dar0);
+  da_free(&dar1); 
   return flag1 && flag2 && flag3 && flag4;
 }
 
@@ -214,6 +218,8 @@ bool test_da_rewind_0(){
   bool flag3 = n == 10;
   bool flag4 = (*(dar.end + (7 * sizeof(int))) = 17);
   bool result = flag1 && flag2 && flag3 && flag4;
+
+  da_free(&dar);
   return result;
 }
 
@@ -239,11 +245,12 @@ bool test_da_index_0(){
     }
   }
   bool result = flag[0] && flag[1] && flag[2] && flag[3];
+  da_free(dar_pt); 
   return result;
 }
 
 //tests da_free_elements - still getting core dump on function call
-//cannot test sub-functions bc da_free_elements needs to be static
+//cannot test sub-functions bc da_free_element needs to be static
 bool test_da_free_elements_0(){
   Da dar;
   Da *dar_pt = &dar;
@@ -258,6 +265,7 @@ bool test_da_free_elements_0(){
   
   //da_free_elements(dar_pt);
   bool result = true;
+  da_free(dar_pt); 
   return result;
 }
 
@@ -291,7 +299,7 @@ bool test_da_strings_exists_0(){
     if (result == true)
     result = da_strings_exists(dar_pt, string3);
   }
- 
+  da_free(dar_pt); 
   return result;
 }
 
@@ -302,9 +310,9 @@ bool test_da_rebase_0(){
   da_alloc(&dar,sizeof(char));
 
   char **el_pt = (char **)MALLOC(4*(sizeof(char*)));
-  {//push 2-5 into dar, leave with pointer to last element
+  {//push "temp" into dar, leave with pointer to last element
     int i = 0;
-    char arr[4] = {'t','e','s','t'};
+    char arr[4] = {'t','e','m','p'};
     while(i<4){
       char c = *(arr+i);
       *el_pt = da_push(&dar, &c);
@@ -333,6 +341,7 @@ bool test_da_rebase_0(){
     el_pt--;
     i++;
     }
+    el_pt++;
   }
   
   bool result = flag4[0];
@@ -343,7 +352,8 @@ bool test_da_rebase_0(){
     i++;
     }
   }
-  
+  da_free(&dar);
+  FREE(el_pt);
   return flag1 && flag2 && flag3 && result;
 }
 
@@ -375,6 +385,7 @@ bool test_da_boundq_0(){
       flag[i] = (dar.end != dar.base) && !da_boundq(&dar);
     i++;
     }
+  
   }
 
   //makes end pointer run off allocated area, tests boundq detects runoff
@@ -389,7 +400,7 @@ bool test_da_boundq_0(){
     i++;
     }
   }
-  
+  da_free(&dar);
   return result;
 }
 
@@ -417,7 +428,7 @@ bool test_da_map_0(){
   da_map(&dar, test_da_map_0_helper, (int *)closure);
   //rename to da_foreach
   bool result = n == (5+6+7+8);
-  
+  da_free(&dar);
   return result;
 }
 
@@ -471,7 +482,8 @@ bool test_da_present_0(){
   dpc.found = false;
 
   bool result = flag[0] && flag[1] && flag[2] && flag[3];
-  
+  da_free(dap_0_pt); da_free(dap_1_pt); da_free(dap_2_pt);
+  FREE(dar);
   return result;
 }
 
@@ -526,9 +538,9 @@ bool test_da_exists_0(){
     j++;
     }
   }
-
+  
   bool result_2 = flag[0] && flag[1] && flag[2] && flag[3] && flag[4];
-    
+  da_free(dar_pt);  
   return result_1 && result_2;
 }
 bool test_da_exists_1(){//tests that expansion doesn't change results
@@ -582,7 +594,7 @@ bool test_da_exists_1(){//tests that expansion doesn't change results
   bool result_2 =
       flag[0] && flag[1] && flag[2] && flag[3] && flag[4] && flag[5]
     && flag[6] && flag[7];
-    
+  da_free(dar_pt);
   return result_1 && result_2;
 }
 
@@ -609,7 +621,7 @@ bool test_da_all_0(){
   n = 6;
   //tests da_all is false
   bool flag2 = !da_all(dar_pt, test_exists, n_pt);
-  
+  da_free(dar_pt);
   return flag1 && flag2;
 }
 
@@ -636,6 +648,10 @@ bool test_da_alloc_0(){
 
   bool result =
     flag[0] && flag[1] && flag[2] && flag[3] && flag[4] && flag[5];
+
+  da_free(da0_pt);
+  da_free(da1_pt);
+  da_free(da2_pt);
   return result;
 }
 
@@ -658,7 +674,7 @@ bool test_da_free_0(){
     //test that same memory is properly re-allocated 
   bool flag1 = keep == save;
   bool flag2 = keep->element_size == 1;
-  
+  da_free(keep);
   return flag1 && flag2;
 }
 
@@ -675,7 +691,7 @@ bool test_da_emptyq_0(){
   bool flag1 = !da_emptyq(da_pt);
   da_rewind(da_pt);
   bool flag2 = da_emptyq(da_pt);
-
+  da_free(da_pt);
   return flag1 && flag2;
 }
 
@@ -694,7 +710,7 @@ bool test_da_length_0(){
     result = length == i;
   ++i;
   }
-    
+  da_free(da_pt);
   return result;
 }
 
@@ -718,6 +734,8 @@ bool test_da_push_row_0(){
   }
   //  bool flag3 = da_equal(&row0, (Da *)(damp->base));
   //  Dama won't track changes to Das after pushing onto rows
+  da_free_elements(damp);
+  da_erase(damp);
   return flag0 && flag1 && flag2;// && flag3;
 }
 
@@ -733,6 +751,7 @@ bool test_da_erase_0(){
   Da *save = damp;
   
   //FREE da
+  da_free_elements(damp);
   da_erase(damp);
 
   //re-allocate memory to dew da of chars
@@ -741,7 +760,8 @@ bool test_da_erase_0(){
     //test that same memory is properly re-allocated 
   bool flag1 = keep == save;
   bool flag2 = keep->element_size == 1;
-  
+  da_free_elements(keep);
+  da_free(keep);
   return flag1 && flag2;
 }
 
@@ -788,13 +808,15 @@ bool test_da_longer_0(){
   Da *dr1 = (Da *)((damp->base)+sizeof(Da *));
   Da *dr2 = (Da *)((damp->base)+(2*sizeof(Da *)));
   Da *test3 = da_longer(dr0, dr1);
-  Da *test4 = da_longer(dr0, dr2);
+  Da *test4 = da_longer(dr2, dr0);
   
   bool flag1 = test1 == r1;
   bool flag2 = test2 == r2;
   bool flag3 = test3 == dr1;
   bool flag4 = test4 == dr2;
-  
+
+  da_free_elements(damp);
+  da_erase(damp);
   return flag1 && flag2 && flag3 && flag4; 
 }
 
@@ -832,7 +854,6 @@ bool test_da_longest_0(){
     }
   }
   da_push_row(damp, r2);
-
   
   Da *dr0 = (Da *)(damp->base);
   Da *dr1 = (Da *)((damp->base)+sizeof(Da));
@@ -840,8 +861,9 @@ bool test_da_longest_0(){
   Da *test = da_longest(damp);
   
   bool flag = test == dr2;
-  
-  return flag; 
+  da_free_elements(damp);
+  da_erase(damp);
+  return flag;
 }
 
 

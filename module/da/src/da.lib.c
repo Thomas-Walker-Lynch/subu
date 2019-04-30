@@ -51,14 +51,17 @@ void *da_malloc_counted(size_t mem_size){//pushed pointer onto heap_count
   return (void *)temp;
 }
 void da_free_counted(void *pt){//pops pointer from heap_count
-  if( counting == true ) da_pop(&heap_count, pt);
+  bool flag1 = false;//put here for debugging purposes
+  if( counting == true ) {flag1 = da_pop(&heap_count, NULL);}
   free(pt);
 }
-bool da_result_heap_counter(){//returns false if heap_count is not empty or if it was not being used
+//returns false if heap_count is not empty or if it was not being used
+bool da_result_heap_counter(){
   if ( counting == true ){
   return heap_count.base == heap_count.end;
   } else return false;
 }
+
 
 //--------------------------------------------------------------------------------
 // allocation

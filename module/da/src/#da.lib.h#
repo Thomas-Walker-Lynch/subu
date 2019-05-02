@@ -96,6 +96,7 @@ Replacement for malloc and free that allows us to check if all the memory we all
   Da extra_frees;                                             \
   bool accounting = false;                                    \
   da_start_accounting(heap_acc, extra_frees, accounting);
+
 #define BALANCE da_result_accounting()
 #define CLOSE_ACC da_na_free(&heap_acc); da_na_free(&extra_frees);
 

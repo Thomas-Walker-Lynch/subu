@@ -8,7 +8,6 @@
 int main(){
   // enumeration of tests
   typedef bool (*test_fun)();
-  da_start_heap_counter();
   test_fun tests[] =
     {
       test_da_push_0,
@@ -30,13 +29,13 @@ int main(){
       test_da_all_0,
       test_da_alloc_0,
       test_da_free_0,
-      test_da_emptyq_0,
+      test_da_empty_0,
       test_da_length_0,
       test_da_push_row_0,
       test_da_erase_0,
       test_da_longer_0,
       test_da_longest_0,
-      da_result_heap_counter,
+      da_result_accounting,
       NULL};
   char *test_names[] =
     {
@@ -59,16 +58,17 @@ int main(){
       "test_da_all_0",
       "test_da_alloc_0",
       "test_da_free_0",
-      "test_da_emptyq_0",
+      "test_da_empty_0",
       "test_da_length_0",
       "test_da_push_row_0",
       "test_da_erase_0",
       "test_da_longer_0",
       "test_da_longest_0",
-      "da_result_heap_counter",
+      "da_result_accounting",
       NULL};
 
   // call tests
+  ACCOUNT
   bool da_0_passed = true;
   unsigned int passed = 0;
   unsigned int failed = 0;

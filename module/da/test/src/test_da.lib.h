@@ -20,7 +20,7 @@ bool test_da_exists_1();
 bool test_da_all_0();
 bool test_da_alloc_0();
 bool test_da_free_0();
-bool test_da_emptyq_0();
+bool test_da_empty_0();
 bool test_da_length_0();
 bool test_da_push_row_0();
 bool test_da_erase_0();

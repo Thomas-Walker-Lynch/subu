@@ -10,59 +10,6 @@ Cannot expand an empty array.
 #include<stdbool.h>
 #include<string.h>
 
-
-//------------------------------------------------------------------
-//FREE and MALLOC 
-
-static bool counting = false;
-void da_start_heap_counter(){//assigns properties of heap_counter, must be called before other code to be used
-  heap_count.element_size = sizeof(void *);
-  heap_count.size = 4*sizeof(void *);
-  heap_count.base = malloc(heap_count.size);
-  heap_count.end = heap_count.base;
-  counting = true;
-}
-static char *da_count_expand(Da *dap){//these are redefined with malloc instead of MALLOC becuase da_malloc_counted will not make it past the push once heap_count needs to expand
-  char *old_base = dap->base;
-  size_t end_offset = dap->end - old_base;
-  size_t new_size = dap->size << 1;
-  char *new_base = malloc( new_size );
-  memcpy( new_base, old_base, end_offset + dap->element_size);
-  free(old_base);
-  dap->base = new_base;
-  dap->end = new_base + end_offset;
-  dap->size = new_size;
-  return old_base;
-}
-static char *da_count_push_alloc(Da *dap){
-  size_t element_off = dap->end - dap->base;
-  dap->end += dap->element_size;
-  if( dap->end > dap->base + dap->size ) da_count_expand(dap);
-  return dap->base + element_off;
-}
-static char *da_count_push(Da *dap, void *element){
-  char *element_pt = da_count_push_alloc(dap);
-  memcpy(element_pt, element, dap->element_size);
-  return element_pt;
-}
-void *da_malloc_counted(size_t mem_size){//pushed pointer onto heap_count
-  void *temp = malloc(mem_size);
-  if( counting == true ) da_count_push(&heap_count, temp);
-  return (void *)temp;
-}
-void da_free_counted(void *pt){//pops pointer from heap_count
-  bool flag1 = false;//put here for debugging purposes
-  if( counting == true ) {flag1 = da_pop(&heap_count, NULL);}
-  free(pt);
-}
-//returns false if heap_count is not empty or if it was not being used
-bool da_result_heap_counter(){
-  if ( counting == true ){
-  return heap_count.base == heap_count.end;
-  } else return false;
-}
-
-
 //--------------------------------------------------------------------------------
 // allocation
 
@@ -80,7 +27,7 @@ void da_rewind(Da *dap){
   dap->end = dap->base;
 }
 
-bool da_emptyq(Da *dap){
+bool da_empty(Da *dap){
   return dap->end == dap->base;
 }
 

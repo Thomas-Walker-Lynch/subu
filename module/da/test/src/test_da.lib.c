@@ -678,8 +678,8 @@ bool test_da_free_0(){
   return flag1 && flag2;
 }
 
-//tests da_emptyq
-bool test_da_emptyq_0(){
+//tests da_empty
+bool test_da_empty_0(){
   int i = 6;
   Da da;
   Da *da_pt = &da;
@@ -688,9 +688,9 @@ bool test_da_emptyq_0(){
     da_push(da_pt, &i);
   ++i;
   }
-  bool flag1 = !da_emptyq(da_pt);
+  bool flag1 = !da_empty(da_pt);
   da_rewind(da_pt);
-  bool flag2 = da_emptyq(da_pt);
+  bool flag2 = da_empty(da_pt);
   da_free(da_pt);
   return flag1 && flag2;
 }
@@ -873,7 +873,7 @@ bool test_da_longest_0(){
 -da_alloc                    
 -da_free                     
 -da_rewind                 
--da_emptyq                   
+-da_empty                   
 -da_length                   
 -da_rebase                   
 -da_expand                 
@@ -943,7 +943,7 @@ test_da_exists_1
 test_da_all_0
 test_da_alloc_0
 test_da_free_0
-test_da_emptyq_0
+test_da_empty_0
 test_da_length_0
 
 //matrix

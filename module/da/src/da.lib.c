@@ -4,15 +4,17 @@ Dynamic Array
 Cannot expand an empty array.
 
 */
-#include "da.lib.h"
-
 #include<stdlib.h>
 #include<stdbool.h>
 #include<string.h>
 
-//--------------------------------------------------------------------------------
-// allocation
+#include "da.lib.h"
+#include "acc.lib.h"
 
+//--------------------------------------------------------------------------------
+// constructors / destructors
+
+// this really should be called da_init, as it doesn't do any allocation ...
 void da_alloc(Da *dap, size_t element_size){
   dap->element_size = element_size;
   dap->size = 4 * element_size;
@@ -25,14 +27,6 @@ void da_free(Da *dap){
 }
 void da_rewind(Da *dap){
   dap->end = dap->base;
-}
-
-bool da_empty(Da *dap){
-  return dap->end == dap->base;
-}
-
-size_t da_length(Da *dap){
-  return (dap->end - dap->base)/dap->element_size;
 }
 
 void da_rebase(Da *dap, char *old_base, void *pta){
@@ -61,8 +55,33 @@ bool da_boundq(Da *dap){
   return dap->end > (dap->base + dap->size);
 }
 
+void da_erase(Da *dap){//same as da_free, don't tell anyone
+  FREE(dap->base);
+  dap->size = 0;
+}
+
 //--------------------------------------------------------------------------------
-// putting/taking items
+// status / attributes
+
+bool da_empty(Da *dap){
+  return dap->end == dap->base;
+}
+
+bool da_equal(Da *da_0, Da *da_1){
+  return !bcmp(da_0, da_1, sizeof(Da));
+}
+
+size_t da_length(Da *dap){
+  return (dap->end - dap->base)/dap->element_size;
+}
+
+bool da_length_equal(Da *dap0, Da *dap1){
+  return da_length(dap0) == da_length(dap1);
+}
+
+
+//--------------------------------------------------------------------------------
+// accessing
 
 char *da_index(Da *dap, size_t i){
   size_t offset = i * dap->element_size;
@@ -71,13 +90,12 @@ char *da_index(Da *dap, size_t i){
 }
 
 // allocate space for a new element at the end of the array
-char *da_push_alloc(Da *dap){
+static char *da_push_alloc(Da *dap){
   size_t element_off = dap->end - dap->base;
   dap->end += dap->element_size;
   if( dap->end > dap->base + dap->size ) da_expand(dap);
   return dap->base + element_off;
 }
-
 char *da_push(Da *dap, void *element){
   char *element_pt = da_push_alloc(dap);
   memcpy(element_pt, element, dap->element_size);
@@ -101,6 +119,11 @@ bool da_endq(Da *dap, void *pt){
   return (char *)pt >= dap->end;
 }
 
+// array is a row of elements, pt points at the rightmost element
+bool da_right_bound(Da *dap, void *pt){
+  return ((char *)pt + dap->element_size) >= dap->end;
+}
+
 // passed in f(element_pt, arg_pt)
 // We have no language support closures, so we pass in an argument for it.
 // The closure may be set to NULL if it is not needed.
@@ -112,20 +135,64 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
   }
 }
 
+//∃, OR map
+---> should return the element pointer, same for da_pts_exists
+
+void *da_exists(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = false;
+  while( !result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
+  }
+  return result;
+}
+
+//∀, AND map
+bool da_all(Da *dap, bool f(void *, void*), void *closure){
+  char *pt = dap->base;
+  bool result = true;
+  while( result && (pt != dap->end) ){
+    result = f(pt, closure);
+    pt += dap->element_size;
+  }
+  return result;
+}
 
 //--------------------------------------------------------------------------------
-// da being used as a resource manager
+// elements are pointers
 
+static da_pts_exists_0(void *element, void *pt){ return element == pt; }
+bool da_pts_exists(Da *dap, void *test_element){
+  return da_exists(dap, da_pts_exists_0, test_element);
+}
 
 // elements were MALLOCed, now they will all be FREEd
-static void da_free_element(void *pt, void *closure){
+static void da_pts_free_all_0(void *pt, void *closure){
   FREE(*(char **)pt); // FREE does not care about the pointer type
 }
-
-void da_free_elements(Da *dap){
-  da_map(dap, da_free_element, NULL);
+void da_pts_free_all(Da *dap){
+  da_map(dap, da_pts_free_all_0, NULL);
   da_rewind(dap);
 }
+
+// elements are pointers
+// ept points at an element, we set *ept to NULL
+// we pop all NULLs off the top of the stack
+void da_pts_nullify(Da *dap, void **ept){
+  if(ept >= dap->base && ept < dap->end){
+    *ept = NULL;
+  }
+  while(
+        dap->end > dap->base
+        &&
+        *(void **)(dap->end - dap->element_size) == NULL
+        ){
+    da_pop(dap, NULL);
+  }
+}
+
+
 
 //--------------------------------------------------------------------------------
 // da is an array of integers
@@ -271,27 +338,6 @@ void da_cat(Da *dap0, Da *dap1){
 
 //-----------------------------------------------------
 
-//∃, OR map
-bool da_exists(Da *dap, bool f(void *, void*), void *closure){
-  char *pt = dap->base;
-  bool result = false;
-  while( !result && (pt != dap->end) ){
-    result = f(pt, closure);
-    pt += dap->element_size;
-  }
-  return result;
-}
-
-//∀, AND map
-bool da_all(Da *dap, bool f(void *, void*), void *closure){
-  char *pt = dap->base;
-  bool result = true;
-  while( result && (pt != dap->end) ){
-    result = f(pt, closure);
-    pt += dap->element_size;
-  }
-  return result;
-}
 
 //-------------------------------------------------------
 
@@ -307,32 +353,27 @@ da_push(damp, dap0);
 da_push(damp, dap1);
 */
 
-void da_erase(Da *damp){//same as da_free, don't tell anyone
-  FREE(damp->base);
-  damp->size = 0;
-}
-
-Da *da_push_row_alloc(Da *damp){
+Da *da_mat_push_row_alloc(Da *damp){
   size_t row_off = (Da *)(damp->end) - (Da *)(damp->base);
   damp->end += damp->element_size;
   if( damp->end > damp->base + damp->size ) da_expand(damp);
   return (Da *)(damp->base) + row_off;
 }
-Da *da_push_row(Da *damp, Da *dap){// Dama won't track changes to Das after pushing onto rows
-  Da *row_pt = da_push_row_alloc(damp);
+Da *da_mat_push_row(Da *damp, Da *dap){// Dama won't track changes to Das after pushing onto rows
+  Da *row_pt = da_mat_push_row_alloc(damp);
   memcpy(row_pt, dap, damp->element_size);
   return row_pt;
 }
 
-void da_push_column(Da *damp, Da *dap, void *fill){
-  Da *tran = da_matrix_transpose(damp, fill);
-  da_push_row(tran, dap);
-  Da *new_dama = da_matrix_transpose(tran, fill);
+void da_mat_push_column(Da *damp, Da *dap, void *fill){
+  Da *tran = da_mat_transpose(damp, fill);
+  da_mat_push_row(tran, dap);
+  Da *new_dama = da_mat_transpose(tran, fill);
   //add protection against memory overwrite - expand if necessary
   memcpy(damp, new_dama, new_dama->size);
 }
 
-void da_every_row(Da *damp, void f(void *, void *), void *closure){//like every but for rows instead of elements
+void da_mat_every_row(Da *damp, void f(void *, void *), void *closure){//like every but for rows instead of elements
   Da *dpt = (Da *)(damp->base);
   while( dpt != (Da *)damp->end ){
     f(dpt, closure);
@@ -340,26 +381,26 @@ void da_every_row(Da *damp, void f(void *, void *), void *closure){//like every 
     }
 }
 
-// da_every_column uses da_longest and therefore da_longer, written for the purpose of terminating the while loop in the appropriate place
+// da_mat_every_column uses da_mat_longest and therefore da_mat_longer, written for the purpose of terminating the while loop in the appropriate place
 // will return dap1 if equal, cannot determine equality
-Da *da_longer(Da *dap0, Da *dap1){
+Da *da_mat_longer(Da *dap0, Da *dap1){
   if (da_length(dap0) > da_length(dap1)) return dap0;
   else return dap1;
 }
 // returns Da in DaMa with longest length
-Da *da_longest(Da *damp){
+Da *da_mat_longest(Da *damp){
   Da *dap = (Da *)(damp->base);
   Da *longest = (Da *)((damp->base) + sizeof(Da));
   while( dap < (Da *)(damp->end) ){
-    longest = da_longer(dap,longest);
+    longest = da_mat_longer(dap,longest);
     dap++;
   }
   return longest;
 }
-void da_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
+void da_mat_every_column(Da *damp, void f(void *, void *), void *closure){//like every but for columns instead of elements
   Da *dpt = (Da *)(damp->base);
   size_t rows = damp->size/damp->element_size;
-  size_t columns = da_length(da_longest(damp));
+  size_t columns = da_length(da_mat_longest(damp));
   size_t j = 0;
   while( j < columns ){
     int *col = MALLOC(sizeof(rows*sizeof(int)));
@@ -376,13 +417,13 @@ void da_every_column(Da *damp, void f(void *, void *), void *closure){//like eve
   }
 }
 
-Da *da_matrix_transpose(Da *damp, void *fill){// all Das must have same element type, will sort to integer, char, or char * transpose function
+Da *da_mat_transpose(Da *damp, void *fill){// all Das must have same element type, will sort to integer, char, or char * transpose function
   Da *dap = (Da *)(damp->base);
   Da tran;    da_alloc(&tran, sizeof(damp->element_size));
   Da *transpose = &tran;
   if( dap->element_size == sizeof(int) ){
     int *filler = (int *)fill;
-    transpose = da_integer_transpose(damp, filler);
+    transpose = da_mat_ints_transpose(damp, filler);
   }
   /*else if( dap->element_size == sizeof(char) ){
     char *filler = (char *)fill;
@@ -401,10 +442,7 @@ Da *da_matrix_transpose(Da *damp, void *fill){// all Das must have same element 
 // DaMa is a matrix of integers (stored in Das as columns)
 
 // integer repeats across columns
-bool da_length_equal(Da *dap0, Da *dap1){
-  return da_length(dap0) == da_length(dap1);
-}
-bool da_all_rows_same_length(Da *damp){
+bool da_mat_all_rows_same_length(Da *damp){
   Da *dap = (Da *)(damp->base);
   Da *pt = dap;
   bool flag = true;
@@ -413,10 +451,10 @@ bool da_all_rows_same_length(Da *damp){
   }
   return flag;
 }
-bool da_integer_all_rows_repeat(Da *damp){// if rows are made of repeating integers, then all columns read the same thing
+bool da_mat_ints_all_rows_repeat(Da *damp){// if rows are made of repeating integers, then all columns read the same thing
   Da *dpt = (Da *)(damp->base);
   bool flag = false;
-  if( da_all_rows_same_length((Da *)damp) ){// columns can't be equal if rows not all same length, will return false
+  if( da_mat_all_rows_same_length((Da *)damp) ){// columns can't be equal if rows not all same length, will return false
     flag = true;
     while( flag && dpt != (Da *)(damp->end) ){
       flag = da_integer_repeats(dpt); // in "da is array of integers" section
@@ -426,21 +464,21 @@ bool da_integer_all_rows_repeat(Da *damp){// if rows are made of repeating integ
   }
   else return flag;
 }
-bool da_integer_all_columns_repeat(Da *damp){// rows are repeating in transpose = columns are repeating
+bool da_mat_ints_all_columns_repeat(Da *damp){// rows are repeating in transpose = columns are repeating
   int x = 0; //have to pass in fill for transpose, this nullifies effect same_length test
-  Da *test_da = da_matrix_transpose(damp, &x);
-  return da_integer_all_rows_repeat(test_da);
+  Da *test_da = da_mat_transpose(damp, &x);
+  return da_mat_ints_all_rows_repeat(test_da);
 }
-bool da_integer_repeats_matrix(Da *damp){// all elements in matrix are same
-  bool flag1 = da_integer_all_rows_repeat(damp);
-  bool flag2 = da_integer_all_columns_repeat(damp);
+bool da_mat_ints_repeats_matrix(Da *damp){// all elements in matrix are same
+  bool flag1 = da_mat_ints_all_rows_repeat(damp);
+  bool flag2 = da_mat_ints_all_columns_repeat(damp);
   return flag1 && flag2;
 }
 
 // to transpose directly from one DaMa to another
-Da *da_integer_transpose(Da *damp, int *fill){
+Da *da_mat_ints_transpose(Da *damp, int *fill){
   size_t rows = damp->size/damp->element_size;
-  size_t columns = da_length(da_longest(damp));
+  size_t columns = da_length(da_mat_longest(damp));
   Da *matrix = damp;
   Da tran;
   da_alloc(&tran, sizeof(Da));
@@ -459,16 +497,16 @@ Da *da_integer_transpose(Da *damp, int *fill){
     dpt++;
     i++;
     }
-    da_push_row(transpose, &new_row);
+    da_mat_push_row(transpose, &new_row);
     j++;
   }
   return transpose;
 }
 
 //to create raw matrix image in memory, no longer a Da struct
-int *da_integer_to_raw_image_matrix(Da *damp, int fill){
+int *da_mat_ints_to_raw_image_matrix(Da *damp, int fill){
   size_t rows = damp->size / damp->element_size;
-  size_t columns = da_length(da_longest(damp));
+  size_t columns = da_length(da_mat_longest(damp));
   int *matrix = MALLOC(sizeof(rows*columns));//[rows][columns]
   int i = 0;
   Da *dpt = (Da *)(damp->base); 
@@ -489,10 +527,10 @@ int *da_integer_to_raw_image_matrix(Da *damp, int fill){
     }
   return matrix;
 }
-int *da_integer_to_raw_image_transpose(Da *damp, int fill){
+int *da_mat_ints_to_raw_image_transpose(Da *damp, int fill){
   size_t rows = damp->size/damp->element_size;
-  size_t columns = da_length(da_longest(damp));
-  int *matrix = da_integer_to_raw_image_matrix(damp, fill);//[rows][columns]
+  size_t columns = da_length(da_mat_longest(damp));
+  int *matrix = da_mat_ints_to_raw_image_matrix(damp, fill);//[rows][columns]
   int *transpose = MALLOC(sizeof(columns*rows));
   int i, j;
   for(i=0;i<rows;i++)
@@ -546,17 +584,8 @@ void da_present(Da **dar, int dar_size, void *closure){
   return;
 }
 
-bool da_equal(Da *da_el, Da *test_el){
-  bool f1 = da_el->base == test_el->base;
-  bool f2 = da_el->end == test_el->end;
-  bool f3 = da_el->size == test_el->size;
-  bool f4 = da_el->element_size == test_el->element_size;
-  return f1 && f2 && f3 && f4;
-}//may need to be static?
 
-
-
-void da_matrix_map(Da **dar, int dar_size, void f(void *, void *), void *closure){
+void da_mat_map(Da **dar, int dar_size, void f(void *, void *), void *closure){
   Da **pt = dar;
   int i = 0;
   while( i < dar_size ){

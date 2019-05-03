@@ -1,0 +1,82 @@
+Hello Emacs
+
+2019-05-03T18:06:21Z
+glendawest045@phoenix§~/subu/module/da§
+> make all
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc version
+makefile version 6.0
+gcc -v
+Using built-in specs.
+COLLECT_GCC=gcc
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/8/lto-wrapper
+OFFLOAD_TARGET_NAMES=nvptx-none
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu 8.3.0-6ubuntu1' --with-bugurl=file:///usr/share/doc/gcc-8/README.Bugs --enable-languages=c,ada,c++,go,brig,d,fortran,objc,obj-c++ --prefix=/usr --with-gcc-major-version-only --program-suffix=-8 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --enable-default-pie --with-system-zlib --with-target-system-zlib --enable-objc-gc=auto --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 8.3.0 (Ubuntu 8.3.0-6ubuntu1) 
+g++ -v
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/8/lto-wrapper
+OFFLOAD_TARGET_NAMES=nvptx-none
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Ubuntu 8.3.0-6ubuntu1' --with-bugurl=file:///usr/share/doc/gcc-8/README.Bugs --enable-languages=c,ada,c++,go,brig,d,fortran,objc,obj-c++ --prefix=/usr --with-gcc-major-version-only --program-suffix=-8 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-libmpx --enable-plugin --enable-default-pie --with-system-zlib --with-target-system-zlib --enable-objc-gc=auto --enable-multiarch --disable-werror --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+gcc version 8.3.0 (Ubuntu 8.3.0-6ubuntu1) 
+make -v
+GNU Make 4.2.1
+Built for x86_64-pc-linux-gnu
+Copyright (C) 1988-2016 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+2019-05-03T18:06:24Z
+glendawest045@phoenix§~/subu/module/da§
+> make dep lib exec 
+if [ -e tmp/makefile-cc.deps ]; then rm tmp/makefile-cc.deps; fi
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dep
+C compiler only deps
+deps for C linking
+cp src/da.lib.h include/da.h
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+make[1]: Nothing to be done for 'lib'.
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc exec
+make sub_exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc sub_exec
+make[3]: Nothing to be done for 'sub_exec'.
+
+2019-05-03T18:06:45Z
+glendawest045@phoenix§~/subu/module/da§
+> cd test/
+
+2019-05-03T18:06:49Z
+glendawest045@phoenix§~/subu/module/da/test§
+> make dep lib exec 
+if [ -e tmp/makefile-cc.deps ]; then rm tmp/makefile-cc.deps; fi
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc dep
+C compiler only deps
+deps for C linking
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc lib
+gcc -std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB  -o tmp/test_da.lib.o -c src/test_da.lib.c
+ar rcs lib/libtest.a  tmp/test_da.lib.o
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc exec
+make sub_exec
+/usr/bin/make --no-print-directory -f /home/glendawest045/subu/tool/lib/makefile-cc sub_exec
+gcc -std=gnu11 -fPIC -Iinclude -I../include -ggdb -DDEBUG -DDEBUGDB  -o tmp/test_da.cli.o -c src/test_da.cli.c
+gcc -o exec/test_da tmp/test_da.cli.o -Llib -L../lib -ltest -lda
+
+2019-05-03T18:06:55Z
+glendawest045@phoenix§~/subu/module/da/test§
+> cd exec/
+
+2019-05-03T18:06:59Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> ./test_da 
+passed all 26 tests
+
+2019-05-03T18:07:01Z
+glendawest045@phoenix§~/subu/module/da/test/exec§
+> 

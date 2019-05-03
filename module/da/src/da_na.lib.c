@@ -1,3 +1,9 @@
+/*
+Accounting for all the pointers for which we allocated memory on the heap.
+
+Replacement for malloc and free that allows us to check if all the memory we allocated was freed, and if all the memory we tried to free was actually allocated by keeping registers of pointers in Da structs.
+ */
+
 #include "da.lib.h"
 
 #include<stdlib.h>
@@ -7,8 +13,7 @@
 //------------------------------------------------------------------
 //FREE and MALLOC replacement
 
-static bool accounting = false;
-void da_start_accounting(Da heap_acc, Da extra_frees, bool acc){//assigns properties of heap_acc and extra_frees, must be called before other code to be used
+void da_start_accounting(){//assigns properties of heap_acc and extra_frees and sets accounting to true, must be called before other code to be used
   heap_acc.element_size = sizeof(void *);
   heap_acc.size = 4*sizeof(void *);
   heap_acc.base = malloc(heap_acc.size);
@@ -17,38 +22,42 @@ void da_start_accounting(Da heap_acc, Da extra_frees, bool acc){//assigns proper
   extra_frees.size = 4*sizeof(void *);
   extra_frees.base = malloc(extra_frees.size);
   extra_frees.end = extra_frees.base;
-  acc = true;
+  accounting = true;
 }
-void *da_malloc_counted(size_t mem_size){//pushed pointer onto heap_acc
+void *da_malloc_counted(size_t mem_size){//pushes pointer onto heap_acc before mallocing
   void *temp = malloc(mem_size);
   if( accounting == true ) da_na_push(&heap_acc, &temp);
   return (void *)temp;
 }
 void da_free_counted(void *pt){
-    if( accounting == true ) {
-      void *i = heap_acc.base;
-      bool present = false;
-      while( i < (void *)heap_acc.end ){
-        if( pt == *(void **)i ){//matches and zeroes out pointer from heap_acc
-          *(int *)i = 0;
-          present = true;
-          if( (i + heap_acc.element_size) == heap_acc.end )//pops excess 0s from end
+  if( accounting == true ) {
+    void *i = heap_acc.base;
+    bool present = false;
+    while( i < (void *)heap_acc.end ){
+      if( pt == *(void **)i ){//matches and zeroes out pointer from heap_acc
+        *(int *)i = 0;
+        present = true;
+        if( (i + heap_acc.element_size) == heap_acc.end ){//pops excess 0s from end of heap_acc
+          void *j = i;
+          while( (*(int *)j == 0) && ((void *)j >= (void *)heap_acc.base) ){
             da_pop(&heap_acc, NULL);
-        }
-      i++;
-      }
-      if( present == false ) da_push(&extra_frees, &pt);//stores pointer in extra_frees if tried to free one that we didn't count
+          j-=heap_acc.element_size;
+          }}}
+    i++;
     }
-    free(pt);
+    if( present == false ) da_push(&extra_frees, &pt);//stores pointer in extra_frees if tried to free one that we didn't count
+  }
+  free(pt);//frees pointer
 }
-//returns false if accounting wasn't being used or heap_acc is not empty or if we tried to free more pointers than we malloced for
-bool da_result_accounting(){
+bool da_result_accounting(){//returns false if accounting wasn't being used or heap_acc is not empty or if we tried to free more pointers than we malloced for
   if ( accounting == true ){
     bool flag1 = da_empty(&heap_acc);
     bool flag2 = da_empty(&extra_frees);
     return flag1 && flag2;
   } else return false;
 }
+
+//-------------------------------------------------------------------------
 
 //these are redefined with malloc instead of MALLOC because da_malloc_counted will not make it past the push once heap_acc needs to expand
 char *da_na_expand(Da *dap){

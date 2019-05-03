@@ -4,8 +4,12 @@
 #include "test_da.lib.h"
 #include <da.h>
 
+Da heap_acc;
+Da extra_frees;
+bool accounting = false;
 
 int main(){
+  ACCOUNT;
   // enumeration of tests
   typedef bool (*test_fun)();
   test_fun tests[] =
@@ -66,9 +70,7 @@ int main(){
       "test_da_longest_0",
       "da_result_accounting",
       NULL};
-
   // call tests
-  ACCOUNT
   bool da_0_passed = true;
   unsigned int passed = 0;
   unsigned int failed = 0;
@@ -97,7 +99,7 @@ int main(){
   else
     printf("failed %u of %u tests\n", failed, passed + failed);
 
-
+  CLOSE_ACC;
   if( passed == 0 || failed != 0 ) return 1;
   return 0;
 }

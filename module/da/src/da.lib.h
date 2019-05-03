@@ -92,15 +92,14 @@ Replacement for malloc and free that allows us to check if all the memory we all
 
 #define MALLOC da_malloc_counted
 #define FREE da_free_counted
-#define ACCOUNT Da heap_acc; \
-  Da extra_frees;                                             \
-  bool accounting = false;                                    \
-  da_start_accounting(heap_acc, extra_frees, accounting);
+#define ACCOUNT da_start_accounting()
 #define BALANCE da_result_accounting()
-#define CLOSE_ACC da_na_free(&heap_acc); da_na_free(&extra_frees);
+#define CLOSE_ACC da_na_free(&heap_acc); da_na_free(&extra_frees)
 
-Da heap_acc; Da extra_frees;
-void da_start_accounting(Da heap_acc, Da extra_frees, bool acc);
+//These variables must be declared at global scope in file that will use them.
+extern Da heap_acc; extern Da extra_frees; extern bool accounting;
+
+void da_start_accounting();
 void *da_malloc_counted(size_t mem_size);
 void da_free_counted(void *pt);
 bool da_result_accounting(void);

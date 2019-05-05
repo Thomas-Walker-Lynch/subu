@@ -154,6 +154,10 @@ bool da_all(Da *dap, bool pred(void *, void*), void *closure){
 }
 
 
+
+
+
+
 //--------------------------------------------------------------------------------
 // elements are pointers
 

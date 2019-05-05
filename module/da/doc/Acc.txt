@@ -1,0 +1,115 @@
+
+
+Memory accounting.
+
+----------------------------------------
+Objectives:
+
+1) to detect memory leaks
+2) to helpe identify the source of memory leaks
+3) to provide useful information during debug sessions
+
+Initially considered making a tool that would work with source code that was unaware of
+Acc. This is no longer an objective.  Consequently it is acceptable that source code
+must be modified. Possible examples include having to use a special version of malloc
+and free, and/or having to add small amounts of overhead code.
+
+----------------------------------------
+Requirements:
+
+1. To be able to turn accounting off and thus to minimize its impact. It is acceptable
+that doing so requires a second compile.
+
+2. For specific groups of functions to be able to be tracked independently, or
+not at all.  
+
+3. For specific callers to be tracked separate or not at all.
+
+----------------------------------------
+Requirements Use Case Examples:
+
+Requirement 2, Use Case 1: Say there is a dynamic array and a dynamic tree structures which both make
+use of malloc and free.  Then malloc/free balance for the dynamic array is reported
+separately than that for the dymaic tree.
+
+Requirement 3, Use Case 1 A dyamic array called from user code should be accounted for, while
+a dynamic array used by the accounting code does not.
+
+Requirement 3, Use Case 2 Say that a dyamic array is used by a dynamic tree.  This dynamic array should
+be tracked separately from other dynamic arrays.  Perhaps it is tracked as part of the rest of
+the tree code, or perhaps it is tracked as part separately from both the rest of the array and tree.
+
+----------------------------------------
+Proposed 'Channel Architecture'
+
+1. Channels are created with an open call, and are retired with a free
+call. Channels might be structs, or integers, etc. (changed name from handles to
+channels to be suggestive of the integer impelementation)
+
+    Acc handle;
+    acc_open(handle);
+
+    or perhaps
+
+    Acc handle = acc_open();
+
+    also then
+
+    acc_close(handle);
+
+2. channel_NULL, means that no accounting should be done
+
+3. dynamic structures are given and keep a copy of the memory accounting channel
+they are initialized with.  Integer handles are an advantage here as they are
+small.
+
+Specifically,  da_init (was da_alloc)  would take a handle operand.
+
+So something like:
+
+    Acc acc_channel = acc_open("Data Structure Martyrs");
+    Da x;
+    da_init(x, acc_channel);
+    .. .. lots of code, possible many acc_report(channel) calls ..
+    acc_report();
+    acc_close();
+
+A dynamic array is initialized with da_init, and the handle is written to a
+field in the Da struct.  da_init should accept a memory accounting channel
+number.  Constituent acc_malloc and acc_free calls in the dynamic array are
+given the handle, copied in from the Da struct value.
+
+    acc_malloc(size, channel);
+    acc_free(pt, channel)
+
+4. acc_malloc keeps a list of pointers it allocates, say  acc_malloc_list[channel]
+5. acc_free(pt) removes pt from the acc_malloc_list, if not found adds it to the acc_spurious_free list[channel]
+
+6. each channel is associated with a mode of accounting.  There are currently three modes:
+  0) do nothing  1) count balance only  2) full pointer accounting   Chances are for debugging
+  the user will want mode 2.  For non critical code it make sense to run in mode 1.  For
+  performance critical code, run in mode 0.
+
+  The default is no accounting.
+
+7. acc_report pretty prints the list of values on the outstanding malloc and spurious free lists,
+if not too many.  If too many then it reports a count.
+
+8. the header file redefines malloc to something that prints to stderr a warning when called, but only does
+so one time (not every time it is called).  same for free.
+
+----------------------------------------
+How the proposed architecture meets requirements
+
+1. requirement 1 is achieved by architecture 6.  as all channels may be turned off.
+
+2. requirement 2 is achieved by giving all acc_alloc, and acc_free members of a group
+the same channel.  In the case of Da this is achieved by putting the channel in the Da struct,
+and then all routines referencing the struct.
+
+3. requirement 3.  consider the use case, that of a Da (dynamic array)  and a Dt (dyamic tree).
+ The dynamic tree uses a Da, and when it calls da_init it gives the Da a different channel
+ than the channels used by others.  If the Da is to be tracked along with the rest of the tree.
+ Suppose the tree is created with dt_init(tree_channel), then internally the tree creates the
+ arrays it uses as da_init(tree_channel) also.  Then they track together.
+

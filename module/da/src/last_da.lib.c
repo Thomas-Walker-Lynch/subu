@@ -136,28 +136,23 @@ void da_map(Da *dap, void f(void *, void *), void *closure){
 }
 
 //∃, OR map
----> should return the element pointer, same for da_pts_exists
-
-void *da_exists(Da *dap, bool f(void *, void*), void *closure){
+//---> should return the element pointer, same for da_pts_exists
+static bool da_quantifier(bool complement, Da *dap, bool pred(void *, void*), void *closure){
   char *pt = dap->base;
   bool result = false;
-  while( !result && (pt != dap->end) ){
+  while( (complement? !result : result) && (pt != dap->end) ){
     result = f(pt, closure);
     pt += dap->element_size;
   }
   return result;
+}
+bool da_exists(Da *dap, bool pred(void *, void*), void *closure){
+  return da_quantifier(true, dap, pred, closure);
+}
+bool da_all(Da *dap, bool pred(void *, void*), void *closure){
+  return da_quantifier(false, dap, pred, closure);
 }
 
-//∀, AND map
-bool da_all(Da *dap, bool f(void *, void*), void *closure){
-  char *pt = dap->base;
-  bool result = true;
-  while( result && (pt != dap->end) ){
-    result = f(pt, closure);
-    pt += dap->element_size;
-  }
-  return result;
-}
 
 //--------------------------------------------------------------------------------
 // elements are pointers

@@ -6,13 +6,17 @@ but not freed, or freed but not allocated.
 
 */
 
+//new sed file for changes to rest of project
+//da_alloc -> da_init
+//da_map -> da_foreach
+
 #include "da.lib.h"
 #include "da_na.lib.h"
 #include "acc.lib.h"
 
 Da *acc_live_checkers = NULL;
 
-void acc_init(){ 
+void acc_init(){ //open
   if( acc_live_checkers == NULL ){
     acc_live_checkers = malloc(sizeof(Da));
     da_na_init(acc_live_checkers, sizeof(AccChecker));
@@ -22,7 +26,7 @@ void acc_init(){
   da_na_alloc(&(acp->spurious_free), sizeof(void *));
   da_na_push(acc_live_checkers, acp);
 }
-void acc_free(){
+void acc_free(){//close
   
 }
 void acc_report(){

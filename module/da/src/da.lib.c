@@ -159,6 +159,10 @@ bool da_all(Da *dap, bool f(void *, void*), void *closure){
   return result;
 }
 
+
+
+
+
 //--------------------------------------------------------------------------------
 // elements are pointers
 

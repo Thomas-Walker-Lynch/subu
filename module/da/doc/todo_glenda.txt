@@ -33,3 +33,8 @@ then test starting with helper functions
 got through each row and push values onto columns or vice versa?
 how to construct new Da's
 how to fill - integers only?
+
+
+--------------------
+
+here, change da_exists to return a pointer to the element, or a NULL pointer   (NULL being false, doesn't exist)

@@ -6,7 +6,7 @@ Memory accounting.
 Objectives:
 
 1) to detect memory leaks
-2) to helpe identify the source of memory leaks
+2) to help identify the source of memory leaks
 3) to provide useful information during debug sessions
 
 Initially considered making a tool that would work with source code that was unaware of
@@ -23,7 +23,7 @@ that doing so requires a second compile.
 2. For specific groups of functions to be able to be tracked independently, or
 not at all.  
 
-3. For specific callers to be tracked separate or not at all.
+3. For specific callers to be tracked separately or not at all.
 
 ----------------------------------------
 Requirements Use Case Examples:
@@ -33,7 +33,7 @@ use of malloc and free.  Then malloc/free balance for the dynamic array is repor
 separately than that for the dymaic tree.
 
 Requirement 3, Use Case 1 A dyamic array called from user code should be accounted for, while
-a dynamic array used by the accounting code does not.
+a dynamic array used for the accounting code itself does not.
 
 Requirement 3, Use Case 2 Say that a dyamic array is used by a dynamic tree.  This dynamic array should
 be tracked separately from other dynamic arrays.  Perhaps it is tracked as part of the rest of
@@ -42,8 +42,8 @@ the tree code, or perhaps it is tracked as part separately from both the rest of
 ----------------------------------------
 Proposed 'Channel Architecture'
 
-1. Channels are created with an open call, and are retired with a free
-call. Channels might be structs, or integers, etc. (changed name from handles to
+1. Channels are created with an open call, and are retired with a close
+call. Channels might be structs, or integers, etc. (enum tags) (changed name from handles to
 channels to be suggestive of the integer impelementation)
 
     Acc handle;
@@ -60,8 +60,8 @@ channels to be suggestive of the integer impelementation)
 2. channel_NULL, means that no accounting should be done
 
 3. dynamic structures are given and keep a copy of the memory accounting channel
-they are initialized with.  Integer handles are an advantage here as they are
-small.
+they are initialized with.  Integer (enum) handles are an advantage here as they are
+small. (add another field to the da struct for the accounting channel)
 
 Specifically,  da_init (was da_alloc)  would take a handle operand.
 
@@ -71,8 +71,8 @@ So something like:
     Da x;
     da_init(x, acc_channel);
     .. .. lots of code, possible many acc_report(channel) calls ..
-    acc_report();
-    acc_close();
+    acc_report(acc_channel);
+    acc_close(acc_channel);
 
 A dynamic array is initialized with da_init, and the handle is written to a
 field in the Da struct.  da_init should accept a memory accounting channel
@@ -88,15 +88,19 @@ given the handle, copied in from the Da struct value.
 6. each channel is associated with a mode of accounting.  There are currently three modes:
   0) do nothing  1) count balance only  2) full pointer accounting   Chances are for debugging
   the user will want mode 2.  For non critical code it make sense to run in mode 1.  For
-  performance critical code, run in mode 0.
+  performance critical code, run in mode 0. Want a switch to turn it all off globally (no header hacks)
 
   The default is no accounting.
 
+Modes: enum with mode options, stored in array (not a da array)
+-just tells how to run report, is not scope, channels are scope
+
 7. acc_report pretty prints the list of values on the outstanding malloc and spurious free lists,
 if not too many.  If too many then it reports a count.
+   Modes tell how to run: Option 1: just true or false Option 2: give me something reasonable (like above) 3: count 4: pointers
 
 8. the header file redefines malloc to something that prints to stderr a warning when called, but only does
-so one time (not every time it is called).  same for free.
+so one time (not every time it is called).  same for free. #define malloc crash_and_burn
 
 ----------------------------------------
 How the proposed architecture meets requirements
@@ -112,4 +116,3 @@ and then all routines referencing the struct.
  than the channels used by others.  If the Da is to be tracked along with the rest of the tree.
  Suppose the tree is created with dt_init(tree_channel), then internally the tree creates the
  arrays it uses as da_init(tree_channel) also.  Then they track together.
-

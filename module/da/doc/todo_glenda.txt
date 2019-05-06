@@ -38,3 +38,7 @@ how to fill - integers only?
 --------------------
 
 here, change da_exists to return a pointer to the element, or a NULL pointer   (NULL being false, doesn't exist)
+
+you will need the da_pts_exists version that returns a pointer so that you can search the malloc list to find freed pointers
+
+I also added da_pts_nullify, to set a pointer to zero, then to pop NULL pointers from the top of the stack.  You will want that to set the malloc poniters to NULL when there is a match with a free pointer, so that the array will contract.  using da_pts_nullify at the end, if there are no memory leaks the malloc array will be empty

@@ -1,0 +1,25 @@
+/*
+// matrix
+// There is a top level master da array.  Its elements are da arrays, these are said to be rows
+  void da_mat_map(Da **dar, int dar_size, void f(void *,void*), void *closure);
+
+  Da *da_mat_push_row_alloc(Da *damp);
+  Da *da_mat_push_row(Da *damp, Da *dap);
+  void da_mat_push_column(Da *damp, Da *dap, void *fill);
+
+  void da_mat_every_row(Da *damp, void f(void *, void *), void *closure);
+  Da *da_mat_longer(Da *dap0, Da *dap1);
+  Da *da_mat_longest(Da *damp);
+  void da_mat_every_column(Da *damp, void f(void *, void *), void *closure);
+
+  Da *da_mat_transpose(Da *damp, void *fill);
+
+  bool da_mat_all_rows_same_length(Da *damp);
+  bool da_mat_ints_all_rows_repeat(Da *damp);
+  bool da_mat_ints_all_columns_repeat(Da *damp);
+  bool da_mat_ints_repeats_matrix(Da *damp);
+
+  Da *da_mat_ints_transpose(Da *damp, int *fill);
+  int *da_mat_ints_to_raw_image_matrix(Da *damp, int fill);
+  int *da_mat_ints_to_raw_image_transpose(Da *damp, int fill);
+*/

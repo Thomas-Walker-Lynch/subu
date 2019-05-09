@@ -18,7 +18,6 @@ dep:
 .PHONY: lib
 lib:
 	cp $(SRCDIR)/da.lib.h $(INCDIR)/da.h
-	cp $(SRCDIR)/da_na.lib.h $(INCDIR)/da_na.h
 	cp $(SRCDIR)/acc.lib.h $(INCDIR)/acc.h
 	$(MAKE) $@
 

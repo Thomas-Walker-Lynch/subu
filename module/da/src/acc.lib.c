@@ -1,80 +1,149 @@
 /*
 dynamic memory accounting
 
-Alternative version of malloc and free that will invoke accounting for pointers that are allocated
-but not freed, or freed but not allocated.
-
 */
-
-//new sed file for changes to rest of project
-//da_alloc -> da_init
-//da_map -> da_foreach
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "da.lib.h"
-#include "da_na.lib.h"
 #include "acc.lib.h"
 
-Da *acc_live_checkers = NULL;
+//-----------------------------------------------------------------
+//function definitions for accounting
 
-void acc_init(){ //open
-  if( acc_live_checkers == NULL ){
-    acc_live_checkers = malloc(sizeof(Da));
-    da_na_init(acc_live_checkers, sizeof(AccChecker));
+AccChannel *acc_open(AccChannel *channel, Mode mode){//acc init
+  if( channel == &acc_live_channels ) {//avoid pushing channel tracker onto itself
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
+    return channel;
   }
-  AccChecker *acp = malloc(sizeof(AccChecker));
-  da_na_alloc(&(acp->outstanding_malloc), sizeof(void *));
-  da_na_alloc(&(acp->spurious_free), sizeof(void *));
-  da_na_push(acc_live_checkers, acp);
-}
-void acc_free(){//close
-  
-}
-void acc_report(){
-}
-
-void *acc_malloc(size_t mem_size){
-  void *an_allocation_pt = malloc(mem_size);
-
-  // push an_allocation_pt on to all live checkers
-  AccChecker *acp = acc_live_checkers->base;
-  while(!da_endq(acc_live_checkers, acp)){
-    if(*acp) da_na_push(&(acp->outstanding_malloc), an_allocation_pt);
-  acp++;
+  else if( acc_live_channels.mode == acc_NULL ){//accounting NULL
+    //channel = (AccChannel *)acc_malloc(sizeof(AccChannel), NULL);//accounting channel still on the heap but not tracked in SELF mode
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
+    return channel;
   }
-
-  return an_allocation_pt;
+  else if( acc_live_channels.mode == acc_SELF ){//accounting tracks itself
+    channel = (AccChannel *)acc_malloc(sizeof(AccChannel), &acc_live_channels);
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
+    return channel;
+  }
+  else{ //cerr, optional acc_live_channels only tracks channels, not other mallocs/frees
+    return channel;
+  }
 }
-
-void *acc_malloc(size_t mem_size){//pushes pointer onto heap_acc before mallocing
-  void *temp = malloc(mem_size);
-  da_na_push(&heap_acc, &temp);
-  return (void *)temp;
+void *acc_malloc(size_t size, AccChannel *channel){
+  void *an_allocation_pt = malloc(size);
+  if( channel ) da_push((Da *)(channel->outstanding_malloc), &an_allocation_pt);
+  return (void *)an_allocation_pt;
 }
-void acc_free(void *pt){
-  if( accounting == true ) {
-    void *i = heap_acc.base;
+void acc_free(void *pt, AccChannel *channel){
+  if( channel ){
+    void **i = (void **)(((Da *)(channel->outstanding_malloc))->base);
     bool present = false;
-    while( i < (void *)heap_acc.end ){
-      if( pt == *(void **)i ){//matches and zeroes out pointer from heap_acc
-        *(int *)i = 0;
+    while( i < (void **)(((Da *)(channel->outstanding_malloc))->end) ){
+      if( *i == pt ){
+        da_pts_nullify((Da *)(channel->outstanding_malloc), i);
         present = true;
-        if( (i + heap_acc.element_size) == heap_acc.end ){//pops excess 0s from end of heap_acc
-          void *j = i;
-          while( (*(int *)j == 0) && ((void *)j >= (void *)heap_acc.base) ){
-            da_pop(&heap_acc, NULL);
-          j-=heap_acc.element_size;
-          }}}
+      } 
     i++;
     }
-    if( present == false ) da_push(&extra_frees, &pt);//stores pointer in extra_frees if tried to free one that we didn't count
+    if( present == false ) da_push((Da *)(channel->spurious_free), &pt);
   }
-  free(pt);//frees pointer
+  free(pt);
 }
-bool acc_result(){//returns false if accounting wasn't being used or heap_acc is not empty or if we tried to free more pointers than we malloced for
-  if ( accounting == true ){
-    bool flag1 = da_empty(&heap_acc);
-    bool flag2 = da_empty(&extra_frees);
-    return flag1 && flag2;
-  } else return false;
+static void count_balance(void *element, void *closure){
+  int *counter = (int *)closure;
+  if( (void *)element ) (*counter)++;
 }
+static void acc_rep_helper_BALANCE(AccChannel *channel){
+  int count = 0;
+  da_foreach((Da *)channel->outstanding_malloc, count_balance, &count);
+  printf("There are %d outstanding allocations.\n", count);
+  count = 0;
+  da_foreach((Da *)channel->spurious_free, count_balance, &count);
+  printf("There are %d spurious frees.\n", count);
+}
+static void print_pointer(void *element, void *closure){
+  if( element ) printf("%d ", *(int *)element);
+}
+static void acc_rep_helper_FULL(AccChannel *channel){
+  int count = 0;
+  da_foreach((Da *)channel->outstanding_malloc, count_balance, &count);
+  printf("There are %d outstanding mallocs.\n", count);
+  if( count < 10 ){
+    printf("The outstanding allocated pointers are: ");
+    da_foreach((Da *)channel->outstanding_malloc, print_pointer, NULL);
+    printf(".\n");
+  }
+  count = 0;
+  da_foreach((Da *)channel->spurious_free, count_balance, &count);
+  printf("There are %d spurious frees.\n", count);
+  if( count < 10 ){
+    printf("The spuriously freed pointers are: ");
+    da_foreach((Da *)channel->outstanding_malloc, print_pointer, NULL);
+    printf(".\n");
+  }
+}
+AccChannel *acc_report(AccChannel *channel){
+  if( channel->mode == acc_NULL ){
+    printf("Accounting mode is NULL.");
+    return channel;
+  }
+  if( channel->mode == acc_BALANCE ){
+    printf("Accounting mode is BALANCE.\n");
+    if( da_is_empty((Da *)(channel->outstanding_malloc)) && da_is_empty((Da *)(channel->spurious_free)) ){
+      printf("This channel is in balance.");
+    }
+    else{
+      printf("This channel is out of balance.\n");
+      acc_rep_helper_BALANCE(channel);
+    }
+    return channel;
+  }
+  if( channel->mode == acc_FULL ){
+    printf("Accounting mode is FULL.\n");
+    if( da_is_empty((Da *)(channel->outstanding_malloc)) && da_is_empty((Da *)(channel->spurious_free)) ){
+      printf("This channel is in balance.");
+    }
+    else{
+      printf("This channel is out of balance.\n");
+      acc_rep_helper_FULL(channel);
+    }
+    return channel;
+  }
+  if( channel->mode == acc_SELF ){
+    printf("Accounting mode is SELF.\n");
+    if( da_is_empty((Da *)(channel->outstanding_malloc)) && da_is_empty((Da *)(channel->spurious_free)) ){
+      printf("There are no open channels.");
+    }
+    else {
+      printf("The accounting code is out of balance.\n");
+      acc_rep_helper_FULL(channel);
+    }
+    return channel;
+  }
+}
+void acc_close(AccChannel *channel){
+  da_free((Da *)(channel->outstanding_malloc));
+  da_free((Da *)(channel->spurious_free));
+  if( (channel != &acc_live_channels)
+      && (acc_live_channels.mode == acc_SELF) ){
+    acc_free(channel, &acc_live_channels);
+    return;
+  }
+  else return;
+}
+
+void *crash_and_burn_malloc(size_t size){}
+void crash_and_burn_free(void *pt){}
 

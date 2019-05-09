@@ -14,19 +14,27 @@
 //function definitions for accounting
 
 Acc_channel *acc_open(Acc_channel *channel, enum Mode mode){//acc init
-  Da os; Da sf;
-  channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
-  channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
-  channel->mode = mode;
   if( channel == &acc_live_channels ) {//avoid pushing channel tracker onto itself
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
     return channel;
   }
   else if( acc_live_channels.mode == acc_NULL ){//accounting NULL
-    //channel = (Acc_channel *)acc_malloc(sizeof(Acc_channel), NULL);//accounting still functions but not SELF
+    //channel = (Acc_channel *)acc_malloc(sizeof(Acc_channel), NULL);//accounting channel still on the heap but not tracked in SELF mode
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
     return channel;
   }
   else if( acc_live_channels.mode == acc_SELF ){//accounting tracks itself
     channel = (Acc_channel *)acc_malloc(sizeof(Acc_channel), &acc_live_channels);
+    Da os; Da sf;
+    channel->outstanding_malloc = da_init(&os, sizeof(void *), NULL);
+    channel->spurious_free = da_init(&sf, sizeof(void *), NULL);
+    channel->mode = mode;
     return channel;
   }
   else{ //cerr, optional acc_live_channels only tracks channels, not other mallocs/frees

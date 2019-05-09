@@ -2,7 +2,7 @@ Explanation of process for using accounting code.
 
   First, acc_open(&acc_live_channels, mode); ---acc_NULL or acc_SELF only, decide whether to track memory allocation for channels themselves
   
-  Declare an Acc_channel and pass its address (via reference or pointer) to acc_open to begin an accounting channel. You will also need to pass in a Mode. 
+  To begin an accounting channel, declare an Acc_channel and initialize it by passing a pointer to it into acc_open. You will also need to pass in a Mode. 
 
 -acc_NULL does not track
 -acc_BALANCE will give you a count of outstanding mallocs and spurious frees when reported
@@ -15,6 +15,6 @@ Explanation of process for using accounting code.
   To free a Da, pass a pointer to the Da into da_free. It will automatically call acc_free for the base pointer, set the size to 0 and set the channel to NULL.
   To free anything other else in the program, simply call acc_free, passing in the pointer and the channel the pointer is being tracked in. This will zero it out from the channel, call da_pts_nullify to clean up any zeroes at the end of the channel, and then free the pointer. 
 
-  To find out if there are any memory leaks in a particular channel, call acc_report with a pointer to the Acc_channel as the argument. Depending on the channel's mode, it will pretty print a current report of memory allocation and frees. If it is acc_live_channels set to Mode acc_SELF, it will report on the memory currently in use for the accounting system itself.
+  To find out if there are any memory leaks in a particular channel, call acc_report with a pointer to the Acc_channel as the argument. Depending on the channel's mode, it will pretty print a current report of memory allocation and frees. If you call a report on acc_live_channels and it is set to Mode acc_SELF, it will report on the memory currently in use for the accounting system itself.
 
   When finished with a channel, call acc_close and pass in the channel pointer. This will free up the memory used by it and remove it from the acc_live_channels outstanding_malloc list if there is SELF tracking on. Any allocation information being tracked by this channel will be lost, so it is advised to call acc_report before deciding whether to free the channel.

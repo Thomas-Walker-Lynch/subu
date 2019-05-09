@@ -3,17 +3,25 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
-#define malloc crash_and_burn_malloc
-#define free crash_and_burn_free
+//#define malloc crash_and_burn_malloc
+//#define free crash_and_burn_free
+//shouldn't define these in header bc need to use malloc and free in functions, put definitions after header if going to use
+
+// See acc_doc.txt for explanation of process for using accounting code.
+
+enum Mode{acc_NULL, acc_BALANCE, acc_FULL, acc_SELF};//0,1,2,3
+
+struct Da;//forward declaration because mutually referential structs
 
 typedef struct {
-  Da outstanding_malloc;
-  Da spurious_free;
-  int mode;
+  struct Da *outstanding_malloc;
+  struct Da *spurious_free;
+  enum Mode mode;
 } Acc_channel; //name instances of channels with handles
 
-typedef struct {
+typedef struct Da {
   char *base;
   char *end; // one byte/one element off the end of the array
   size_t size; // size >= (end - base) + 1;
@@ -21,19 +29,14 @@ typedef struct {
   Acc_channel *channel;//assign during init, set to NULL during free
 } Da;
 
-enum Mode{acc_NULL, acc_BALANCE, acc_FULL, acc_SELF};//0,1,2,3
-
 extern Acc_channel acc_live_channels;//acc_NULL or acc_SELF to track acc channels or not, other options return invalid upon report
 
-/*
-  Explanation of process for using accounting code.
-*/
 //function declarations for accounting
-  Acc_channel *acc_open(Acc_channel channel, int mode);//initializes channel structs
-  void *acc_malloc(size_t size, Acc_channel channel);//works for things besides Das too
-  void acc_free(void *pt, Acc_channel channel);//works for things besides Das too
-  Acc_channel *acc_report(Acc_channel channel);//reports on channels based on mode
-  void acc_close(Acc_channel channel);//frees channel itself
+  Acc_channel *acc_open(Acc_channel *channel, enum Mode mode);//initializes channel structs
+  void *acc_malloc(size_t size, Acc_channel *channel);//works for things besides Das too
+  void acc_free(void *pt, Acc_channel *channel);//works for things besides Das too
+  Acc_channel *acc_report(Acc_channel *channel);//reports on channels based on mode
+  void acc_close(Acc_channel *channel);//frees channel itself
 
   void *crash_and_burn_malloc(size_t size);//sends error message in case of accidental regular malloc
   void crash_and_burn_free(void *);// sends error message in case of accidental regular free
@@ -41,17 +44,16 @@ extern Acc_channel acc_live_channels;//acc_NULL or acc_SELF to track acc channel
 //function declarations for Das
 
 // constructors / destructors
-  Da *da_init(Da *dap, size_t element_size, Acc_channel channel);//calls da_malloc for base pointer
-  
+  Da *da_init(Da *dap, size_t element_size, Acc_channel *channel);//calls da_malloc for base pointer
+  void da_free(Da *dap);
   void da_rewind(Da *dap);
   void da_rebase(Da *dap, char *old_base, void *pta);
   char *da_expand(Da *dap);
   bool da_boundq(Da *dap);
-  void da_erase(Da *dap);
 
 // status / attributes
 //
-  bool da_empty(Da *dap);
+  bool da_emptyq(Da *dap);
   bool da_equal(Da *da_0, Da *da_1);
   size_t da_length(Da *dap);
   bool da_length_equal(Da *dap0, Da *dap1);
@@ -78,6 +80,7 @@ extern Acc_channel acc_live_channels;//acc_NULL or acc_SELF to track acc channel
 
 // matrices - elements are das 
 //need to rename/sed a lot of functions before adding
+void da_mat_erase(Da *dap);//same as free
 
 
 

@@ -1,6 +1,9 @@
 #ifndef ACC_LIB_H
 #define ACC_LIB_H
 
+#define malloc crash_and_burn_malloc
+#define free crash_and_burn_free
+
 typedef struct AccChannel_struct AccChannel;
 typedef struct Da_struct Da; // Da_struct defined in da.lib.h
 

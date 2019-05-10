@@ -13,18 +13,19 @@ bool test_da_free_elements_0();
 bool test_da_strings_exists_0();
 bool test_da_rebase_0();
 bool test_da_boundq_0();
-bool test_da_map_0();
+bool test_da_foreach_0();
 bool test_da_present_0();
 bool test_da_exists_0();
 bool test_da_exists_1();
 bool test_da_all_0();
-bool test_da_alloc_0();
+bool test_da_init_0();
 bool test_da_free_0();
-bool test_da_empty_0();
+bool test_da_is_empty_0();
 bool test_da_length_0();
-bool test_da_push_row_0();
-bool test_da_erase_0();
-bool test_da_longer_0();
-bool test_da_longest_0();
+//bool test_da_push_row_0();
+//bool test_da_erase_0();
+//bool test_da_longer_0();
+//bool test_da_longest_0();
+bool test_da_accounting_0();
 
 #endif

@@ -13,7 +13,7 @@ struct Da_struct{
   char *end; // one byte/one element off the end of the array
   size_t size; // size >= (end - base) + 1;
   size_t element_size;
-  AccChannel *channel;
+  AccChannel *channel;//assign during init, set to NULL during free
 };
 
 // constructors / destructors

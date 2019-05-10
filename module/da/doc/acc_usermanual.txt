@@ -1,6 +1,9 @@
 Explanation of process for using accounting code.
 
-  First, acc_open(&acc_live_channels, mode); ---acc_NULL or acc_SELF only, decide whether to track memory allocation for channels themselves
+  First,
+  AccChannel acc_live_channels; needs to be declared at global scope in the CLI file.
+  acc_open(&acc_live_channels, mode); needs to be called in main.
+  ---acc_NULL or acc_SELF only, decide whether to track memory allocation for channels themselves
   
   To begin an accounting channel, declare an Acc_channel and initialize it by passing a pointer to it into acc_open. You will also need to pass in a Mode. 
 

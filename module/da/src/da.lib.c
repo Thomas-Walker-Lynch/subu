@@ -143,7 +143,7 @@ void da_foreach(Da *dap, void f(void *, void *), void *closure){
 //---> should return the element pointer, same for da_pts_exists
 static bool da_quantifier(bool complement, Da *dap, bool pred(void *, void*), void *closure){
   char *pt = dap->base;
-  bool result = false;
+  bool result = !complement;
   while( (complement? !result : result) && (pt != dap->end) ){
     result = pred(pt, closure);
     pt += dap->element_size;

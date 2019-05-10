@@ -3,14 +3,13 @@
 #include <stdbool.h>
 #include "test_da.lib.h"
 #include <da.h>
+#include <acc.h>
 
-Da heap_acc;
-Da extra_frees;
-bool accounting = false;
+AccChannel acc_live_channels;
 
 int main(){
-  ACCOUNT;
-  // enumeration of tests
+  acc_open(&acc_live_channels, acc_SELF);
+    // enumeration of tests
   typedef bool (*test_fun)();
   test_fun tests[] =
     {
@@ -26,20 +25,20 @@ int main(){
       test_da_strings_exists_0,
       test_da_rebase_0,
       test_da_boundq_0,
-      test_da_map_0,
-      test_da_present_0,
+      test_da_foreach_0,
+      //test_da_present_0,
       test_da_exists_0,
       test_da_exists_1,
       test_da_all_0,
-      test_da_alloc_0,
+      test_da_init_0,
       test_da_free_0,
-      test_da_empty_0,
+      test_da_is_empty_0,
       test_da_length_0,
-      test_da_push_row_0,
-      test_da_erase_0,
-      test_da_longer_0,
-      test_da_longest_0,
-      da_result_accounting,
+      // test_da_push_row_0,
+      // test_da_erase_0,
+      // test_da_longer_0,
+      // test_da_longest_0,
+      test_da_accounting_0,
       NULL};
   char *test_names[] =
     {
@@ -55,20 +54,20 @@ int main(){
       "test_da_strings_exists_0",
       "test_da_rebase_0",
       "test_da_boundq_0",
-      "test_da_map_0",
-      "test_da_present_0",
+      "test_da_foreach_0",
+      //"test_da_present_0",
       "test_da_exists_0",
       "test_da_exists_1",
       "test_da_all_0",
-      "test_da_alloc_0",
+      "test_da_init_0",
       "test_da_free_0",
-      "test_da_empty_0",
+      "test_da_is_empty_0",
       "test_da_length_0",
-      "test_da_push_row_0",
-      "test_da_erase_0",
-      "test_da_longer_0",
-      "test_da_longest_0",
-      "da_result_accounting",
+      //"test_da_push_row_0",
+      //"test_da_erase_0",
+      //"test_da_longer_0",
+      //"test_da_longest_0",
+      "test_da_accounting_0",
       NULL};
   // call tests
   bool da_0_passed = true;
@@ -88,7 +87,7 @@ int main(){
   tfp++;
   tnp++;
   }
-
+  acc_report(&acc_live_channels);
   // summarize results
   if( passed == 0 && failed == 0)
     printf("no tests ran\n");
@@ -99,7 +98,6 @@ int main(){
   else
     printf("failed %u of %u tests\n", failed, passed + failed);
 
-  CLOSE_ACC;
-  if( passed == 0 || failed != 0 ) return 1;
+    if( passed == 0 || failed != 0 ) return 1;
   return 0;
 }

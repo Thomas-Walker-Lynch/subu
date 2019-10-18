@@ -5,10 +5,10 @@
 #include <da.h>
 #include <acc.h>
 
-AccChannel acc_live_channels;
+//AccChannel acc_live_channels;
 
 int main(){
-  acc_open(&acc_live_channels, acc_SELF);
+  //acc_open(&acc_live_channels, acc_SELF);
     // enumeration of tests
   typedef bool (*test_fun)();
   test_fun tests[] =
@@ -29,7 +29,7 @@ int main(){
       //test_da_present_0,
       test_da_exists_0,
       test_da_exists_1,
-      test_da_all_0,
+      //test_da_all_0,
       test_da_init_0,
       test_da_free_0,
       test_da_is_empty_0,
@@ -87,7 +87,7 @@ int main(){
   tfp++;
   tnp++;
   }
-  acc_report(&acc_live_channels);
+  //acc_report(&acc_live_channels);
   // summarize results
   if( passed == 0 && failed == 0)
     printf("no tests ran\n");

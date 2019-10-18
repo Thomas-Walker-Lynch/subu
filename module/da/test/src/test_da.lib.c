@@ -14,6 +14,8 @@ Tests for Da.
 
 // tests push
 bool test_da_push_0(){
+  //AccChannel c;
+  //AccChannel *channel = acc_open(&c, acc_SELF);
   Da da;
   da_init(&da, sizeof(int), NULL); // leaves room for 4 ints
   int i = 0;
@@ -37,13 +39,15 @@ bool test_da_push_0(){
   }
   bool flag3 = da_endq(&da, pt);
   da_free(&da);
+  //acc_report(channel);
+  //acc_close(channel);
   return flag0 && flag1 && flag2 && flag3;
 }
 
 // tests manual expansion
 bool test_da_expand_0(){
   Da da;
-  da_init(&da, sizeof(int), NULL); // leaves room for 4 ints
+  Da *dap = da_init(&da, sizeof(int), NULL); // leaves room for 4 ints
   int i = 0;
   int *pt = (int *)da.base;
   // will double, 4 -> 8, then double 8 -> 16
@@ -69,7 +73,7 @@ bool test_da_expand_0(){
   pt++;
   }
   bool flag3 = da_endq(&da, pt);
-  da_free(&da);
+  da_free(dap);
   return flag0 && flag1 && flag2 && flag3;
 }
 
@@ -602,7 +606,7 @@ bool test_da_exists_1(){//tests that expansion doesn't change results
 }
 
 
-
+/*
 //tests da_all
 bool test_da_all_0(){
   Da dar;
@@ -628,7 +632,7 @@ bool test_da_all_0(){
   
   return flag1 && flag2;
 }
-
+*/
 
 
 //tests da_init
@@ -688,6 +692,7 @@ bool test_da_is_empty_0(){
   Da da;
   Da *da_pt = &da;
   da_init(da_pt, sizeof(int), NULL);
+  bool flag0 = da_is_empty(da_pt);
   while(i < 11){
     da_push(da_pt, &i);
   ++i;
@@ -696,7 +701,7 @@ bool test_da_is_empty_0(){
   da_rewind(da_pt);
   bool flag2 = da_is_empty(da_pt);
   da_free(da_pt);
-  return flag1 && flag2;
+  return flag0 && flag1 && flag2;
 }
 
 //tests da_length
@@ -874,20 +879,19 @@ bool test_da_longest_0(){
 
 bool test_da_accounting_0(){
   AccChannel acc0;
-  AccChannel *acc0_pt = acc_open(&acc0, acc_NULL);
+  AccChannel *acc0_pt = acc_open(&acc0, acc_FULL);
 
-  //Da da0;
-  //Da *dap = &da0;
-  //da_init(dap, sizeof(int), acc0_pt);
+  Da da0;
+  Da *dap = (Da *)da_init(&da0, sizeof(int), NULL);
+  
 
   printf("Outstanding Malloc: %d\n", (int)(acc0_pt->outstanding_malloc));
   printf("Spurious Free: %d\n", (int)(acc0_pt->spurious_free)); 
   acc_report(acc0_pt);
 
-  //da_free(dap);
-  //acc_close(acc0_pt);
-
-  //acc_close(acc0_pt);
+  // da_free(dap);
+  
+  acc_close(acc0_pt);
   bool result = true;
   return result;
 }

@@ -1,13 +1,18 @@
 #ifndef ACC_LIB_H
 #define ACC_LIB_H
 
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+
 #define malloc crash_and_burn_malloc
 #define free crash_and_burn_free
 
 typedef struct AccChannel_struct AccChannel;
 typedef struct Da_struct Da; // Da_struct defined in da.lib.h
 
-enum Mode_enum{acc_NULL, acc_BALANCE, acc_FULL, acc_SELF};//0,1,2,3
+enum Mode_enum{acc_NULL = 0, acc_BALANCE = 1, acc_FULL = 2, acc_SELF = 3};//0,1,2,3
 typedef enum Mode_enum Mode;
 
 struct AccChannel_struct{
@@ -15,9 +20,6 @@ struct AccChannel_struct{
   Da *spurious_free;
   Mode mode;
 }; //name instances of channels with handles
-
-
-extern AccChannel acc_live_channels;//acc_NULL or acc_SELF to track acc channels or not, other options return invalid upon report
 
 //function declarations for accounting
   AccChannel *acc_open(AccChannel *channel, Mode mode);//initializes channel structs

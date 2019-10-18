@@ -152,10 +152,10 @@ static bool da_quantifier(bool complement, Da *dap, bool pred(void *, void*), vo
 }
 bool da_exists(Da *dap, bool pred(void *, void*), void *closure){
   return da_quantifier(true, dap, pred, closure);
-}
-bool da_all(Da *dap, bool pred(void *, void*), void *closure){
+}//return pointer to thing it found that exists
+bool da_exception(Da *dap, bool pred(void *, void*), void *closure){
   return da_quantifier(false, dap, pred, closure);
-}
+}//make return pointer to exception and NULL (pointer) if no exception
 
 
 
@@ -169,7 +169,7 @@ bool da_all(Da *dap, bool pred(void *, void*), void *closure){
 static bool da_pts_exists_0(void *element, void *test_element){ return element == test_element; }
 void *da_pts_exists(Da *dap, void *test_element){
   if( da_exists(dap, da_pts_exists_0, test_element) ) return test_element;
-  else return NULL;
+  else return NULL; //if da_exists returns pointer, gets bool and pointer in one
 }
 /*
 static da_pts_exists_0(void *element, void *pt){ return element == pt; }

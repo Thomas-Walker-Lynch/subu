@@ -881,10 +881,9 @@ bool test_da_accounting_0(){
   AccChannel acc0;
   AccChannel *acc0_pt = acc_open(&acc0, acc_FULL);
 
-  Da da0;
-  Da *dap = (Da *)da_init(&da0, sizeof(int), NULL);
+  //Da da0;
+  //Da *dap = (Da *)da_init(&da0, sizeof(int), NULL); //trying to use acc0_pt results in even more immediate seg fault
   
-
   printf("Outstanding Malloc: %d\n", (int)(acc0_pt->outstanding_malloc));
   printf("Spurious Free: %d\n", (int)(acc0_pt->spurious_free)); 
   acc_report(acc0_pt);

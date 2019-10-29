@@ -22,7 +22,7 @@ AccChannel *acc_open(AccChannel *channel, Mode mode){//acc init
 }
 void *acc_malloc(size_t size, AccChannel *channel){
   void *an_allocation_pt = malloc(size);
-  if( channel ) da_push((Da *)(channel->outstanding_malloc), &an_allocation_pt);
+  if( channel ) da_push((Da *)(channel->outstanding_malloc), &an_allocation_pt);//tried taking out reference but fixed nothing
   return (void *)an_allocation_pt;
 }
 void acc_free(void *pt, AccChannel *channel){

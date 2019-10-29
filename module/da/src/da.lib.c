@@ -96,6 +96,7 @@ char *da_index(Da *dap, size_t i){
 // allocate space for a new element at the end of the array
 static char *da_push_alloc(Da *dap){
   size_t element_off = dap->end - dap->base;
+  //printf("help help help I'm melting!");
   dap->end += dap->element_size;
   if( dap->end > dap->base + dap->size ) da_expand(dap);
   return dap->base + element_off;

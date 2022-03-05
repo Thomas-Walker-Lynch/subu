@@ -1,0 +1,35 @@
+#!/bin/bash
+# must have commands rsync and user-stem
+# user-stem is in the system repo
+#
+# wish we could set the uids and gids so that backups would restore properly on other systems but it is too much trouble
+# to do in a shell script.  Perhaps in the python code for the actual release.
+
+subu=$1
+
+
+if [ ! -x "/usr/local/bin/user-stem" ]; then
+   echo "no /usr/local/bin/user-stem program found (it is in the system repo)"
+   exit 1
+fi
+
+if [ -z "$subu" ]; then
+   echo "no subuser name supplied"
+   exit 1
+fi
+
+# stem includes all characters up to the first '-' 
+stem=$(/usr/local/bin/user-stem)
+
+user_subu="$stem-$subu"
+user_admin="$stem-admin"
+
+home_subu="/home/$stem/$subu"
+home_admin="/home/$stem/admin"
+
+sudo useradd --home-dir "$home_subu"  "$user_subu"
+sudo usermod -aG "$user_subu" "$user_admin"
+sudo find "$home_admin/subu_default" -mindepth 1 -execdir cp -p {} "$home_subu" \;
+sudo find "$home_subu" -execdir chown "$user_subu":"$user_subu" {} \;
+
+

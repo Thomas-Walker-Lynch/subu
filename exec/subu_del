@@ -1,0 +1,63 @@
+#!/bin/bash
+# must have command user-stem
+# user-stem is in the system repo
+#
+# currently this is setup to be run by any user who has sudo - it doesn't have to be run by the user-admin account; though chances are it will be.
+#
+# userdel -r deletes both the /var/spool/mail/user and the user's home directory.  We don't want to delete the old data just in case there
+# is something important there.  However we can not leve the old /var/spool/mail/user file under /var/spool/mail in case another subu is
+# created later with the same name.  Hence we will move the /var/spool/mail/user file into the users home directory.  We will give ownership
+# of the old home directory to the admin.
+#
+# I have run into a problem that subu users do not inherit the MAIL variable, I wouldn't trust it anyway.  I do not know if userdel -r
+# references the MAIL variable.  I will hard code a local variable to /var/sppol/mail.  This must be changed for systems that put the mail spool
+# file eleswhere.
+#
+#set -x
+
+subu=$1
+
+if [ ! -x "/usr/local/bin/user-stem" ]; then
+   echo "no /usr/local/bin/user-stem program found (it is in the system repo)"
+   exit 1
+fi
+
+if [ -z "$subu" ]; then
+   echo "no subuser name supplied"
+   exit 1
+fi
+
+# stem includes all characters up to the first '-' 
+stem=$(/usr/local/bin/user-stem)
+user_subu="$stem-$subu"
+user_admin="$stem-admin"
+home_subu="/home/$stem/$subu"
+archive_suffix=_former_subu
+archive_subu="$home_subu$archive_suffix"
+mail_source_dir="/var/spool/mail"
+mail_source_file="$mail_source_dir/$user_subu" 
+mail_target_file="$home_subu/mail_spool" 
+
+if [ -e "$archive_subu" ]; then
+   echo "there is already a saved directory for a deleted subu with this name, move this out of the way first: $archive_subu"
+   exit 1
+fi
+if [ ! -d "$mail_source_dir" ]; then
+   echo "could not find mail spooler directory: $mail_source_dir"
+   exit 1
+fi
+
+if [ -e "$mail_target_file" ]; then
+   echo "there is already file system object where we planned to move the deleted user's mail spool, which is here: $home_subu/mail_spool"
+   exit 1
+fi
+
+sudo killall --signal 5 --user "$user_subu"
+sudo mv  "$mail_source_file"  "$mail_target_file"
+sudo chmod -R go-rwx "$home_subu"
+sudo chown -R "$user_admin":"$user_admin" "$home_subu"
+mv "$home_subu" "$archive_subu"
+sudo groupdel -f "$user_subu"
+sudo userdel "$user_subu"
+
+#set +x

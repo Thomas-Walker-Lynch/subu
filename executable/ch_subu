@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# This must be sourced
+
+subu=$1
+if [ -z "$subu" ]; then
+   echo "no subuser name supplied"
+   exit 1
+fi
+
+machine="$(hostname)"
+xkey=$(xauth list | grep Turbine | awk '{print $3}')
+
+if [ -z "$key" ]; then
+   echo "xauth key not found"
+   exit 1
+fi
+
+sudo su "$subu"
+
+xauth 

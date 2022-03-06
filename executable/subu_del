@@ -52,7 +52,7 @@ if [ -e "$mail_target_file" ]; then
    exit 1
 fi
 
-sudo killall --signal 5 --user "$user_subu"
+sudo killall --signal 5 --wait --user "$user_subu"
 sudo mv  "$mail_source_file"  "$mail_target_file"
 sudo chmod -R go-rwx "$home_subu"
 sudo chown -R "$user_admin":"$user_admin" "$home_subu"

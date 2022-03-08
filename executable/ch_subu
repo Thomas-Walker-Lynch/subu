@@ -4,6 +4,8 @@
 # to make audio work will need to do this:
 #    > sudo dnf install pulseaudio-utils
 #    > pactl load-module module-native-protocol-tcp
+# To load a specific module to the PA server, you add it to /etc/pulse/default.pa:
+# I created the file because it was not there... 
 
 #set -x
 

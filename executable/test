@@ -1,6 +1,0 @@
-
-subu=$1
-
-whoami
-sudo su $subu
-whoami

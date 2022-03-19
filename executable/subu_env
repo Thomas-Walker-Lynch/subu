@@ -45,6 +45,10 @@ read -r -d '' script0 <<-EOF
     ;gnome-terminal
 EOF
 
-sudo su  "$user_subu" -c "$script0"
+
+sudo su  -l "$user_subu" -c "$script0"
+
+#just hangs
+#sudo -u  "$user_subu" sh -c "$script0"
 
 #set +x

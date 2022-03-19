@@ -1,0 +1,6 @@
+
+user must be in group video
+
+I added 666 permissions to udev for the USB camera but doubt this
+is needed.
+

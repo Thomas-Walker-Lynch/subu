@@ -1,4 +1,6 @@
 
+this does not apply to the current scripts, but rather the setuid code
+
 subu-mk-0
 
   1. We have to make the subu for step 2 so that we will have subu_uid and subu_gid

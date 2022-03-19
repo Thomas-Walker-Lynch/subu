@@ -1,0 +1,18 @@
+
+
+added file /etc/udev/rules/50-usb-scale.rules
+SUBSYSTEM=="usb" ,ATTR{idVendor}=="1d50" ,ATTR{idProduct}=="60fc" ,MODE="0666" ,OWNER="Thomas-Internet"
+
+SUBSYSTEM=="usb" \
+,ATTR{idVendor}=="1d50" \
+,ATTR{idProduct}=="60fc" \
+,MODE="0666" \
+,OWNER="Thomas-Internet"
+
+
+udevadm control --reload-rules
+udevadm control --reload-rules && udevadm trigger
+
+systemctl status systemd-udevd
+
+firefox can find the usb hardward key with these settings, google-chrome can not.

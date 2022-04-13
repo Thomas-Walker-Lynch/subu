@@ -31,7 +31,7 @@ fi
 
 stem=$(/usr/local/bin/user-stem)
 user_subu="$stem-$subu"
-home_subu="/home/$stem/$subu"
+home_subu=/home/"$stem"/"$subu"_root/"$subu"
 bashrc="$home_subu/.bashrc"
 xauthority="$home_subu/.Xauthority"
 

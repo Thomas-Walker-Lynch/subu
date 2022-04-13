@@ -24,12 +24,17 @@ stem=$(/usr/local/bin/user-stem)
 user_subu="$stem-$subu"
 user_admin="$stem-admin"
 
-home_subu="/home/$stem/$subu"
-home_admin="/home/$stem/admin"
+subu_root="/home/$stem/$subu"_root
+subu_home="$subu_root"/"$subu"
 
-sudo useradd --home-dir "$home_subu"  "$user_subu"
+admin_home="/home/$stem/admin"
+
+sudo useradd --home-dir "$subu_root"  "$user_subu"
 sudo usermod -aG "$user_subu" "$user_admin"
-sudo find "$home_admin/subu_default" -mindepth 1 -execdir cp -p {} "$home_subu" \;
-sudo find "$home_subu" -execdir chown "$user_subu":"$user_subu" {} \;
+sudo find "$admin_home/subu_default" -mindepth 1 -execdir cp -p {} "$subu_root" \;
+sudo find "$subu_root" -execdir chown "$user_subu":"$user_subu" {} \;
 
+if [[ ! -d "$subu_home" ]]; then
+    mkdir "$subu_home"
+fi
 

@@ -29,17 +29,17 @@ fi
 
 # stem includes all characters up to the first '-' 
 stem=$(/usr/local/bin/user-stem)
-user_subu="$stem-$subu"
-user_admin="$stem-admin"
-home_subu="/home/$stem/$subu"
-archive_suffix=_former_subu
-archive_subu="$home_subu$archive_suffix"
+subu_user="$stem-$subu"
+admin_user="$stem-admin"
+subu_root="/home/$stem/$subu"_root
+archive_suffix=";1"
+archive_root="$subu_root$archive_suffix"
 mail_source_dir="/var/spool/mail"
-mail_source_file="$mail_source_dir/$user_subu" 
-mail_target_file="$home_subu/mail_spool" 
+mail_source_file="$mail_source_dir/$subu_user" 
+mail_target_file="$subu_root/mail_spool" 
 
-if [ -e "$archive_subu" ]; then
-   echo "there is already a saved directory for a deleted subu with this name, move this out of the way first: $archive_subu"
+if [ -e "$archive_root" ]; then
+   echo "there is already a saved directory for a deleted subu with this name, move this out of the way first: $archive_root"
    exit 1
 fi
 if [ ! -d "$mail_source_dir" ]; then
@@ -48,16 +48,16 @@ if [ ! -d "$mail_source_dir" ]; then
 fi
 
 if [ -e "$mail_target_file" ]; then
-   echo "there is already file system object where we planned to move the deleted user's mail spool, which is here: $home_subu/mail_spool"
+   echo "there is already file system object where we planned to move the deleted user's mail spool, which is here: $subu_root/mail_spool"
    exit 1
 fi
 
-sudo killall --signal 5 --wait --user "$user_subu"
+sudo killall --signal 5 --wait --user "$subu_user"
 sudo mv  "$mail_source_file"  "$mail_target_file"
-sudo chmod -R go-rwx "$home_subu"
-sudo chown -R "$user_admin":"$user_admin" "$home_subu"
-mv "$home_subu" "$archive_subu"
-sudo groupdel -f "$user_subu"
-sudo userdel "$user_subu"
+sudo chmod -R go-rwx "$subu_root"
+sudo chown -R "$admin_user":"$admin_user" "$subu_root"
+mv "$subu_root" "$archive_root"
+sudo groupdel -f "$subu_user"
+sudo userdel "$subu_user"
 
 #set +x

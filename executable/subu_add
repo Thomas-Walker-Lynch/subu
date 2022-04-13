@@ -31,7 +31,7 @@ admin_home="/home/$stem/admin"
 
 sudo useradd --home-dir "$subu_root"  "$user_subu"
 sudo usermod -aG "$user_subu" "$user_admin"
-sudo find "$admin_home/subu_default" -mindepth 1 -execdir cp -p {} "$subu_root" \;
+sudo find "$admin_home/subu_root" -mindepth 1 -execdir cp -p {} "$subu_root" \;
 sudo find "$subu_root" -execdir chown "$user_subu":"$user_subu" {} \;
 
 if [[ ! -d "$subu_home" ]]; then

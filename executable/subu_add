@@ -35,6 +35,7 @@ sudo find "$admin_home/subu_root" -mindepth 1 -execdir cp -p {} "$subu_root" \;
 sudo find "$subu_root" -execdir chown "$user_subu":"$user_subu" {} \;
 
 if [[ ! -d "$subu_home" ]]; then
-    mkdir "$subu_home"
+    sudo mkdir "$subu_home"
+    chown "$user_subu":"$user_subu" "$subu_home"
 fi
 

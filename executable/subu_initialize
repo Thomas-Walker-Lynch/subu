@@ -1,0 +1,59 @@
+#!/bin/bash
+# symbolic links made this complicated
+#set -x
+
+subu=$1
+stem=$2
+
+if [ ! -x "/usr/local/bin/user-stem" ]; then
+  echo "no /usr/local/bin/user-stem program found (it is in the system repo)"
+  exit 1
+fi
+
+if [ -z "$subu" ]; then
+  echo "no subuser name supplied"
+  exit 1
+fi
+
+# stem includes all characters up to the first '-' 
+if [ -z "$stem" ]; then
+  stem=$(/usr/local/bin/user-stem)
+fi
+
+subu_username="$stem-$subu"
+subu_home="/home/$stem/$subu"
+subu_initial_files="/home/$stem/subu_initial_files"
+
+# install always derefs sym links ... actually it didn't work at all here
+#shopt -s dotglob
+#sudo install -o "$subu_username" -g "$subu_username" -t "$subu_home" "$subu_initial_files"/*
+
+# free a brief moment, files that appear in the initial subu will have their subu_initial
+# ownership instead of being owned by the subu
+#find "$subu_initial_files" -mindepth 1 -exedir copy({}
+#     -execdir cp -a {} "$subu_home" \; \
+#     -execdir chown -h "$subu_username":"$subu_username" "$subu_home"/{} \;
+#  cp --remove-destination -RP "$1" "$2"
+
+function copy {
+  s0="$1"
+  filename="${s0:2}"
+  destination_directory="$2"
+  username="$3"
+   
+  source_directory=$(pwd)
+  source_path="$source_directory"/"$filename"
+  destination_path="$destination_directory"/"$filename"
+  echo "ln -fs" "$source_path" "$destination_path"
+  #ln -f did work when the existing object was a file rather than anotehr link so ..
+  rm -f "$destination_path"
+  ln -s "$source_path" "$destination_path"
+  chown -h "$username":"$username" "$destination_path"
+}
+export -f copy
+
+find "$subu_initial_files" -mindepth 1 -execdir \
+  bash -c 'copy "$1" "$2" "$3"' _ {} "$subu_home" "$subu_username" \;
+
+
+#set +x

@@ -10,6 +10,8 @@
 #set -x
 
 subu=$1
+stem=$2
+
 
 if [ ! -x "/usr/local/bin/user-stem" ]; then
    echo "no /usr/local/bin/user-stem program found (it is in the system repo)"
@@ -29,26 +31,30 @@ if [ -z "$xkey" ]; then
    exit 1
 fi
 
-stem=$(/usr/local/bin/user-stem)
-user_subu="$stem-$subu"
-home_subu=/home/"$stem"/"$subu"_root/"$subu"
-bashrc="$home_subu/.bashrc"
-xauthority="$home_subu/.Xauthority"
+# stem includes all characters up to the first '-' 
+if [ -z "$stem" ]; then
+  stem=$(/usr/local/bin/user-stem)
+fi
+
+subu_username="$stem-$subu"
+subu_user_directory=/home/"$stem"/"$subu"/user
+bashrc="$subu_user_directory/.bashrc"
+xauthority="$subu_user_directory/.Xauthority"
 
 read -r -d '' script0 <<-EOF
-    cd "$home_subu" \
+    cd "$subu_user_directory" \
     ;export DISPLAY=$DISPLAY \
     ;export NO_AT_BRIDGE=1 \
     ;export PULSE_SERVER=localhost \
     ;touch "$xauthority" \
     ;xauth add "$DISPLAY" . "$xkey" \
-    ;gnome-terminal
+    ;gnome-terminal --title="$subu"
 EOF
 
 
-sudo su  -l "$user_subu" -c "$script0"
+sudo su  -l "$subu_username" -c "$script0"
 
 #just hangs
-#sudo -u  "$user_subu" sh -c "$script0"
+#sudo -u  "$subu_username" sh -c "$script0"
 
 #set +x

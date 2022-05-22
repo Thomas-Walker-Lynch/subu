@@ -6,7 +6,7 @@
 # to do in a shell script.  Perhaps in the python code for the actual release.
 
 subu=$1
-
+stem=$2
 
 if [ ! -x "/usr/local/bin/user-stem" ]; then
    echo "no /usr/local/bin/user-stem program found (it is in the system repo)"
@@ -19,23 +19,26 @@ if [ -z "$subu" ]; then
 fi
 
 # stem includes all characters up to the first '-' 
-stem=$(/usr/local/bin/user-stem)
-
-user_subu="$stem-$subu"
-user_admin="$stem-admin"
-
-subu_root="/home/$stem/$subu"_root
-subu_home="$subu_root"/"$subu"
-
-admin_home="/home/$stem/admin"
-
-sudo useradd --home-dir "$subu_root"  "$user_subu"
-sudo usermod -aG "$user_subu" "$user_admin"
-sudo find "$admin_home/subu_root" -mindepth 1 -execdir cp -p {} "$subu_root" \;
-sudo find "$subu_root" -execdir chown "$user_subu":"$user_subu" {} \;
-
-if [[ ! -d "$subu_home" ]]; then
-    sudo mkdir "$subu_home"
-    chown "$user_subu":"$user_subu" "$subu_home"
+if [ -z "$stem" ]; then
+  stem=$(/usr/local/bin/user-stem)
 fi
+
+subu_username="$stem-$subu"
+admin_username="$stem-admin"
+
+subu_home="/home/$stem/$subu"
+subu_user="$subu_home"/user
+
+admin_root="/home/$stem/admin"
+subu_initial_files="$admin_root"/user/library/subu_initial_files
+
+sudo useradd --home-dir "$subu"  "$subu_username"
+sudo usermod -aG "$subu_username" "$admin_username"
+
+if [[ ! -d "$subu_user" ]]; then
+    sudo mkdir "$subu_user"
+    chown "$subu_username":"$subu_username" "$subu_user"
+fi
+
+subu_initialize subu stem
 

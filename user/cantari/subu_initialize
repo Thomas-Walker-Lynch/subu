@@ -46,9 +46,9 @@ function copy {
   destination_path="$destination_directory"/"$filename"
   echo "ln -fs" "$source_path" "$destination_path"
   #ln -f did work when the existing object was a file rather than anotehr link so ..
-  rm -f "$destination_path"
-  ln -s "$source_path" "$destination_path"
-  chown -h "$username":"$username" "$destination_path"
+  sudo rm -f "$destination_path"
+  sudo ln -s "$source_path" "$destination_path"
+  sudo chown -h "$username":"$username" "$destination_path"
 }
 export -f copy
 

@@ -1,0 +1,17 @@
+
+2022-08-03T15:50:23Z
+
+the group sticky bit scheme has an interesting drawback, the group owner can not
+change permissions of a file owned by the subu.  Hence the administrative user who
+is a group owner can not act like an admin.  Will need to use facl instead.
+
+ran across this because Lustucru, who is a repo user, can not adjust permissions of
+repo files *and vice versa*.  If Lustru creates a file, the group is appropriatly
+sticky, and becomes 'repo',  but as Lustcru *owns* such files the repo user may
+not adjust their permissions.
+
+Hence, if the admin owns a file, though it is group of the subu, the subu can
+not change permissions (can not make them more permissive, or not change them at all?).
+
+
+

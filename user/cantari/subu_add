@@ -4,6 +4,7 @@
 #
 # wish we could set the uids and gids so that backups would restore properly on other systems but it is too much trouble
 # to do in a shell script.  Perhaps in the python code for the actual release.
+set -x
 
 subu=$1
 stem=$2
@@ -26,19 +27,22 @@ fi
 subu_username="$stem-$subu"
 admin_username="$stem-admin"
 
-subu_home="/home/$stem/$subu"
-subu_user="$subu_home"/user
+subu_home="/home/$stem"
+subu_dir="$subu_home/$subu"
+subu_user="$subu_dir"/user
 
-admin_root="/home/$stem/admin"
-subu_initial_files="$admin_root"/user/library/subu_initial_files
+admin_home="/home/$stem/admin"
+subu_initial_files="$admin_home"/user/library/subu_initial_files
 
-sudo useradd --home-dir "$subu"  "$subu_username"
+sudo useradd --badname --home-dir "$subu_dir"  "$subu_username"
 sudo usermod -aG "$subu_username" "$admin_username"
 
 if [[ ! -d "$subu_user" ]]; then
     sudo mkdir "$subu_user"
-    chown "$subu_username":"$subu_username" "$subu_user"
+    sudo chown "$subu_username":"$subu_username" "$subu_user"
 fi
 
-subu_initialize subu stem
+subu_initialize "$subu" "$stem"
+
+
 

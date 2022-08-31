@@ -4,7 +4,8 @@
 #
 # wish we could set the uids and gids so that backups would restore properly on other systems but it is too much trouble
 # to do in a shell script.  Perhaps in the python code for the actual release.
-set -x
+
+#set -x
 
 subu=$1
 stem=$2

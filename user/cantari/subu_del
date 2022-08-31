@@ -2,17 +2,26 @@
 # must have command user-stem
 # user-stem is in the system repo
 #
-# currently this is setup to be run by any user who has sudo - it doesn't have to be run by the user-admin account; though chances are it will be.
+# currently this is setup to be run by any user who has sudo - it doesn't have
+# to be run by the user-admin account; though chances are it will be.
 #
-# userdel -r deletes both the /var/spool/mail/user and the user's home directory.  We don't want to delete the old data just in case there
-# is something important there.  However we can not leve the old /var/spool/mail/user file under /var/spool/mail in case another subu is
-# created later with the same name.  Hence we will move the /var/spool/mail/user file into the users home directory.  We will give ownership
-# of the old home directory to the admin.
+# userdel -r deletes both the /var/spool/mail/user and the user's home
+# directory.  We don't want to delete the old data just in case there is
+# something important there.  However we can not leave the old
+# /var/spool/mail/user file under /var/spool/mail in case another subu is
+# created later with the same name.  Hence we will move the /var/spool/mail/user
+# file into the users home directory.  We will give ownership of the old home
+# directory to the admin.
 #
-# I have run into a problem that subu users do not inherit the MAIL variable, I wouldn't trust it anyway.  I do not know if userdel -r
-# references the MAIL variable.  I will hard code a local variable to /var/sppol/mail.  This must be changed for systems that put the mail spool
-# file eleswhere.
+# I have run into a problem that subu users do not inherit the MAIL variable, I
+# wouldn't trust it anyway.  I do not know if userdel -r references the MAIL
+# variable.  I will hard code a local variable to /var/spool/mail.  This must be
+# changed for systems that put the mail spool file eleswhere.
 #
+# It seems that upon upgrade to Fedora 36 it stopped making a /var/spool/mail
+# file for a new user.  Anyway I am getting errors on that.file not existing, so
+# added a conditional for if /var/spool/mail/user file
+
 #set -x
 
 subu=$1
@@ -35,12 +44,17 @@ fi
 
 subu_username="$stem-$subu"
 admin_username="$stem-admin"
-subu_home="/home/$stem/$subu"_root
+subu_home="/home/$stem/$subu"
 archive_suffix=";1"
 archive_home="$subu_home$archive_suffix"
 mail_source_dir="/var/spool/mail"
 mail_source_file="$mail_source_dir/$subu_username" 
 mail_target_file="$subu_home/mail_spool" 
+
+if ! id "$subu_username" &>/dev/null; then
+  echo "no such user"
+  exit 1
+fi
 
 if [ -e "$archive_home" ]; then
    echo "there is already a saved directory for a deleted subu with this name, move this out of the way first: $archive_home"
@@ -56,12 +70,23 @@ if [ -e "$mail_target_file" ]; then
    exit 1
 fi
 
-sudo killall --signal 5 --wait --user "$subu_username"
-sudo mv  "$mail_source_file"  "$mail_target_file"
+sudo killall --signal 5 --wait --user "$subu_username" && true
+
+if [ -e "$mail_source_file" ]; then
+  sudo mv  "$mail_source_file"  "$mail_target_file"
+fi
 sudo chmod -R go-rwx "$subu_home"
 sudo chown -R "$admin_username":"$admin_username" "$subu_home"
 mv "$subu_home" "$archive_home"
 sudo groupdel -f "$subu_username"
 sudo userdel "$subu_username"
+
+# common to follow up with rm -r and get an error that gvfs can not be deleted
+# (probably better to move it trash or tmp than rm -r, and let the system clean it up later)
+# rather surprising as we did a kill all on its processes
+gvfs="$archive_home/.cache/gvfs" 
+if [ -e "$gvfs" ]; then
+  sudo umount "$gvfs"
+fi
 
 #set +x

@@ -1,0 +1,90 @@
+#!/bin/python
+#
+# The subu admin is member of all subu users groups, so group rw enables
+# administration of file. 
+#
+# Consequently, in the subu environement we may think of the group permissions
+# as 'admin permissions'. We remove x from administrator permissions because the
+# administor does not want to execute user's executables.
+#
+# This script exists because it is possible for users to mess with the subu
+# admin permissions, because they are the same as the user's group
+# permissions. I should instead be using acls instead.
+#
+# Here is a flaw in this approach: when the administrator moves files from, say,
+# Thomas/repo to Thomas/archive, the set gid bit on the archive directory causes
+# the file to to have group ownership of thomas-archive, while the user remains
+# thomas-repo.  Now, as the thomas-archive does not own the file thomas-archive
+# may not change the permissions on the file. Compounding this problem, since
+# we cleared the group x bit (except for directories),  thomas-archive may not
+# execute the file even if he wants to. Compunding this yet further, the original
+# file owner, who still owns the file, can not change the permissions because
+# the original file owner has no permissions on the directory.
+#
+# ^^ hence the prior owner remains on the transferred file, that is kind of
+# nice, so we know where the file came from - but this is not a good way to keep
+# track of the history of ownership.  BSD has a mode where the set UID bit on a
+# directory has an analogous function to the set GID bit, but Linux does not. We
+# do not know if a whole file tree was transferred, we can end up with a
+# mess. The solution seems to be that the admin needs to manually 'chown -R
+# target_user:target_group' the transferred files and assign them to the target
+# user.
+#
+# Another interesting permissions use case is that of the subu repo and subu Lustucru.
+# Lustuctru is a member of group repo.  subu repo does not have sudo access.  However
+# the Lustucur project uses the chroot command, so it needs it. I did not want to give
+# sudo to all repos projects, so I created subu Lustucru that does have sudo. Lustucru
+# makes use of the repo/Lustucru files by being in the repo group.  Now the repo group
+# has two purposes, one being admin, and one to give group members access to files.  This
+# is not going to work because the admin set the mode bits to turn off x.  I.e. there
+# are conflicts between what the admin wants as a group member and what subu Lustucru wants
+# as a group member.
+#
+# modes changes occur on the symbolic links directly, i.e. this script
+# does not follow sym links.
+#
+# We start by clearing all mode bits that we might want cleared.  Then
+# we set mode bits we know we want.
+
+import sys
+import os
+import stat
+
+def mode_clear(mode):
+  return mode & ~(stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH | stat.S_IXGRP)
+
+# files
+#  user is as found
+#  administrator is given rw permissions
+#
+def mode_file(mode):
+  mode = mode_clear(mode)
+  return mode | stat.S_IRGRP | stat.S_IWGRP
+
+# directories
+#   administrator is given rwx, and set gid so that files made in the directory
+#   will be made in the user's group, which the administrator is a member.
+#
+def mode_dir(mode):
+  mode = mode_clear(mode)
+  return mode | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | stat.S_ISGID
+
+# By default os.walk does not follow symlinks, so dn will be a directory not a
+# link to one. stat follows symlinks, lstat does not, so we use lstat
+#
+exclude = set(['.cache' ,'.dbus' ,'.ssh' ,'.gnupg'])
+for darg in sys.argv[1:]:
+  if os.path.isdir(darg):
+    for dn, dnp1s, files in os.walk(darg):
+      dnp1s[:] = [d for d in dnp1s if d not in exclude]
+      dn_mode = os.lstat(dn).st_mode
+      if not stat.S_ISDIR(dn_mode):
+        print("os.walk returned a non directory for dn, strange, ignoring it.")
+      else:
+        os.chmod(dn ,mode_dir(dn_mode))
+        for f in files:
+          f_path = "/".join([dn ,f])
+          f_mode = os.lstat(f_path).st_mode
+          os.chmod(f_path ,mode_file(f_mode) ,follow_symlinks=False)
+
+    

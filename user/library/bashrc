@@ -1,0 +1,43 @@
+# note ssh will fail if .bashrc writes to stdout
+# set -x
+# in F37 something seems to be caching PATH, which is requiring logging in again or there will be redundant paths
+
+umask 0007
+export HOME=$(/usr/local/bin/home)
+
+# it is nearly impossible to get Linux to use ISO8601
+export TZ=UTC
+export TIME_STYLE=long-iso
+export LC_ALL=en_DK.UTF-8
+
+export EDITOR=emacs
+export PS_FORMAT=user:15,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command
+
+# without -i bash clear PS1, just because, so we set PPS1, etc.
+# use $(pwd) instead of \w or it will prefix ~ which confuses dirtrack when the user is changed using su
+export PPS1='\n$(/usr/local/bin/Z)[$PROJECT]\n\u@\h§$(pwd)§\n> '
+export PPS2='>> '
+export PS1="$PPS1"
+export PS2="$PPS2"
+
+# No sound in subu shells without this
+# as of F37, group audio and video work for speakers and camera, but this is still needed for the mic
+# often fails with unknown code, yet is needed for the mic to work ...
+pactl load-module module-native-protocol-tcp >& /dev/null
+
+# suppresses the no at bridge error .. no one seems to know why ...
+# now built into the subu command
+#  export NO_AT_BRIDGE=1
+
+for p in "$SUBU_HOME" "$RESOURCE_HOME" "$HOME";do
+  if [ -d "$p/user/cantari" ]; then
+    PATH="$p/user/cantari:$PATH"
+  fi
+done
+
+alias emacs="emacs --title='$(/usr/local/bin/user-subu $(/usr/local/bin/user))'"
+alias pstree='pstree -lp'
+alias printenv='printenv | sort' 
+alias cd='HOME=$HOME/user cd'
+alias ls='ls -a' 
+

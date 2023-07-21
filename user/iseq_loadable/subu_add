@@ -7,6 +7,11 @@
 
 #set -x
 
+   echo "deprecated due to moving to the /var/user_data/ model"
+   exit 1
+
+
+
 subu=$1
 stem=$2
 
@@ -26,9 +31,9 @@ if [ -z "$stem" ]; then
 fi
 
 subu_username="$stem-$subu"
-admin_username="$stem-admin"
+admin_username="$stem"
 
-subu_home="/home/$stem"
+subu_home="/home"
 subu_dir="$subu_home/$subu"
 subu_user="$subu_dir"/user
 

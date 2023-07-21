@@ -13,5 +13,14 @@ not adjust their permissions.
 Hence, if the admin owns a file, though it is group of the subu, the subu can
 not change permissions (can not make them more permissive, or not change them at all?).
 
+2022-10-05T12:24:06Z
 
+Combine the repo and subu commands into one. activate becomes bashrc?  add an archive script
+for each subu, and a push script for each repo.
 
+repo is similar to subu, but it does not login.  Thus the environment of the caller is
+still available. subu handles environment sharing through a shared bashrc file.  This would
+also work for repo.
+
+perhaps leave repo as a script, then source the script as part of the bashrc of a subu.  I.e.
+each repo would be a subu, only different due to running the repo script.

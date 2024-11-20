@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 script_afp=$(realpath "${BASH_SOURCE[0]}")
-# vl 'vertical list'
 
-# Check if the command is provided
+# vl 'vertical list'
+# e.g.:
+# > vl echo $PATH
+
 if [ -z "$1" ]; then
   echo "Usage: vl <command> [args...]"
   exit 1

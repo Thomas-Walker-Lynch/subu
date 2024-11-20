@@ -1,0 +1,20 @@
+#!/bin/env /bin/bash
+
+# Description: Finds all empty directories and adds a `.githolder` file to ensure Git tracking.
+
+# Function to add .githolder to empty directories
+add_githolders() {
+  echo "Searching for empty directories..."
+  
+  # Find all empty directories and loop through them
+  find . -type d -empty | while read -r dir; do
+    # Add .githolder file in each empty directory
+    echo "Adding .githolder to $dir"
+    touch "$dir/.githolder"
+  done
+
+  echo "Done! Empty directories are now tracked by Git with .githolder files."
+}
+
+# Run the function
+add_githolders

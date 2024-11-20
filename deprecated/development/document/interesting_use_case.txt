@@ -1,0 +1,17 @@
+
+    A leaf type node specifies a path to a file that should not be deleted by
+    the build scripts. Typically this is the source code. Optionally, the build
+    scripts can mark such files as read only before the build, and thus the
+    build code can not delete them without changing permissions.
+
+The build code for a project should not delete certain files.
+
+The Unix way: Say the builder and developer are different users.  The
+developer puts the builder into his group. The group permissions are
+set so that source code can not be deleted.  Great, but now the builder
+will be the member of many developers.
+
+...  so instead the builder is a sub user of the developer, and has
+access via sharing with the sub user, either through group membership
+or ACLS.
+

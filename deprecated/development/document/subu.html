@@ -1,0 +1,78 @@
+
+<div class='page'>
+  <h1>Introduction</h1>
+
+  <p>A system will have a number of user accounts.  Each user may in turn have a
+    number of sub-user accounts, aka subu accounts.</p>
+
+  <p>A subu account is much like any other user account.  It has an entry in
+    /etc/passwd, and a home directory. The subu user account will also be mounted
+    under /home.  Direct login to the subu might be barred, though that is not
+    necessarly the case.</p>
+
+  <p>Whereas a user account is administered by the root user.  A subu account is
+    administered by the user who created it.  The creating user is said to be the
+    owner. Because a subu account is much like any other account, a root user can
+    also administer a subu account.</p>
+
+  <p>A user runs <span class='code'>subu_add &ltname&gt</span> to create a subu account.  For practical reasons,
+    the account name in /etc/password will show up as <span class='code'>`&ltuser&gt-&ltname&gt`</span>, where 
+    <span class='code'>&ltuser&gt</span>
+    is the user's username and <span class='code'>&ltname&gt</span> is the name the user gave to the subu.
+    The subu account will also show up under the directory <span class='code'>&ltuser&gt/subu</span>.</p>
+
+  <p>To user a subu account, the user first logs into his or her user account.  Then
+    the user runs the command  <span class='code'>subu &ltname&gt &ltapp&gt</span> to enter the sub user.
+    The <span class='code'>&ltapp&gt</span> will then be opened while logged-in as the subu.</p>
+
+  <p>Files in the subu directory are owned by the subu. Depending on the umask these
+    may or may not be readable/writable by other users, including other subu. *Linux
+    User Beware* gnome ignores the user umask, and makes all files world
+    readable. Linux has been like this for years.  My most common app to open
+    in the subu is <span class='code'>emacs</span>, so the umask is followed.  If no <span class='code'>&ltapp&gt</span> is specified,
+    then a terminal is opened.<p>
+</div>
+
+<div class='page'>
+  <h1>Directory Structure</h1>
+
+  <p>Each subu has a home directory under <span class='code'>/home/&ltuseer&gt-&ltname&gt</span>. Each subu
+    is also file system mounted with ownship ship translations under <span class='code'>/home/&ltuseer&gt/subu</span>.
+    Hence the user may move a file around between subu and the file ownership will automatically map to be
+    owned by the subu it is found under.</p>
+  
+  <p>There are two special directories under <span class='code'>/home/&ltuseer&gt/subu</span>, one has the
+    same name as the user, the other is called <span class=
+
+</div>
+
+<div class='page'>
+  <h1>Issues</h1>
+
+  <h2>Where to put a subu home directory</h2>
+
+  <p>Initially these were placed under the user directory. However, that meant that the user's home directory
+    had to have execute permission to the world so the subu could get to their home directory.  So the subu
+    were then moved to <span class='code'>/home</span>.</p>
+
+  <h2>sudo RealID bug</h2>
+
+  <p>Real uid is a poorly named term for the uid of the user who launched the
+    process.  The uid that the process has been set to is the effective uid.  There
+    is a third stored uid in a process's record.  Hence the uid being used by the
+    OS will be set to one of these.</p>
+
+  <p>Our subu-mk-0 program wants to create a subservient user to a master user.  The
+    master user is known via the real uid.  The effective user will be that of root,
+    as the script needs root privilege to run adduser.</p>
+
+  <p>sudo resets the real uid, and there is no reliable approch then to create a subu-mk-0
+    program run by sudo.  A setuid root program is needed.  Only compiled executables can
+    be setuid root on linux.</p>
+
+  <p>There is an environment variable given to programs run by sudo, $SUDO_USER. Sudo sets
+    it, so if called from sudo then that works. It could be set by another user, even
+    if that user is root or not.</p>
+
+  <p>I will make a setuid C program.  Too bad, had written this in Python.</p>
+</div>

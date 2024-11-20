@@ -1,0 +1,30 @@
+
+# I don't know if this is still relevant. I haven't done sound from a subu for some time.
+
+before changing users:
+
+user must be in group audio
+
+> sudo dnf install pulseaudio-utils
+> pactl load-module module-native-protocol-tcp
+
+after changing users:
+
+> export PULSE_SERVER=localhost
+
+According to
+https://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/CLI/#default.pa
+the module load command goes in /etc/pulse/default.pa and the pactl command is not needed,
+but this did not work:
+
+  /etc/pulse/default.pa
+  load-module module-native-protocol-tcp
+
+this did not work
+seems this must be run by the login user, not even root can do it:
+
+ pactl load-module module-native-protocol-tcp
+
+also requires restart of google-chrome etc.
+
+for now I will add this the .bashrc file for admin

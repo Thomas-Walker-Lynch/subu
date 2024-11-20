@@ -1,0 +1,6 @@
+#!/bin/env bash
+script_afp=$(realpath "${BASH_SOURCE[0]}")
+
+# 2024-11-20T06:45:43Z v2 - subu invoked using machinectl
+echo v2.0
+

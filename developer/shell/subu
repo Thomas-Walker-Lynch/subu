@@ -1,0 +1,31 @@
+#!/bin/env /bin/bash
+# set -x
+
+subu="$1"
+if [ -z "$subu" ]; then
+  echo "No subuser name supplied"
+  exit 1
+fi
+subu_user="Thomas-$subu"
+
+# share the X display
+#
+  export DISPLAY=:0
+  export XAUTHORITY=${XAUTHORITY:-$(ls -1 /run/user/$(id -u)/.mutter-Xwaylandauth.* 2>/dev/null | head -n 1)}
+  if [ -z "$XAUTHORITY" ]; then
+    export XAUTHORITY="$HOME/.Xauthority"
+  fi
+  xauth -f "$XAUTHORITY" generate "$DISPLAY" . trusted
+  xauth extract - "$DISPLAY" | sudo -u "$subu_user" \
+    XAUTHORITY="/home/$subu_user/.Xauthority" \
+    xauth merge -
+
+# Login the subu
+#
+  sudo loginctl enable-linger "$subu_user"
+  sudo machinectl shell "$subu_user"@ /bin/bash -c "
+    export DISPLAY=:0;
+    export XAUTHORITY=/home/$subu_user/.Xauthority;
+    bash -i
+  "
+

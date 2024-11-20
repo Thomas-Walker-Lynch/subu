@@ -1,0 +1,9 @@
+
+Found this feature recently.  It is interesting.  Is this relevant? Maybe could make use of this?
+
+  affects /etc/subuid:
+
+  usermod --add-subuids 2000-3000 --add-subgids 2000-3000
+
+  want to look into this more
+

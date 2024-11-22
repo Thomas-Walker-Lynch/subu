@@ -1,6 +1,3 @@
-# subu
-subservient user tools
 
-Create and run sub-users that share the desktop, but are limited to by unix permission to viewing their own files.
+release directory has some resources that are shared among projects
 
-see development/documents/subu.html for a more info.

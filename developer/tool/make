@@ -1,0 +1,6 @@
+#!/bin/env /bin/bash
+
+set -e
+cd ${REPO_HOME}/developer
+/bin/make -f tool/makefile $@
+

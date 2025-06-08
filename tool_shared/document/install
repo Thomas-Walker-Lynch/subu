@@ -1,0 +1,19 @@
+
+1. resource
+
+`resource` has the core makefile environment and targets for compiling C and C++
+programs, as well as seme utility programs.
+
+    > echo $REPO_HOME 
+    /var/user_data/Thomas-developer/subu
+
+    > cd $REPO_HOME/tool_shared/third_party
+    > git clone git@github.com:Thomas-Walker-Lynch/resource.git
+
+`resource` is also available from git.reasoningtechnology.com
+
+2. sqlite
+
+  I suggest punting ...
+
+      # dnf install sqlite sqlite-devel

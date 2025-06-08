@@ -1,31 +1,41 @@
-#!/bin/env /bin/bash
-# set -x
+#!/bin/bash
+set -x
 
 subu="$1"
 if [ -z "$subu" ]; then
   echo "No subuser name supplied"
   exit 1
 fi
+
+# actual subu user name and subu home directory
 subu_user="Thomas-$subu"
+subu_dir="/home/Thomas/subu_data/$subu"
 
-# share the X display
-#
-  export DISPLAY=:0
-  export XAUTHORITY=${XAUTHORITY:-$(ls -1 /run/user/$(id -u)/.mutter-Xwaylandauth.* 2>/dev/null | head -n 1)}
-  if [ -z "$XAUTHORITY" ]; then
-    export XAUTHORITY="$HOME/.Xauthority"
-  fi
-  xauth -f "$XAUTHORITY" generate "$DISPLAY" . trusted
-  xauth extract - "$DISPLAY" | sudo -u "$subu_user" \
-    XAUTHORITY="/home/$subu_user/.Xauthority" \
-    xauth merge -
+# detect current display and authority
+display_val="${DISPLAY:-:0}"
+authority_val="${XAUTHORITY:-$HOME/.Xauthority}"
 
-# Login the subu
-#
-  sudo loginctl enable-linger "$subu_user"
-  sudo machinectl shell "$subu_user"@ /bin/bash -c "
-    export DISPLAY=:0;
-    export XAUTHORITY=/home/$subu_user/.Xauthority;
-    bash -i
-  "
+# construct guest's authority path (destination)
+subu_Xauthority_path="$HOME/subu/$subu/.Xauthority"
 
+if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+  # Wayland/XWayland uses a temporary XAUTHORITY file (already in $XAUTHORITY)
+  echo "Wayland session detected"
+  xhost +SI:localuser:"$subu_user"
+else
+  # X11 session – extract the proper cookie
+  echo "X11 session detected"
+  mkdir -p "$(dirname "$subu_Xauthority_path")"
+  touch "$subu_Xauthority_path"
+  xauth extract "$subu_Xauthority_path" "$display_val"
+fi
+
+# allow guest processes to outlive login
+sudo loginctl enable-linger "$subu_user"
+
+# Launch the subuser shell with DISPLAY and XAUTHORITY
+sudo machinectl shell "$subu_user"@ /bin/bash -c "
+  export DISPLAY='$display_val';
+  export XAUTHORITY='$subu_Xauthority_path';
+  exec \"\$SHELL\" -l
+"

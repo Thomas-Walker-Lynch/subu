@@ -1,0 +1,21 @@
+# Phased Logging and Reporting Plan
+
+## Build-Up/Initialization Phase
+- Minimal functionality is operational during this phase.
+- Use `fprintf(stderr, ...)` for all error reporting.
+  - This method is reliable and independent of external systems like the database or server infrastructure.
+- Keep this phase simple and robust to surface critical errors immediately to the developer or administrator.
+
+## Operational Phase
+- Once the system is confirmed to be running:
+  - **Database-Related Errors**:
+    - Logged into the database events table to reflect internal operational issues.
+    - May also generate secondary reports to the application if the issue affects its logic (e.g., query failures).
+  - **Application-Related Errors**:
+    - Logged into the application log using `Server·report`.
+    - Provide user-facing insights about the application state, including database issues reported to the app.
+
+## Tear-Down Phase
+- During shutdown or teardown:
+  - Revert to `fprintf(stderr, ...)` for simplicity and reliability.
+  - Avoid relying on the database as its infrastructure may no longer be functional.

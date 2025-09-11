@@ -1,0 +1,90 @@
+#+title: WireGuard Client — Reference
+#+author: Thomas / Aerenis
+#+startup: showall
+
+* Directory layout (wg/)
+- =schema.sql= :: SQLite schema for clients/servers/routes/meta (keys stored in DB).
+- =wg_client.db= :: SQLite DB (created by =db_init.sh=).
+- =db_init.sh= :: Creates/initializes DB from =schema.sql= (user-space).
+- =client_create_keys.sh= :: Creates a fresh client keypair for an =iface= and stores into DB.
+- =config_client_StanleyPark.sh= :: Upserts the StanleyPark client row (iface, addr, mtu, dns_mode, autostart, etc.).
+- =config_server_x6.sh= :: Upserts the remote server (“x6”) row linked to the client.
+- =bind_user.sh= :: Binds a Linux username (and resolves UID) to a client interface in DB.
+- =ls_clients.sh= :: Lists interface names only (one per line).
+- =ls_servers.sh= :: Lists server names (optionally grouped by client).
+- =ls_users.sh= :: Lists =<linux-user> <iface>= pairs.
+- =inspect.sh= :: Shows effective config from DB and current system state for a given iface.
+- =IP_rule_add_UID.sh= :: Helper installed to =/usr/local/bin= (adds =ip rule uidrange= entries idempotently).
+- =stage_generate.sh= :: Builds staged artifacts from DB:
+  - =stage/wireguard/<iface>.conf=
+  - =stage/systemd/wg-quick@<iface>.d/restart.conf=
+  - =stage/usr/local/bin/routes_init_<iface>.sh=
+  - copies =IP_rule_add_UID.sh= into stage for install
+  - Offers to clean stage first; supports =--clean=, =--no-clean=, =--dry-clean=
+- =stage_install.sh= :: Copies staged files into:
+  - =/etc/wireguard/<iface>.conf=
+  - =/etc/systemd/system/wg-quick@<iface>.d/restart.conf=
+  - =/usr/local/bin/routes_init_<iface>.sh=
+  - =/usr/local/bin/IP_rule_add_UID.sh=
+  - Reloads systemd daemon and prints next steps.
+- =stage_clean.sh= :: Empties =./stage= safely (with confirmation).
+- =routes_init_x6.sh= :: (Legacy) Example per-iface route script; superseded by staged =routes_init_<iface>.sh=
+- =deprecated/= :: Old scripts retained for reference.
+- =stage/= :: Generated artifacts awaiting installation.
+- =scratchpad/= :: (Optional) Temporary workspace for ad-hoc edits before installation.
+
+* Schema (summary)
+- =clients=
+  - =iface= (TEXT UNIQUE): bare interface name (e.g., ‘x6’)
+  - =rt_table_id= (INTEGER): e.g., 1002
+  - =rt_table_name= (TEXT): defaults to iface if NULL (used by route scripts and =ip rule=)
+  - =bound_user= (TEXT), =bound_uid= (INTEGER): Linux user + UID that should egress via this iface
+  - =local_address_cidr=, =private_key=, =public_key=, =mtu=, =fwmark=
+  - =dns_mode= (‘none’ or ‘static’), =dns_servers= (if static)
+  - =autostart= (0/1)
+- =servers=
+  - Linked by =client_id= → =clients.id=
+  - =name= (‘x6’), =public_key=, optional =preshared_key=
+  - =endpoint_host=, =endpoint_port=, =allowed_ips=, =keepalive_s=
+  - =route_allowed_ips= (0/1): when 0, =Table= is set to =off= in wg conf and routing is handled by our scripts
+  - =priority= (lower preferred) — first by priority then id is staged
+- =routes=
+  - Linked by =client_id=
+  - =cidr=, optional =via=, optional =table_name= (else use client rt name), optional =metric=
+  - =on_up= (1/0), =on_down= (1/0) — generator emits only =on_up= routes in =routes_init_<iface>.sh=
+- =meta=
+  - =schema= key describing current schema version/string
+
+* Generated files (stage/)
+- wireguard/<iface>.conf ::
+  - =[Interface]= :: Address, PrivateKey, optional MTU/FwMark/DNS, optional =Table= off
+  - =[Peer]= :: Server public key, optional PSK, Endpoint, AllowedIPs, optional PersistentKeepalive
+- systemd/wg-quick@<iface>.d/restart.conf ::
+  - Restart policy; force fresh link; =ExecStartPost= hooks:
+    - routes init script
+    - =IP_rule_add_UID.sh <rt_table_name> <bound_uid>= (if bound)
+    - logger line
+- usr/local/bin/routes_init_<iface>.sh ::
+  - Installs default route to device in =rt_table_name= and a blackhole default guard
+  - Adds any DB =routes= with =on_up=1
+
+* Operational Notes
+- =iface= names are bare (not prefixed with =wg_=). Systemd unit is =wg-quick@<iface>.service=.
+- Unbound rides the tunnel; leave WireGuard DNS unset (=dns_mode=none=) unless you want static DNS in the conf.
+- Copy-based install preserves an audit trail in =./stage=. Clean explicitly when desired.
+
+* Security
+- The DB contains *private keys*. Restrict permissions:
+  #+begin_src bash
+  chmod 600 wg_client.db
+  #+end_src
+- Back up =wg_client.db= securely.
+
+* Troubleshooting
+- If unit fails to start: =journalctl -u wg-quick@<iface> -b=
+- Handshake age / peer state: =wg show=
+- Routing: =ip rule=, =ip route show table <rt_table_name>=
+- Regenerate & reinstall on mismatch:
+  #+begin_src bash
+  ./stage_generate.sh --clean && sudo ./stage_install.sh && sudo systemctl restart wg-quick@<iface>
+  #+end_src

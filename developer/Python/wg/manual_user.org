@@ -1,0 +1,104 @@
+#+title: WireGuard Client — Admin User Guide
+#+author: Thomas / Aerenis
+#+startup: showall
+
+* Overview
+Authoritative state lives here:
+- ~/executable/setup/Debian12_client/wg/
+- Keys + config live in *SQLite* (./db/store).
+- You *stage* generated files in ./stage/, then *install* as root.
+- Interface names are *bare* (e.g., =x6=, =US=). Unit: =wg-quick@<iface>=; config: =/etc/wireguard/<iface>.conf=.
+- Unbound is used for DNS; typically =dns_mode= is =none= (no =DNS= line in WG conf).
+- Staging dirs are not auto-cleaned; each of =db/=, =stage/=, =scratchpad/= contains a =.gitignore= that ignores everything except itself.
+
+* Typical Workflow (example: x6)
+1) Initialize DB
+#+begin_src bash
+./db_init.sh
+#+end_src
+
+2) Create/Update *client* record for this host (inserts the =x6= row)
+#+begin_src bash
+./config_client_StanleyPark.sh
+#+end_src
+
+3) Create/rotate *client keys* (writes keys into DB for =x6=)
+#+begin_src bash
+./client_create_keys.sh x6
+#+end_src
+
+4) Configure the *remote server* record (x6)
+#+begin_src bash
+./config_server_x6.sh
+#+end_src
+
+5) Bind Linux user(s) to interface (traffic steering via uid rules)
+#+begin_src bash
+./user_to_iface.sh Thomas-x6 x6 
+# or bulk:
+./user_all_to_iface.sh
+#+end_src
+Verify:
+#+begin_src bash
+./ls_users.sh
+#+end_src
+
+6) Generate staged files (will offer to clean ./stage first)
+#+begin_src bash
+./stage_generate.sh
+#+end_src
+Review contents of =./stage= (WG conf, systemd drop-in, route script).
+
+7) Install (as root) — copies staged files into the system
+#+begin_src bash
+sudo ./stage_install.sh
+#+end_src
+
+8) Enable & start the interface
+#+begin_src bash
+sudo systemctl enable wg-quick@x6
+sudo systemctl start  wg-quick@x6
+#+end_src
+
+9) Inspect / validate
+#+begin_src bash
+./inspect.sh x6
+ip rule | grep x6
+ip route show table x6
+wg show
+#+end_src
+
+* Key Rotation (client)
+- Update keys in DB and redeploy:
+#+begin_src bash
+./client_create_keys.sh x6
+./stage_generate.sh --clean
+sudo ./stage_install.sh
+sudo systemctl restart wg-quick@x6
+#+end_src
+- Then update the *server’s* peer public key accordingly.
+
+* Listing helpers
+- Interfaces:
+#+begin_src bash
+./ls_clients.sh    # prints: x6, US, ...
+#+end_src
+- Servers (per client):
+#+begin_src bash
+./ls_servers.sh    # prints server names per client
+#+end_src
+- User bindings:
+#+begin_src bash
+./ls_users.sh      # prints: <linux-user> <iface>
+#+end_src
+
+* Notes
+- =./stage= is not auto-cleaned. Use:
+#+begin_src bash
+./stage_clean.sh
+#+end_src
+- Protect your DB (contains private keys):
+#+begin_src bash
+chmod 700 db
+chmod 600 db/store
+#+end_src

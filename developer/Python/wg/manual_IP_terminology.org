@@ -1,0 +1,80 @@
+#+TITLE: Interface vs Link vs Netdevice: a cynical field guide
+#+AUTHOR: Thomas & Nerith (session)
+#+LANGUAGE: en
+#+OPTIONS: toc:2 num:t
+
+* TL;DR
+In Linux networking (and in this doc), /interface/, /link/, and /netdevice/ can all refer to the same kernel object, e.g., wg0, x6, eth0. This conflation of terms came about because different tribes named the same thing differently.
+
+* What these words actually refer to
+- interface: common admin usage for referring to said kernel network object.  
+- link: iproute2's vocabulary for said kernel network object (as in the command: `ip link show <name>` which gives information about said kernel network object).
+- netdevice: the kernel's term (struct net_device under the hood)
+
+* Where the words come from
+- Kernel engineers: /netdevice/ is the internal type that packets touch.
+- iproute2 authors: named their subcommands by subsystem; the L2-ish one is /link/. Hence ip link, ip addr, ip route, ip rule, ip neigh.
+- Humans: kept saying /interface/ because that was the word from ifconfig days and textbooks.
+
+* Cynic's guide to commands (map the terrain)
+- ip link show x6              → show properties of interface x6 (state, mtu, type, flags); not L3 addresses or routes (here /link/ == /interface/)
+- ip addr add A dev x6         → attach IP address A as a property of interface x6; this alone does not force source choice or egress path (here /dev/ = /interface/)
+- ip route add <prefix> dev x6 → write a route entry: map destination <prefix> → interface x6 (here /dev/ = /interface/)
+- ip rule add ...              → write a policy rule that selects which routing table to consult
+- ip neigh ...                 → view/manage the neighbor cache (ARP/ND) per interface; maps L3 neighbor → L2 address; not routing
+
+
+* Device
+
+In computing, a /device/ is a piece of hardware. This includes printers, disk drives, memory cards, NIC cards, etc.  An emulated device is software that is written to do the same thing as an actual device. This is sometimes done when compatibility with an old device is needed, but the old device is not available. A virtual device is software that is written to do the same thing as an imagined device. This is sometimes done to make available features that no physical device provides. A virtual device can also be state that is kept to support multiplexing a real device among many users, while giving each user the appearance of having sole ownership of said device. It is also common to call a device emulator a virtual device.
+
+In unix operating systems special files are used for interfacing to devices. Such an interface is often called a /device file/, which inevitably gets shortened to /device/. 
+
+In networking, the kernel keeps state data for a device, and software drivers for shipping data to and from a device used for networking. Such software objects are often called /network devices/.  The interface to the kernel used for talking to devices inevitably gets called a /device/.
+
+The terms,  /physical device/,  /device file/, and /netdevice/ are used to distinguish among the various possible meanings of /device/. We observe that generally terminology suffers due to a desire to flatten and thus simplify the discussion of the communication abstraction stack.
+
+* Interface
+
+An /interface/ is a shared surface between two systems. A user interface is the shared surface between a user and a system. E.g. the dashboard of a car is a user interface to the car.
+
+In software programming, an interface is a set of data and routines used for communication between software systems.  For example, an API is a application programming interface.
+
+The OS provides named interfaces for communicating with network devices. Within the context of network programming, The literature will refer to such an interface as the /device/,  /link/,  or /interface/, the latter being the only term fitting the wider scope conventional definition.
+
+* Link
+
+A /link/ is a pathway that connects two systems.  With an interface, there is no link, as the systems touch.  A link has two interfaces, one on each end. Hence it was inevitable that a link interface would be called a /link/.  And if the link connects to a device, then that link interface itself gets called a /device/.
+
+In iproute2 /link/ means the local endpoint object. Do not assume a remote counterpart exists just because you saw the word /link/.
+
+* WireGuard mini-map
+We will use this terminology:
+
+- We will consider that WireGuard is conceptually a virtual device.
+- There can be many interfaces to said WireGuard device, taking names like wg0 or x6. Each has a keypair, a listen port, and a set of peers.
+- Config tools: "wg" (CLI, not a daemon), "wg-quick" (oneshot helper per interface).
+- Reality check:
+  - ip link show type wireguard → lists all WG interfaces
+  - ip -d link show x6          → detailed information about the x6 interface
+  - wg show x6                  → peer/crypto state for the x6 interface
+
+* Sanity tests you can run
+#+begin_src sh
+# list all WireGuard interfaces 
+ip link show type wireguard
+
+# detailed view of one interface
+ip -d link show x6
+
+# see handshake and byte counters
+wg show x6
+
+# show L3 addresses bound to an interface
+ip addr show dev x6
+
+# show routes in a named table (if you use policy routing)
+ip route show table x6
+#+end_src
+
+

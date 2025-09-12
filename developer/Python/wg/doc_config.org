@@ -1,0 +1,9 @@
+-New interface:
+
+copy `db_init_iface_x6.py` to `db_init_iface_<name>.py`, replacing <name> with the name of the interface.  Then edit `db_init_iface_<name>.py`
+
+-New Client
+
+-New User
+
+

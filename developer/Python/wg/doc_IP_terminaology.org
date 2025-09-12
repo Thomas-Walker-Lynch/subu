@@ -48,6 +48,24 @@ A /link/ is a pathway that connects two systems.  With an interface, there is no
 
 In iproute2 /link/ means the local endpoint object. Do not assume a remote counterpart exists just because you saw the word /link/.
 
+* Machine Peers
+
+- Client
+
+In these documents, the client machine is the local machine users are working on. Inevitably this gets shortened to /client/ in polite conversation. The example client used in this distribution is StanleyPark.  That is a host name of a computer on our network.
+
+- Server
+
+In these document, the server machine is the remote machine that the write guard tunnels to. We have nicknames for machines. The example used here has the server nicknames of  x6, and US.
+These nicknames are also used for the names of the client machine side interface that connects to the tunnel that leads to said server machine. The nickname is also used for the name of the routing table on the client that routes traffic go said wireguard tunnel.
+
+Hence, a nickname, like x6 or US, refers to a machine, an interface, and an IP route table.
+
+* Software Peers
+
+Programs that run as daemons while listening for connections, and once connected to,k they provide services, are server programs.  The program that connects to said software server is called a client program.  You guessed it, the terms 'server program'  and 'client program' often get shortened to /server/ and /client/.
+
+
 * WireGuard mini-map
 We will use this terminology:
 

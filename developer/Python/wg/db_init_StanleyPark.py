@@ -12,6 +12,8 @@ from db_init_iface_US  import init_iface_US
 from db_init_server_x6 import init_server_x6
 from db_init_server_US  import init_server_US
 from db_bind_user_to_iface import bind_user_to_iface
+from db_init_ip_table_registration import assign_missing_rt_table_ids
+from db_init_ip_iface_addr_assign import reconcile_kernel_and_db_ipv4_addresses
 
 ROOT = Path(__file__).resolve().parent
 DB   = ic.DB_PATH
@@ -46,6 +48,16 @@ def db_init_StanleyPark() -> int:
     msg_wrapped_call("db_init_iface_US.py (init_iface_US)", init_iface_US, conn)
     msg_wrapped_call("db_init_server_US.py (init_server_US)", init_server_US, conn)
     msg_wrapped_call("bind_user_to_iface: Thomas-US → US", bind_user_to_iface, conn, "US", "Thomas-US")
+
+    msg_wrapped_call(
+      "db_init_ip_table_registration"
+      ,lambda: assign_missing_rt_table_ids(conn ,low=20000 ,high=29999 ,dry_run=False)
+    )
+
+    msg_wrapped_call(
+      "db_init_ip_iface_addr_assign"
+      ,lambda: reconcile_kernel_and_db_ipv4_addresses(conn ,pool_cidr="10.0.0.0/16" ,assign_prefix=32 ,reserve_first=0 ,dry_run=False)
+    )
 
     conn.commit()
     print("✔ commit: database updated")

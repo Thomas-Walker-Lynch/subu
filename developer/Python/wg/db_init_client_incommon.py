@@ -6,10 +6,13 @@ import sqlite3
 from typing import Any, Optional, Dict
 import incommon as ic  # provides DB_PATH, open_db
 
+# Normally don't set the addr_cidr, the system will automically
+# assign a free address, or reuse one that is already set.
+
 def upsert_client(conn: sqlite3.Connection,
                   *,
                   iface: str,
-                  addr_cidr: str,
+                  addr_cidr: Optional[str] = None,
                   rt_table_name: Optional[str] = None,
                   rt_table_id: Optional[int] = None,
                   mtu: Optional[int] = None,

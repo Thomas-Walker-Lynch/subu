@@ -1,0 +1,42 @@
+
+stage programs write to the stage directory. Later install copies from the stage
+directory to a provided root, which if it is the local machine, will be '/'.
+
+
+* stage_IP_register_route_table.py
+
+   stages a replacement etc/iproute2/rt_tables file.
+
+* stage_wg_conf.py
+
+   stages  etc/wireguard/ conf files for the configured interfaces
+
+* stage_IP_routes_script.py
+
+  1. stages a shell script that when called writes the IP rule table. Said script binds UIDs to route tables.
+
+  2. stages a priority 10 systemd guard systemd dropin that will call said shell script when
+     WireGuard is started or restarted.
+
+* stage_IP_rules_script.py
+
+  1. stages a shell script that when called writes the required IP route tables
+
+  2. stages a priority 20 systemd guard systemd dropin that will call said shell script when
+     WireGuard is started or restarted.
+
+* stage_client_StanleyPark.py
+
+   A local use client machine configuration file. Calls the other stage programs
+   while providing the correct parameters for configuring wireguard on the
+   machine StanleyPark. Typically these will be a database connection and a list of
+   users.
+
+   The admin will write such a file for each machine he/she/ai is configuring.
+
+* stage_incommon.py
+
+   Utility functions for stage programs.
+
+
+

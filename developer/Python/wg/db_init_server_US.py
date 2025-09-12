@@ -7,7 +7,7 @@ def init_server_US(conn):
     conn,
     client_iface="US",
     server_name="US",
-    server_public_key="h8ZYEEVMForvv9p5Wx+9+eZ87t692hTN7sks5Noedw8=",  # placeholder from old wg0.conf snippet
+    server_public_key="h8ZYEEVMForvv9p5Wx+9+eZ87t692hTN7sks5Noedw8=",  
     endpoint_host="35.194.71.194",
     endpoint_port=443,
     allowed_ips="0.0.0.0/0",

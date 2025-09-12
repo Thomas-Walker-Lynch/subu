@@ -16,12 +16,12 @@ CREATE TABLE IF NOT EXISTS Iface (
   ,created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
   ,updated_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
   ,iface              TEXT NOT NULL UNIQUE   -- kernel interface name as shown by ip link (e.g., wg0, x6)
-  ,rt_table_id        INTEGER                       -- e.g. 1002
+  ,rt_table_id        INTEGER                       -- e.g. 1002, unused
   ,rt_table_name      TEXT                          -- if NULL, default to iface (see view)
   -- legacy caches (kept for compatibility; may be NULL)
   ,bound_user         TEXT
   ,bound_uid          INTEGER
-  ,local_address_cidr TEXT NOT NULL                 -- e.g. '10.8.0.2/32'
+  ,local_address_cidr TEXT                 -- e.g. '10.8.0.2/32'
   -- secrets: private key is NO LONGER stored in DB (lives under key/<machine>)
   ,public_key         TEXT CHECK (public_key IS NULL OR length(public_key) BETWEEN 43 AND 45)
   ,mtu                INTEGER

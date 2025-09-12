@@ -1,0 +1,14 @@
+
+From the point of view of setting up the client (we are in the client setup directory after all):
+
+1. login to the server and get the server public key.  
+
+   This public key is written into the db_init_iface_<server_name>>.py configuration file.  Note the examples `db_init_iface_US.py` and `db_init_iface_x6`.  `x6` and `US` are nicknames for two servers.  These nicknames are also used for the interface names.
+
+   Note that the server private key remains on the server. The client has no knowledge of the server private key. It is not entered anywhere in the client configuration.
+
+2. run the program `key_client_generate1
+
+   This will print the client public key.  It will also place a copy in the database.
+
+   This will write the client private key into a local directory called `key/`. The admin need not do anything concerning this key.  Scripts that need it will find it in the 'key/' directory.

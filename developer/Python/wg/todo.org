@@ -1,0 +1,67 @@
+#+TITLE: subu / WireGuard — TODO
+#+AUTHOR: Thomas & Nerith (session)
+#+LANGUAGE: en
+#+OPTIONS: toc:2 num:t
+#+TODO: TODO(t) NEXT(n) WAITING(w) BLOCKED(b) | DONE(d) CANCELED(c)
+
+- Your current DB schema (the one you pasted earlier) does not include a listen-port field on Iface. So if you want ListenPort = … to be driven from the DB, add a column like Iface.listen_port INTEGER CHECK(listen_port BETWEEN 1 AND 65535).
+
+- have the stage commands echo relative pathnames instead of absolute as they do now.
+
+- Known gaps / open decisions
+  - Systemd drop-in to call staged scripts on ~wg-quick@IFACE~ up (IPv4 addrs + policy rules).
+  - Staged policy-rules script (source-based + uidrange rules) to replace the old global ~IP_rule_add.sh~ usage.
+  - Installer flow & atomic writes (copy staged files, set owner/perms; safe update of ~/etc/iproute2/rt_tables~).
+  - Pool size policy: default /16 with /32 hosts is implemented; decision pending on /8 vs /16.
+  - Style guardrails (RT commas / two-space indent) are manual; optional linter TBD.
+
+* NEXT wiring (high-level order)
+1) Stage: /etc/iproute2/rt_tables (merge) for selected ifaces.
+2) Stage: /usr/local/bin/set_iface_ipv4_addrs.sh for same ifaces.
+3) Stage: /usr/local/bin/set_policy_rules_for_ifaces.sh (new; replaces old global add tool).
+4) Stage: systemd drop-ins for ~wg-quick@IFACE.service.d/10-postup.conf~ to call (2) then (3).
+5) Install: copy staged files → system, set perms/owner; ~systemctl daemon-reload~.
+6) Bring-up: ~wg-quick up IFACE~; verify routes/rules; smoke tests.
+
+* TODO Add “missing-iface” guard to staged IPv4 script
+- When iface doesn’t exist yet, log and continue (no non-zero exit).
+
+* TODO Stage policy rules script (idempotent)
+- For each iface:
+  - Source-based rule: =from <local_address_cidr> lookup <rt_table_name_eff>=.
+  - UID rules: =uidrange U-U lookup <rt_table_name_eff>= for each bound UID.
+- Only for ifaces passed on the CLI; DB-driven; no kernel writes here.
+- Emit with checks (skip if grep finds the exact rule).
+
+* TODO Systemd drop-in generator
+- Emit to: ~stage/etc/systemd/wg-quick@IFACE.service.d/10-postup.conf~.
+- Include:
+  - =ExecStartPre=-/usr/sbin/ip link delete IFACE= (clean stale link).
+  - =ExecStartPost=+/usr/local/bin/set_iface_ipv4_addrs.sh=.
+  - =ExecStartPost=+/usr/local/bin/set_policy_rules_for_ifaces.sh=.
+  - =ExecStartPost=+/usr/bin/logger 'wg-quick@IFACE up: addrs+rules applied'=.
+
+* TODO Installer flow
+- Copy staged files with perms (0500 for scripts; 0644 for rt_tables; 0755 for dirs).
+- Atomic update for ~/etc/iproute2/rt_tables~ (write temp + move); keep timestamped backup.
+- ~systemctl daemon-reload~ after installing drop-ins.
+
+* WAITING Decide “no-op staging” policy for rt_tables
+- Option A: Always stage a copy (deterministic deployment).
+- Option B: Stage only when there are new entries (quieter diffs).
+
+* TODO Tests
+- Unit-ish: parse/plan functions for both staging scripts (dry-run cases, collisions, skip-missing cases).
+- Integration:
+  - Create temp WG iface: ~ip link add dev t0 type wireguard~ (and delete after).
+  - Run staged scripts; verify ~ip -4 addr show dev t0~, ~ip rule show~, ~ip route show table <name>~.
+  - Bring up real ~wg-quick up x6~; repeat verifications.
+
+* TODO Docs
+- Append “operational runbook” to the org manual (bring-up, verify, recover, teardown).
+
+* DONE What’s already proven by commands (from log)
+- all db_init is running, orchestrated by db_init_StanleyPark
+- =stage_rt_tables_merge.py --from-db x6 US= created staged rt_tables with merges.
+- =stage_iface_ipv4_script.py x6 US= staged ~set_iface_ipv4_addrs.sh~.
+

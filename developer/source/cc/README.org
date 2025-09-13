@@ -1,0 +1,5 @@
+
+These are currently not used. Eventually the main subu commands will be C programs and setuid root so that master users (and only master users) can seamlessly manipulate sub users.
+
+I started on this, then decided to let the scripts stabilize first.
+

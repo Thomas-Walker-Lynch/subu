@@ -1,0 +1,135 @@
+#!/bin/bash
+# launch_subu.sh — Start a subuser shell (console or GUI-aware, with systemd user session)
+
+set -euo pipefail
+umask 0077
+
+subu="$1"
+if [ -z "$subu" ]; then
+  echo "❌ No subuser name supplied"
+  exit 1
+fi
+
+subu_user="Thomas-$subu"
+if ! id "$subu_user" &>/dev/null; then
+  echo "❌ User $subu_user does not exist"
+  exit 1
+fi
+
+# Check required commands
+error_flag=0
+for cmd in machinectl xauth xhost dbus-run-session; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "❌ $cmd not found"
+    error_flag=1
+  fi
+done
+if [ "$error_flag" -eq 1 ]; then
+  exit 1
+fi
+
+# don't use sudo -v, because it will echo the password into the emacs shell
+sudo echo >& /dev/null
+
+
+# Something broke when I turned this off. What was it.  Will have to turn it off again and
+# test.
+#
+# Enable lingering so user services can persist
+sudo loginctl enable-linger "$subu_user"
+
+# Decide how to set the use_xauth and use_xhost flags.
+#
+# As of the time of this writing, on my machines, Wayland insists on
+# xauth, while my X11 is refuses to use it, thus it needs xhost control.
+# So this is how I determine how to set the flags here.
+#
+
+# bash will evaluate this variables inside a quoted if even when the
+# gate is falase, so everything needs to be initialized, whether used
+# or not.
+subu_Xauthority_path=""
+use_xauth=0
+use_xhost=0
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+  has_display=true
+  XDG_SESSION_TYPE="wayland"
+  subu_Xauthority_path="$HOME/subu/$subu/.Xauthority"
+  use_xauth=1
+  use_xhost=0
+  echo "🌀 Wayland session - Using xauth for access control"
+
+elif [[ -n "${DISPLAY:-}" ]]; then
+  has_display=true
+  XDG_SESSION_TYPE="x11"
+  use_xauth=0
+  use_xhost=1
+  echo "🧱 X11 session - Using xhost for access control"
+
+else
+  has_display=false
+  XDG_SESSION_TYPE="tty"
+  use_xauth=0
+  use_xhost=0
+  echo "🖳 Console session (no X detected)"
+fi
+
+if [[ "$use_xhost" -eq 1 ]]; then
+  xhost +SI:localuser:"$subu_user"
+fi
+if [[ "$use_xauth" -eq 1 ]]; then
+  mkdir -p "$(dirname "$subu_Xauthority_path")"
+  touch "$subu_Xauthority_path"
+  xauth extract "$subu_Xauthority_path" "$DISPLAY"
+fi
+
+if $has_display; then
+
+
+  sudo machinectl shell "$subu_user"@ /bin/bash -c "
+
+    # --- session env from parent ---
+    export DISPLAY=\"${DISPLAY:-${WAYLAND_DISPLAY}}\";
+    export XDG_RUNTIME_DIR='/run/user/$(id -u "$subu_user")';
+    export XDG_SESSION_TYPE=\"$XDG_SESSION_TYPE\";
+    export XDG_SESSION_CLASS=\"user\";
+    export XDG_DATA_DIRS=\"/usr/share/gnome:/usr/local/share/:/usr/share/\";
+    export USE_XAUTH=$use_xauth
+
+    # Only set XAUTHORITY when we actually prepared it (Wayland/xauth case)
+    if [[ \"\$USE_XAUTH\" -eq 1 ]]; then
+      export XAUTHORITY=\"$subu_Xauthority_path\"
+    fi
+
+    if command -v /usr/bin/gnome-keyring-daemon &>/dev/null; then
+      eval \$(/usr/bin/gnome-keyring-daemon --start)
+      export GNOME_KEYRING_CONTROL GNOME_KEYRING_PID
+    fi
+
+    # WirePlumber: ignore logind (subuser isn't the active seat)
+    systemctl --user set-environment WIREPLUMBER_DISABLE_PLUGINS=logind
+    systemctl --user import-environment DISPLAY XAUTHORITY WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE
+
+    # Bring up audio (sockets first, then services)
+    systemctl --user enable --now pipewire.socket pipewire-pulse.socket >/dev/null 2>&1 || true
+    systemctl --user restart wireplumber pipewire pipewire-pulse
+
+    exec dbus-run-session -- bash -l
+  "
+
+else  
+
+  # Console mode with DBus session (give it audio too)
+  sudo machinectl shell "$subu_user"@ /bin/bash -c "
+    export XDG_RUNTIME_DIR='/run/user/$(id -u "$subu_user")}';
+
+    systemctl --user set-environment WIREPLUMBER_DISABLE_PLUGINS=logind
+    systemctl --user import-environment XDG_RUNTIME_DIR
+    systemctl --user enable --now pipewire.socket pipewire-pulse.socket >/dev/null 2>&1 || true
+    systemctl --user restart wireplumber pipewire pipewire-pulse
+
+    exec dbus-run-session -- bash -l
+  "
+fi
+
+

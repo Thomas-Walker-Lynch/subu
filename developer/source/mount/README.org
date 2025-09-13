@@ -1,0 +1,149 @@
+
+When the master users are not remote mounted, but rather have static home directories on the local machine, these scripts are not needed.
+
+masu == master user
+subu == sub user
+
+These 'mount' scripts are for keeping master users on a remote, optionally encrypted, device.
+
+I have one example running, so there might be generalization issues with these scripts.
+
+The order and type of the command arguments are the first part of each
+command name. The command description follows.  For example:
+
+`map_name__mounted_masu_list.sh`
+
+is given a `map_name`  and provides a list of the masu found at the mount point with that name. (Note, that /dev/mapper/<map_name> is mounted at /mnt/<map_name>.)
+
+
+For mounting a remote device.
+
+The remote device has at the top level master user home directories. Each master user home directory has a sub directory called subu_data.  Each directory in subu_data is owned by a sub-user, and is the home directory for that sub-user.  Each master user also has a `subu` sub-directory.  The contents of the subu directory will parallel that of the subu_data directory, but differ in that the contained files will be owned by the master user.
+
+1. the remote device is mounted under /mnt/map_name
+
+   `device_mapname__open_mount.sh` <device> <mapname>`
+
+   `mapname` is the name that appears under /dev/mapper, it is also used
+   as the /mnt/<name> mount point.
+
+   if <device> is not to be opened with cryptsetup, instead mount it to the mount pt directly.
+
+2. Each master user is mount --bind from the /mnt/<map_name> to /home
+
+   masu__to_home.sh <masu>
+
+   There is currently no script to map bind all the masu in one call.
+
+3. master users have subu home directories under /home/<masu>/subu_data. These
+   are owned by the subu users. Map the /home/<masu>/subu_data directories to
+   `/home/subu`n using
+
+   masu__map_own_all.sh <user>
+
+   The `/home/subu` directories are bindfs mapped to be be owned by the master
+   user, so that the master user may administer them.
+
+
+
+* bindfs problem
+
+  On my Fedora install once it was bound by root, it stayed there.  On
+  Debian it keeps losing the mounts, for sure on a logout or login,
+  and maybe other times also --- the machinectl logins and logouts I
+  bet that is what is doing it.  Hence very time I go to use a mount
+  in subu it is not there or filled with the dreaded question mark
+  garbage, has to be umount then remounted.
+
+  --------------------------------------------------------------------------------
+  You're exactly right in your diagnosis: Debian's behavior under
+  systemd with machinectl is unmounting user bind mounts on
+  login/logout cycles—especially when using enable-linger, systemd
+  --user, or machinectl shell.
+
+  This differs from Fedora, which preserves those mounts more consistently unless explicitly torn down. Let’s first address why it’s happening, then provide a robust, recoverable fix.
+  🔍 Why This Happens
+
+  When machinectl or loginctl manages a user session:
+
+      systemd creates a private mount namespace per user.
+
+      Any mounts (especially bind mounts) not made within that
+      namespace or not managed by systemd itself (i.e. not via .mount
+      units) can be:
+
+          Torn down on logout,
+
+          Hidden due to namespace isolation,
+
+          Disconnected if user lingering is toggled.
+
+  If your bindfs mount is outside the user’s namespace (i.e. mounted by root), but then accessed inside a user-managed session, systemd may unmount it or lose visibility.
+  ✅ Recommended Fix
+
+  There are two paths:
+  A. Use a systemd .mount unit (most stable)
+
+      Create a file /etc/systemd/system/home-Thomas-subu-<subuname>.mount:
+
+  [Unit]
+  Description=Bind mount subu user home
+
+  [Mount]
+  What=/home/Thomas/subu_data/<subuname>
+  Where=/home/Thomas/subu/<subuname>
+  Type=none
+  Options=bind
+
+  [Install]
+  WantedBy=multi-user.target
+
+  Enable and start it:
+
+      sudo systemctl daemon-reexec
+      sudo systemctl enable --now home-Thomas-subu-<subuname>.mount
+
+      Repeat for each subu.
+
+  This ensures systemd manages the bind mount in its native way and it won’t get torn down.
+  B. Remount automatically on login via ~/.bash_profile or a systemd --user unit
+
+  You can modify your script to:
+
+      Skip sudo if already root
+
+      Be idempotent
+
+      Automatically remount on session start
+
+  Then in ~/.bash_profile or ~/.config/systemd/user/subu-mount.service:
+
+  [Unit]
+  Description=Re-mount subu directory for Thomas
+
+  [Service]
+  Type=oneshot
+  ExecStart=/home/Thomas/executable/subu/user_open_subu.sh Thomas US
+
+  [Install]
+  WantedBy=default.target
+
+  Enable with:
+
+  systemctl --user daemon-reexec
+  systemctl --user enable --now subu-mount.service
+
+  This guarantees it will come up as part of your login, even after a reboot.
+  🔄 Temporary Workaround
+
+  If you want a quick way to check all subu are mounted and remount them if not, write a watchdog script:
+
+  #!/bin/bash
+  for subu in $(ls /home/Thomas/subu_data); do
+    mountpoint="/home/Thomas/subu/$subu"
+    if ! mountpoint -q "$mountpoint"; then
+      /home/Thomas/executable/subu/user_open_subu.sh Thomas "$subu"
+    fi
+  done
+
+  Would you like me to auto-generate the .mount or .service files for each subu? We can script the system-wide setup cleanly.

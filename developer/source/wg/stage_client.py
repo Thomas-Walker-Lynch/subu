@@ -3,22 +3,16 @@
 stage_client.py
 
 Given:
-  - A SQLite DB reachable via incommon.open_db()
-  - A client machine name (used to locate ./key/<client_machine_name> for WG PrivateKey)
+  - A SQLite DB via incommon.open_db()
+  - A client machine name (for WG PrivateKey lookup under ./key/<client>)
   - One or more interface names (e.g., x6, US)
 
 Does:
-  1) Stage WireGuard confs for each iface (Table=off; ListenPort commented if NULL)
-  2) Stage /etc/iproute2/rt_tables entries for those ifaces
-  3) Stage a unified IP apply script (addresses, routes, rules)
-  4) Stage per-iface systemd drop-ins to invoke the apply script on wg-quick up
+  1) Stage WireGuard confs for each iface
+  2) Stage a unified IP apply script (addresses, routes, rules) + per-iface drop-ins
 
 Returns:
-  - True on success, False on failure
-  - Prints human-readable progress for each step
-
-Errors:
-  - Raises or prints clear ❌ messages on failure
+  True on success, False on failure (prints progress)
 """
 
 from __future__ import annotations
@@ -84,23 +78,6 @@ def _stage_wg_conf_step(client_name: str ,ifaces: Sequence[str]) -> bool:
   return _msg_wrapped_call(f"stage_wg_conf ({client_name}; {','.join(ifaces)})" ,_do)
 
 
-def _stage_rt_tables_step(ifaces: Sequence[str]) -> bool:
-  def _do():
-    try:
-      from stage_IP_register_route_table import stage_ip_register_route_table  # type: ignore
-      with ic.open_db() as conn:
-        path ,notes = stage_ip_register_route_table(
-           conn
-          ,ifaces
-          ,stage_root=STAGE_ROOT
-          ,dry_run=False
-        )
-      return (path ,notes)
-    except Exception:
-      return _call_cli([str(ROOT / "stage_IP_register_route_table.py") ,*ifaces])
-  return _msg_wrapped_call(f"stage_IP_register_route_table ({','.join(ifaces)})" ,_do)
-
-
 def _stage_apply_ip_state_step(ifaces: Sequence[str]) -> bool:
   def _do():
     try:
@@ -125,9 +102,6 @@ def stage_client_artifacts(
   ,iface_names: Sequence[str]
   ,stage_root: Optional[Path] = None
 ) -> bool:
-  """
-  Orchestrate staging for a client+ifaces. Prints progress and returns success.
-  """
   if not iface_names:
     raise ValueError("no interfaces provided")
   if stage_root:
@@ -138,7 +112,6 @@ def stage_client_artifacts(
 
   ok = True
   ok = _stage_wg_conf_step(client_name ,iface_names) and ok
-  ok = _stage_rt_tables_step(iface_names) and ok
   ok = _stage_apply_ip_state_step(iface_names) and ok
   return ok
 

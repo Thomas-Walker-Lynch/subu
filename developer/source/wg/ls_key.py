@@ -22,7 +22,7 @@ def format_table(headers: List[str], rows: List[Tuple]) -> str:
 
 def list_client_keys(conn: sqlite3.Connection, iface: str | None, banner=False) -> str:
   if banner:
-    print("\n=== Public keys generated locally by client, probably by using `db_update_client_key`===")
+    print("\n=== Public keys generated locally by client, probably by using `key_client_generate.py`===")
   rows = conn.execute(
     "SELECT iface, public_key AS client_public_key "
     "FROM Iface "

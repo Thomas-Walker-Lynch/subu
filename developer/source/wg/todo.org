@@ -1,4 +1,4 @@
-#+TITLE: subu / WireGuard — TODO
+n#+TITLE: subu / WireGuard — TODO
 #+AUTHOR: Thomas & Nerith (session)
 #+LANGUAGE: en
 #+OPTIONS: toc:2 num:t
@@ -7,6 +7,12 @@
 - Your current DB schema (the one you pasted earlier) does not include a listen-port field on Iface. So if you want ListenPort = … to be driven from the DB, add a column like Iface.listen_port INTEGER CHECK(listen_port BETWEEN 1 AND 65535).
 
 - have the stage commands echo relative pathnames instead of absolute as they do now.
+
+- the one private key pair per client (instead of per interface), turns out to be a bad idea, as we can't manage tunnels individually, say, by revoking keys. We need to move to a key pair per interface instead.
+
+- db_wipe needs to delete the key directory contents also
+
+-------------------------------
 
 - Known gaps / open decisions
   - Systemd drop-in to call staged scripts on ~wg-quick@IFACE~ up (IPv4 addrs + policy rules).

@@ -1,0 +1,51 @@
+
+1. create/update the client configuration files.
+
+   These are the configuration files for the machine called StanleyPark, which is on
+   our local network.  (Yes, we capitalize popper nouns, and thus have some "bad names".)
+
+   db_init_StanleyPark.py
+   stage_StanleyPark
+   deploy_StanleyPark
+
+   They are in Python. 
+
+2. Wipe the database and the stage. 
+
+   Wiping the db will erase keys and any other client configurations. This does not effect already installed configuration files. Also, the database can always be rebuilt by running the client configuration files again.
+
+  ./db_wipe.py
+  ./stage_wipe.py
+
+3. Setup the database
+
+  ./db_init_StanleyPark
+
+4. setup the keys
+
+  ./key_generate StanleyPark.py
+  ./key_server_set.py  <sever's public key>
+
+  to see the keys in the database
+
+  ./ls_key.py
+
+  if the database was wiped, it will be necessary to key_generate again. Currently
+  there is one client machine key pair.
+
+5. stage the configuration files to be installed 
+
+  ./stage_StanleyPark
+
+  check them make sure they are what you want
+
+6. install the staged files
+
+  ./deploy_StanlwayPark
+
+
+The goal here is work towards each subu as a container, with its networking tunneled
+to the specified interface. Perhaps the configuration scripts should be subu based instead of client machine based. Perhaps in the next version.
+
+
+

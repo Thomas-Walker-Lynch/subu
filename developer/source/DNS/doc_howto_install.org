@@ -1,0 +1,32 @@
+
+* 1. modify stage files
+
+  The stage/ directory  holds bespoke configuration files for host StanleyPark's configuration.
+
+  Copy/Modify the sraged files for your site.
+
+  Work on the stage is done in user space.  The program `sudo install_staged_tree.py` copies the files on the stage into the root file system, `/', or optionally to another specified directory target. However, normally one will run `deploy.py` to do the install and to make the systemctl calls to restart services.
+
+* 2. edit /etc/nftables.conf
+
+  requires root priv
+
+  Strange, but Debian 12 nftables does not automatically include the scripts in its drop-in directory, so ..
+
+  add this at the bottom of /etc/nftables.conf
+
+      flush ruleset
+      include "/etc/nftables.d/*.nft"
+
+* 3. run `deploy.py`
+
+  requires root priv
+
+* 4. check
+
+  requires root priv
+
+  nft list ruleset | sed -n '/SUBU-/,/}/p'
+  systemctl status nftables
+  ss -ltnup 'sport = :5301' 'sport = :5302'   # your Unbound listeners
+

@@ -1,0 +1,91 @@
+#+TITLE: DNS Bundle (Unbound + Per-subu Redirect) — RT-v2025.09.15.1
+#+AUTHOR: RT Toolkit
+#+OPTIONS: toc:2
+#+STARTUP: show2levels
+
+* Overview
+This bundle stages a *per-subu DNS* setup on the client:
+- Two Unbound instances (templated via ~unbound@.service~):
+  - ~unbound@US~ listens on ~127.0.0.1:5301~, resolves *over the US tunnel* (outgoing interface = ~10.0.0.1~).
+  - ~unbound@x6~ listens on ~127.0.0.1:5302~, resolves *over the x6 tunnel* (outgoing interface = ~10.8.0.2~).
+- nftables rules match the subu’s UID and *redirect TCP/UDP port 53* to the corresponding local Unbound port.
+- A small deploy helper (~deploy_DNS.py~) installs the staged tree and enables services.
+
+* Why this design?
+- When a subu (containerized user) does DNS, traffic is forced to the tunnel assigned to that subu.
+- If a tunnel is down, DNS for that subu fails closed (no silent leak), while your ~local~ subu can still use ISP DNS.
+- No changes to per-user resolv.conf are required: subu keep using ~nameserver 127.0.0.1~ (via redirect).
+
+* Layout
+#+begin_example
+DNS_bundle/
+  README.org
+  deploy_DNS.py
+  stage/
+    etc/
+      nftables.d/
+        DNS-redirect.nft
+      systemd/
+        system/
+          DNS-redirect.service
+          unbound@.service
+      unbound/
+        unbound-US.conf
+        unbound-x6.conf
+    usr/
+      local/
+        sbin/
+          DNS_status.sh
+#+end_example
+
+* Assumptions / Customize
+- Client WG local addresses (from your earlier setup):
+  - US: ~10.0.0.1/32~
+  - x6: ~10.8.0.2/32~
+- Subu UIDs (adjust if different):
+  - US  → UID ~2017~
+  - x6  → UID ~2018~
+- If these differ on your box, edit:
+  - ~stage/etc/unbound/unbound-US.conf~ (~outgoing-interface~)
+  - ~stage/etc/unbound/unbound-x6.conf~ (~outgoing-interface~)
+  - ~stage/etc/nftables.d/DNS-redirect.nft~ (the ~meta skuid~ lines)
+
+* Deploy
+1. Review staged files:
+   #+begin_src sh
+   tar tzf DNS_bundle.tgz | sed 's/^/  /'
+   #+end_src
+2. Extract and run deploy (root):
+   #+begin_src sh
+   tar xzf DNS_bundle.tgz
+   cd DNS_bundle
+   sudo ./deploy_DNS.py --instances US x6
+   #+end_src
+3. Verify:
+   #+begin_src sh
+   systemctl status unbound@US unbound@x6 DNS-redirect
+   sudo nft list table inet NAT-DNS-REDIRECT
+   #+end_src
+
+* How it works
+- nftables (~DNS-redirect.nft~) in ~inet~ *nat output* hook rewrites subu DNS to the local listener ports:
+  - US (UID 2017) → ~127.0.0.1:5301~
+  - x6 (UID 2018) → ~127.0.0.1:5302~
+- Each Unbound instance binds to its port and *sources queries from the WG IP* using ~outgoing-interface~.
+- Unit ordering ties each instance to its tunnel: ~After=~ and ~Requires=~ ~wg-quick@%i.service~.
+
+* Notes
+- If a tunnel’s address is not present at Unbound start, the unit waits because of the dependency and restarts later.
+- For DoT/DoH upstream, you can switch to ~forward-tls-upstream: yes~ with providers that support TLS on 853.
+- The ~DNS_status.sh~ helper prints a quick status and the top of logs.
+
+* Rollback
+#+begin_src sh
+sudo systemctl disable --now unbound@US unbound@x6 DNS-redirect
+sudo nft flush table inet NAT-DNS-REDIRECT || true
+# Remove staged files if desired (be careful)
+# sudo rm -f /etc/unbound/unbound-US.conf /etc/unbound/unbound-x6.conf
+#+end_src
+
+* License
+This bundle is provided “as-is”. Use at your own discretion.

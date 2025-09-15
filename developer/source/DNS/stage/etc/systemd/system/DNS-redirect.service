@@ -1,0 +1,16 @@
+[Unit]
+Description=DNS Redirect (nftables) — redirect per-subu DNS to local Unbound ports
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/DNS-redirect.nft
+ExecReload=/usr/sbin/nft -f /etc/nftables.d/DNS-redirect.nft
+ExecStop=/usr/sbin/nft flush table inet NAT-DNS-REDIRECT
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

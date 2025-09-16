@@ -1,6 +1,0 @@
-
-table inet BLOCK-IPv6 {
-  chain input   { type filter hook input   priority raw; policy accept;   meta nfproto ipv6 drop counter comment "drop all IPv6 inbound" }
-  chain output  { type filter hook output  priority raw; policy accept;   meta nfproto ipv6 drop counter comment "drop all IPv6 outbound" }
-  chain forward { type filter hook forward priority raw; policy accept;   meta nfproto ipv6 drop counter comment "drop all IPv6 forward" }
-}

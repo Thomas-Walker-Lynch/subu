@@ -1,4 +1,0 @@
-
-See also the documents in the `resource` project `document` directory.
-
-

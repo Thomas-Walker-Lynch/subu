@@ -1,5 +1,0 @@
-#!/bin/bash
-set -x
-make -C "$PROJECT_SUBU" dist-clean
-git add "$@"
-

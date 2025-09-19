@@ -231,9 +231,10 @@ class PlanProvenance:
   Runner-provided, read-only provenance for a single config script.
   """
   __slots__ = ("stage_root_dpath","config_abs_fpath","config_rel_fpath",
-               "read_dir_dpath","read_fname")
+               "read_dir_dpath","read_fname","process_user")
 
   def __init__(self, *, stage_root: Path, config_path: Path):
+    import getpass
     self.stage_root_dpath = stage_root.resolve()
     self.config_abs_fpath = config_path.resolve()
     try:
@@ -241,10 +242,8 @@ class PlanProvenance:
     except Exception:
       self.config_rel_fpath = Path(self.config_abs_fpath.name)
 
-    # Where the config file lives (used to anchor relative write dirs)
     self.read_dir_dpath = self.config_abs_fpath.parent
 
-    # “py-less” filename: strip .stage.py, else .py, else keep name
     name = self.config_abs_fpath.name
     if name.endswith(".stage.py"):
       self.read_fname = name[:-len(".stage.py")]
@@ -253,23 +252,19 @@ class PlanProvenance:
     else:
       self.read_fname = name
 
+    # NEW: owner of the StageHand process
+    self.process_user = getpass.getuser()
+
   def print(self, *, file=None) -> None:
-    """
-    Given: optional file-like (defaults to stdout).
-    Does:  print a readable, multi-line summary of provenance.
-    Returns: None.
-    """
     if file is None:
       import sys as _sys
       file = _sys.stdout
-
     print(f"Stage root:   {self.stage_root_dpath}", file=file)
     print(f"Config (rel): {self.config_rel_fpath.as_posix()}", file=file)
     print(f"Config (abs): {self.config_abs_fpath}", file=file)
     print(f"Read dir:     {self.read_dir_dpath}", file=file)
     print(f"Read fname:   {self.read_fname}", file=file)
-
-
+    print(f"Process user: {self.process_user}", file=file)   # NEW
 
 # ===== Admin-facing defaults carrier =====
 
@@ -287,27 +282,16 @@ class WriteFileMeta:
   def __init__(self
     ,*
     ,dpath="/"
-    ,fname=None            # None or "." → let Planner resolve (provenance fallback)
-    ,owner="root"          # "." → current process user (resolved by Planner)
+    ,fname=None            # None → let Planner/provenance choose
+    ,owner="root"
     ,mode=0o444
     ,content=None
   ):
     self.dpath_str           = norm_dpath_str(dpath)
-    # keep "." as a sentinel; otherwise validate the filename
-    if fname == ".":
-      self.fname = "."
-    else:
-      self.fname = norm_fname_or_none(fname)
-
-    # keep "." as a sentinel; otherwise normalize owner
-    if owner == ".":
-      self.owner_name_str = "."
-    else:
-      self.owner_name_str = norm_nonempty_owner(owner)
-
+    self.fname               = norm_fname_or_none(fname)          # '.' no longer special → None
+    self.owner_name_str      = norm_nonempty_owner(owner)         # '.' rejected → None
     self.mode_int, self.mode_octal_str = parse_mode(mode)
-    # content_'bytes' due to UTF8 encoding
-    self.content_bytes = norm_content_bytes(content)
+    self.content_bytes       = norm_content_bytes(content)
 
   def print(self, *, label: str | None = None, file=None) -> None:
     """
@@ -359,6 +343,11 @@ class Planner:
 
   # --- defaults management / access ---
 
+  # in Planner.py, inside class Planner
+  def set_provenance(self, prov: PlanProvenance) -> None:
+    """Switch the current provenance used for fallbacks & per-command provenance tagging."""
+    self._prov = prov
+
   def set_defaults(self ,defaults: WriteFileMeta)-> None:
     "Given WriteFileMeta. Does replace planner defaults. Returns None."
     self._defaults = defaults
@@ -377,18 +366,15 @@ class Planner:
     "Given three sources. Does pick first non-None. Returns value or None."
     return kw if kw is not None else (meta_attr if meta_attr is not None else default_attr)
 
-  # Planner.py (inside Planner)
   def _resolve_write_file(self, wfm, dpath, fname) -> tuple[str|None, str|None]:
-    # normalize explicit kwargs (allow "." to pass through untouched)
     dpath_str = norm_dpath_str(dpath) if dpath is not None else None
-    if fname is not None and fname != ".":
-      fname = norm_fname_or_none(fname)
+    fname     = norm_fname_or_none(fname) if fname is not None else None
 
     dpath_val = self._pick(dpath_str, (wfm.dpath_str if wfm else None), self._defaults.dpath_str)
     fname_val = self._pick(fname,     (wfm.fname     if wfm else None), self._defaults.fname)
 
-    # final fallback for filename: "." or None → derive from config name
-    if fname_val == "." or fname_val is None:
+    # final fallback for filename: derive from config name
+    if fname_val is None:
       fname_val = self._prov.read_fname
 
     # anchor relative dpaths against the config’s directory
@@ -403,20 +389,15 @@ class Planner:
     ,mode: int|str|None
     ,content: bytes|str|None
   )-> tuple[str|None ,tuple[int|None ,str|None] ,bytes|None]:
-    owner_norm = norm_nonempty_owner(owner) if (owner is not None and owner != ".") else owner
-    mode_norm  = parse_mode(mode) if mode is not None else (None, None)
+    owner_norm = norm_nonempty_owner(owner) if owner is not None else None
+    mode_norm  = parse_mode(mode) if mode is not None else (None ,None)
     content_b  = norm_content_bytes(content) if content is not None else None
 
     owner_v = self._pick(owner_norm, (wfm.owner_name_str if wfm else None), self._defaults.owner_name_str)
-
-    # resolve "." → current process user
-    if owner_v == ".":
-      owner_v = getpass.getuser()
-
-    mode_v = (mode_norm if mode_norm != (None, None) else
-              ((wfm.mode_int, wfm.mode_octal_str) if wfm else (self._defaults.mode_int, self._defaults.mode_octal_str)))
-    content_v = self._pick(content_b, (wfm.content_bytes if wfm else None), self._defaults.content_bytes)
-    return owner_v, mode_v, content_v
+    mode_v  = (mode_norm if mode_norm != (None ,None) else
+               ((wfm.mode_int ,wfm.mode_octal_str) if wfm else (self._defaults.mode_int ,self._defaults.mode_octal_str)))
+    content_v = self._pick(content_b ,(wfm.content_bytes if wfm else None) ,self._defaults.content_bytes)
+    return owner_v ,mode_v ,content_v
 
   def print(self, *, show_journal: bool = True, file=None) -> None:
     """

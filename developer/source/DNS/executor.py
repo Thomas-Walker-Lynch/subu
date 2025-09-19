@@ -2,22 +2,19 @@
 """
 executor.py — StageHand outer/inner executor (MVP; UNPRIVILEGED for now)
 
+Phase 0 (bootstrap):
+  - Ensure filter program exists (create default in CWD if --filter omitted)
+  - Validate --stage exists
+  - If --phase-0-then-stop: exit here (no scan, no execution)
+
 Phase 1 (outer):
-  - Build a combined plan by executing each config's `configure(prov, planner, WriteFileMeta)`.
-  - Optionally print the plan via Planner.print().
-  - Optionally stop.
+  - Discover every file under --stage; acceptance filter decides which to include
+  - Execute each config’s configure(prov, planner, WriteFileMeta) into ONE Planner
+  - Optionally print the planner; optionally stop
 
 Phase 2 (inner shim in same program for now; no privilege yet):
-  - Encode combined plan to CBOR and pass to inner path.
-  - Inner decodes back to a Journal and optionally prints it.
-  - Optionally stop.
-
-Discovery:
-  - --stage (default: ./stage) points at the stage directory root.
-  - By default, *every file* under --stage (recursively) is executed as a config,
-    regardless of extension. Editors can still use .py for highlighting; we strip
-    only a trailing ".py" to derive prov.read_fname.
-
+  - Encode plan to CBOR and hand to inner path
+  - Inner decodes to a Journal and can print it
 """
 
 from __future__ import annotations
@@ -34,86 +31,153 @@ import tempfile
 import runpy
 import subprocess
 import datetime as _dt
-import os, fnmatch, stat
-
+import stat
 
 # Local module: Planner.py (same directory)
 from Planner import (
   Planner, PlanProvenance, WriteFileMeta, Journal, Command,
 )
 
+# -------- default filter template (written to CWD when --filter not provided) --------
+
+DEFAULT_FILTER_FILENAME = "stagehand_filter.py"
+
+DEFAULT_FILTER_SOURCE = """# StageHand acceptance filter (default template)
+# Return True to include a config file, False to skip it.
+# You receive a PlanProvenance object named `prov`.
+#
+# prov fields commonly used here:
+#   prov.stage_root_dpath : Path   → absolute path to the stage root
+#   prov.config_abs_fpath : Path   → absolute path to the candidate file
+#   prov.config_rel_fpath : Path   → path relative to the stage root
+#   prov.read_dir_dpath   : Path   → directory of the candidate file
+#   prov.read_fname       : str    → filename with trailing '.py' stripped (if present)
+#
+# Examples:
+#
+# 1) Accept everything (default behavior):
+# def accept(prov):
+#   return True
+#
+# 2) Only accept configs in a 'dns/' namespace under the stage:
+# def accept(prov):
+#   return prov.config_rel_fpath.as_posix().startswith("dns/")
+#
+# 3) Exclude editor backup files:
+# def accept(prov):
+#   rel = prov.config_rel_fpath.as_posix()
+#   return not (rel.endswith("~") or rel.endswith(".swp"))
+#
+# 4) Only accept Python files + a few non-Python names:
+# def accept(prov):
+#   name = prov.config_abs_fpath.name
+#   return name.endswith(".py") or name in {"hosts", "resolv.conf"}
+#
+# Choose ONE 'accept' definition. Below is the default:
+
+def accept(prov):
+  return True
+"""
+
 # -------- utilities --------
 
 def iso_utc_now_str() -> str:
   return _dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 
-def _split_globs(glob_arg: str) -> list[str]:
-    parts = [g.strip() for g in (glob_arg or "").split(",") if g.strip()]
-    # Default includes both deep and top-level files
-    return parts or ["**/*", "*"]
+def _ensure_filter_file(filter_arg: str|None) -> Path:
+  """
+  If --filter is provided, return that path (must exist).
+  Otherwise, create ./stagehand_filter.py in the CWD if missing (writing a helpful template),
+  and return its path.
+  """
+  if filter_arg:
+    p = Path(filter_arg)
+    if not p.is_file():
+      raise RuntimeError(f"--filter file not found: {p}")
+    return p
 
-def find_config_paths(stage_root: Path, glob_arg: str) -> list[Path]:
-    """
-    Given stage root and comma-glob string, return sorted list of files (regular or symlink).
-    Defaults to match ALL files under stage, including top-level ones.
-    """
-    root = stage_root.resolve()
-    patterns = _split_globs(glob_arg)
-    out: set[Path] = set()
+  p = Path.cwd() / DEFAULT_FILTER_FILENAME
+  if not p.exists():
+    try:
+      p.write_text(DEFAULT_FILTER_SOURCE, encoding="utf-8")
+      print(f"(created default filter at {p})")
+    except Exception as e:
+      raise RuntimeError(f"failed to create default filter {p}: {e}")
+  return p
 
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        # (optional) prune symlinked dirs to avoid cycles; files can still be symlinks
-        dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
-
-        for fname in filenames:
-            f_abs = Path(dirpath, fname)
-            rel = f_abs.relative_to(root).as_posix()
-            if any(fnmatch.fnmatch(rel, pat) for pat in patterns):
-                try:
-                    st = f_abs.lstat()
-                    if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
-                        out.add(f_abs)
-                except Exception:
-                    # unreadable/broken entries are skipped
-                    pass
-
-    return sorted(out, key=lambda p: p.as_posix())
-
-
-
-def _run_one_config(config_path: Path, stage_root: Path) -> Planner:
-  """Execute a single config's `configure(prov, planner, WriteFileMeta)` and return that config's Planner."""
-  prov = PlanProvenance(stage_root=stage_root, config_path=config_path)
-  per_planner = Planner(provenance=prov)  # defaults derive from this file's provenance
-  env = runpy.run_path(str(config_path))
-  fn = env.get("configure")
+def _load_accept_func(filter_path: Path):
+  env = runpy.run_path(str(filter_path))
+  fn = env.get("accept")
   if not callable(fn):
-    raise RuntimeError(f"{config_path}: missing callable configure(prov, planner, WriteFileMeta)")
-  fn(prov, per_planner, WriteFileMeta)
-  return per_planner
+    raise RuntimeError(f"{filter_path}: missing callable 'accept(prov)'")
+  return fn
 
-def _aggregate_into_master(stage_root: Path, planners: list[Planner]) -> Planner:
-  """Create a master Planner and copy all Commands from per-config planners into it."""
-  # Synthetic provenance for the master planner (used only for display/meta)
-  fake_config = stage_root / "(aggregate).py"
-  master = Planner(PlanProvenance(stage_root=stage_root, config_path=fake_config))
+def _walk_all_files(stage_root: Path):
+  """
+  Yield every file (regular or symlink) under stage_root recursively.
+  We do not follow symlinked directories to avoid cycles.
+  """
+  root = stage_root.resolve()
+  for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    # prune symlinked dirs (files can still be symlinks)
+    dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
+    for fname in filenames:
+      p = Path(dirpath, fname)
+      try:
+        st = p.lstat()
+        if stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
+          yield p.resolve()
+      except Exception:
+        # unreadable/broken entries skipped
+        continue
 
-  # annotate meta
-  master.journal().set_meta(
+def find_config_paths(stage_root: Path, accept_func) -> list[Path]:
+  """
+  Return files accepted by the Python acceptance function: accept(prov) → True/False.
+  """
+  out: list[Path] = []
+  for p in _walk_all_files(stage_root):
+    prov = PlanProvenance(stage_root=stage_root, config_path=p)
+    try:
+      if accept_func(prov):
+        out.append(p)
+    except Exception as e:
+      raise RuntimeError(f"accept() failed on {prov.config_rel_fpath.as_posix()}: {e}")
+  return sorted(out, key=lambda q: q.as_posix())
+
+# --- run all configs into ONE planner ---
+
+def _run_all_configs_into_single_planner(stage_root: Path, cfgs: list[Path]) -> Planner:
+  """
+  Create a single Planner and execute each config's configure(prov, planner, WriteFileMeta)
+  against it. Returns that single Planner containing the entire plan.
+  """
+  # seed with synthetic provenance; we overwrite per config before execution
+  aggregate_prov = PlanProvenance(stage_root=stage_root, config_path=stage_root / "(aggregate).py")
+  planner = Planner(provenance=aggregate_prov)
+
+  for cfg in cfgs:
+    prov = PlanProvenance(stage_root=stage_root, config_path=cfg)
+    planner.set_provenance(prov)
+
+    env = runpy.run_path(str(cfg))
+    fn = env.get("configure")
+    if not callable(fn):
+      raise RuntimeError(f"{cfg}: missing callable configure(prov, planner, WriteFileMeta)")
+
+    fn(prov, planner, WriteFileMeta)
+
+  # annotate meta once, on the single planner's journal
+  j = planner.journal()
+  j.set_meta(
     generator_prog_str="executor.py",
     generated_at_utc_str=iso_utc_now_str(),
     user_name_str=getpass.getuser(),
     host_name_str=os.uname().nodename if hasattr(os, "uname") else "unknown",
     stage_root_dpath_str=str(stage_root.resolve()),
-    configs_list=[p._prov.config_rel_fpath.as_posix() for p in planners],
+    configs_list=[str(p.resolve().relative_to(stage_root.resolve())) for p in cfgs],
   )
-
-  # copy commands
-  out_j = master.journal()
-  for p in planners:
-    for cmd in p.journal().command_list:
-      out_j.append(cmd)  # keep Command objects as-is
-  return master
+  return planner
 
 # ----- CBOR “matchbox” (simple wrapper kept local to executor) -----
 
@@ -164,30 +228,23 @@ def _inner_main(plan_path: Path, phase2_print: bool, phase2_then_stop: bool) -> 
 
 # -------- outer executor (phase 1 & handoff) --------
 
-def _outer_main(args) -> int:
-  stage_root = Path(args.stage)
+def _outer_main(stage_root: Path, accept_func, args) -> int:
   if not stage_root.is_dir():
     print(f"error: --stage not a directory: {stage_root}", file=sys.stderr)
     return 2
 
-  cfgs = find_config_paths(stage_root, args.glob)
+  cfgs = find_config_paths(stage_root, accept_func)
   if not cfgs:
     print("No configuration files found.")
     return 0
 
-  # Execute each config into its own planner
-  per_planners: list[Planner] = []
-  for cfg in cfgs:
-    try:
-      per_planners.append(_run_one_config(cfg, stage_root))
-    except SystemExit:
-      raise
-    except Exception as e:
-      print(f"error: executing {cfg}: {e}", file=sys.stderr)
-      return 2
-
-  # Aggregate into a single master planner for printing/CBOR
-  master = _aggregate_into_master(stage_root, per_planners)
+  try:
+    master = _run_all_configs_into_single_planner(stage_root, cfgs)
+  except SystemExit:
+    raise
+  except Exception as e:
+    print(f"error: executing configs: {e}", file=sys.stderr)
+    return 2
 
   if args.phase_1_print:
     master.print()
@@ -233,14 +290,19 @@ def main(argv: list[str] | None = None) -> int:
     prog="executor.py",
     description="StageHand outer/inner executor (plan → CBOR → decode).",
   )
-  ap.add_argument("--stage", default="stage", help="stage root directory (default: ./stage)")
-
-  ap.add_argument("--glob", default="**/*",
-                  help="glob for config scripts under --stage (default: '**/*' = all files)")
-
-  # ap.add_argument("--glob",
-  #                 default="**/*",
-  #                 help="comma-separated globs under --stage (default: **/*; every file is a config)")
+  ap.add_argument("--stage", default="stage",
+                  help="stage root directory (default: ./stage)")
+  ap.add_argument(
+    "--filter",
+    default="",
+    help=f"path to acceptance filter program exporting accept(prov) "
+         f"(default: ./{DEFAULT_FILTER_FILENAME}; created if missing)"
+  )
+  ap.add_argument(
+    "--phase-0-then-stop",
+    action="store_true",
+    help="stop after arg checks & filter bootstrap (no stage scan)"
+  )
 
   # Phase-1 (outer) controls
   ap.add_argument("--phase-1-print", action="store_true", help="print master planner (phase 1)")
@@ -256,6 +318,7 @@ def main(argv: list[str] | None = None) -> int:
 
   args = ap.parse_args(argv)
 
+  # Inner path
   if args.inner:
     if not args.plan:
       print("error: --inner requires --plan <file>", file=sys.stderr)
@@ -264,8 +327,33 @@ def main(argv: list[str] | None = None) -> int:
                        phase2_print=args.phase_2_print,
                        phase2_then_stop=args.phase_2_then_stop)
 
-  return _outer_main(args)
+  # Phase 0: bootstrap & stop (no scan)
+  stage_root = Path(args.stage)
+  try:
+    filter_path = _ensure_filter_file(args.filter or None)
+  except Exception as e:
+    print(f"error: {e}", file=sys.stderr)
+    return 2
 
+  if not stage_root.exists():
+    print(f"error: --stage not found: {stage_root}", file=sys.stderr)
+    return 2
+  if not stage_root.is_dir():
+    print(f"error: --stage is not a directory: {stage_root}", file=sys.stderr)
+    return 2
+
+  if args.phase_0_then_stop:
+    print(f"phase-0 OK: stage at {stage_root.resolve()} and filter at {filter_path}")
+    return 0
+
+  # Load acceptance function and proceed with outer
+  try:
+    accept_func = _load_accept_func(filter_path)
+  except Exception as e:
+    print(f"error: {e}", file=sys.stderr)
+    return 2
+
+  return _outer_main(stage_root, accept_func, args)
 
 if __name__ == "__main__":
   sys.exit(main())

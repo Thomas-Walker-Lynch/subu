@@ -5,7 +5,7 @@ executor.py — StageHand outer/inner executor (MVP; UNPRIVILEGED for now)
 Phase 0 (bootstrap):
   - Ensure filter program exists (create default in CWD if --filter omitted)
   - Validate --stage exists
-  - If --phase-0-then-stop: exit here (no scan ,no execution)
+  - If --phase-0-then-stop: exit here (no scan, no execution)
 
 Phase 1 (outer):
   - Discover every file under --stage; acceptance filter decides which to include
@@ -47,7 +47,7 @@ from Planner import (
 DEFAULT_FILTER_FILENAME = "stagehand_filter.py"
 
 DEFAULT_FILTER_SOURCE = """# StageHand acceptance filter (default template)
-# Return True to include a config file ,False to skip it.
+# Return True to include a config file, False to skip it.
 # You receive a PlanProvenance object named `prov`.
 #
 # prov fields commonly used here:
@@ -90,8 +90,8 @@ def iso_utc_now_str()-> str:
 
 def _ensure_filter_file(filter_arg: str|None)-> Path:
   """
-  If --filter is provided ,return that path (must exist).
-  Otherwise ,create ./stagehand_filter.py in the CWD if missing (writing a helpful template),
+  If --filter is provided, return that path (must exist).
+  Otherwise, create ./stagehand_filter.py in the CWD if missing (writing a helpful template),
   and return its path.
   """
   if filter_arg:
@@ -138,7 +138,7 @@ def _walk_all_files(stage_root: Path):
 def find_config_paths(stage_root: Path ,accept_func)-> list[Path]:
   """
   Return files accepted by the Python acceptance function: accept(prov) → True/False.
-  Ordered breadth-first by depth ,then lexicographically by relative path.
+  Ordered breadth-first by depth, then lexicographically by relative path.
   """
   out: list[tuple[int ,str ,Path]] = []
   root = stage_root.resolve()
@@ -157,7 +157,7 @@ def find_config_paths(stage_root: Path ,accept_func)-> list[Path]:
 
 def _run_all_configs_into_single_planner(stage_root: Path ,cfgs: list[Path])-> Planner:
   """
-  Create a single Planner and execute each config's configure(prov ,planner ,WriteFileMeta)
+  Create a single Planner and execute each config's configure(prov, planner, WriteFileMeta)
   against it. Returns that single Planner containing the entire plan.
   """
   # seed with synthetic provenance; we overwrite per config before execution
@@ -175,7 +175,7 @@ def _run_all_configs_into_single_planner(stage_root: Path ,cfgs: list[Path])-> P
 
     fn(prov ,planner ,WriteFileMeta)
 
-  # annotate meta once ,on the single planner's journal
+  # annotate meta once, on the single planner's journal
   j = planner.journal()
   j.set_meta(
     generator_prog_str="executor.py"
@@ -260,7 +260,7 @@ def _outer_main(stage_root: Path ,accept_func ,args)-> int:
   if args.phase_1_then_stop:
     return 0
 
-  # Phase 2: encode CBOR and invoke inner path (same script ,--inner)
+  # Phase 2: encode CBOR and invoke inner path (same script, --inner)
   try:
     cbor_bytes = _plan_to_cbor_bytes(master)
   except Exception as e:

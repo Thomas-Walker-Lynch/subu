@@ -1,60 +1,75 @@
 #!/bin/bash
+# masu_subu__map_own.sh <user> <subu> [--suid]
+#
+# Examples:
+#   subu_bind Thomas developer           # default (nosuid)
+#   subu_bind Thomas developer --suid    # enable setuid on this mount
 
-# Function to bind mount with UID/GID mapping
+set -euo pipefail
+
 subu_bind() {
-  local user=$1
-  local subu=$2
+  local user="$1"
+  local subu="$2"
+  local want_suid="${3-}"   # optional third arg
 
-  # Check if bindfs is installed
-  if ! command -v bindfs &> /dev/null; then
-    echo "Error: bindfs is not installed!"
+  if ! command -v bindfs &>/dev/null; then
+    echo "Error: bindfs is not installed!" >&2
     return 1
   fi
 
-  # Get the username and group name for the main user
-  master_user_name=$user
-  master_group=$user
+  # identities
+  local master_user_name="$user"
+  local master_group="$user"
+  local subu_user_name="${user}-${subu}"
+  local subu_group="${user}-${subu}"
 
-  # Get the username and group name for the sub-user
-  subu_user_name="${user}-${subu}"
-  subu_group="${user}-${subu}"
+  id "$master_user_name" &>/dev/null || { echo "Error: user '$master_user_name' not found!" >&2; return 1; }
+  id "$subu_user_name"   &>/dev/null || { echo "Error: sub-user '$subu_user_name' not found!"   >&2; return 1; }
 
-  # Check if the user and sub-user exist
-  if ! id "$master_user_name" &>/dev/null; then
-    echo "Error: User '$master_user_name' not found!"
-    return 1
-  fi
-  if ! id "$subu_user_name" &>/dev/null; then
-    echo "Error: Sub-user '${master_user_name}-${subu}' not found!"
-    return 1
-  fi
+  # paths
+  local subu_data_path="/home/$user/subu_data/$subu"
+  local subu_mount_point_path="/home/$user/subu/$subu"
 
-  # Directories to be bind-mounted
-  subu_data_path="/home/$user/subu_data/$subu"
-  subu_mount_point_path="/home/$user/subu/$subu"
-
-  # Check if sub-user directory exists
-  if [ ! -d "$subu_data_path" ]; then
-    echo "Error: Sub-user directory '$subu_data_path' does not exist!"
-    return 1
-  fi
-
-  # Create the mount point if it doesn't exist
+  [[ -d "$subu_data_path" ]] || { echo "Error: source dir '$subu_data_path' does not exist!" >&2; return 1; }
   mkdir -p "$subu_mount_point_path"
 
-  # Perform the bind mount using bindfs with UID/GID mapping
-  sudo bindfs\
-       --map="$subu_user_name/$master_user_name:@$subu_group/@$master_group" \
-       "$subu_data_path" \
-       "$subu_mount_point_path"
+  # mount options
+  # - allow_other/default_permissions: kernel does POSIX perms
+  # - exec: allow execution on the mount
+  # - suid: only when explicitly requested (and only works when mounted as root)
+  local base_opts="allow_other,default_permissions,exec"
+  local opts="$base_opts,nosuid"
+  if [[ "$want_suid" == "--suid" ]]; then
+    opts="$base_opts,suid"
+  fi
 
-  # Verify if the mount was successful
-  if [ $? -eq 0 ]; then
-    echo "Successfully bind-mounted $subu_data_path to $subu_mount_point_path with UID/GID mapping."
+  # The UID/GID mapping you already use
+  local map_opt="--map=${subu_user_name}/${master_user_name}:@${subu_group}/@${master_group}"
+
+  # If already mounted, decide whether to keep or remount
+  if findmnt -n -T "$subu_mount_point_path" >/dev/null 2>&1; then
+    current_opts="$(findmnt -no OPTIONS -T "$subu_mount_point_path" || true)"
+    if [[ ",$current_opts," != *",$opts,"* ]]; then
+      echo "remounting $subu_mount_point_path with opts: $opts"
+      # clean remount: unmount then mount with new opts
+      sudo umount "$subu_mount_point_path"
+      sudo bindfs -o "$opts" $map_opt "$subu_data_path" "$subu_mount_point_path"
+    else
+      echo "already mounted with compatible options: $current_opts"
+    fi
   else
-    echo "Error: Failed to bind-mount $subu_data_path to $subu_mount_point_path, might already exist."
+    echo "mounting $subu_data_path -> $subu_mount_point_path with opts: $opts"
+    sudo bindfs -o "$opts" $map_opt "$subu_data_path" "$subu_mount_point_path"
+  fi
+
+  # Verify outcome
+  findmnt "$subu_mount_point_path" -o TARGET,FSTYPE,OPTIONS
+  echo "OK: $subu_data_path -> $subu_mount_point_path"
+  if [[ "$want_suid" == "--suid" ]]; then
+    echo "note: suid is enabled; setuid binaries (e.g., the gasket) can take effect on this mount."
+  else
+    echo "note: nosuid (default) — setuid will NOT take effect on this mount."
   fi
 }
 
-# Call the function with user and subu as arguments
-subu_bind "$1" "$2"
+subu_bind "${1:-}" "${2:-}" "${3:-}"

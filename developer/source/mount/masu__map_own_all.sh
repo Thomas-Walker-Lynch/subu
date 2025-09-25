@@ -9,7 +9,7 @@ fi
 user=$1
 
 # Get the list of sub-users by calling the user_list_subu_home.sh script
-subu_list=$(./user_list_subu_homedir.sh "$user")
+subu_list=$(./masu__subu_dir_llst.sh "$user")
 
 # Check if we received any sub-users
 if [ -z "$subu_list" ]; then

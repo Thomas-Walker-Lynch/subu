@@ -1,5 +1,6 @@
+#!/bin/env bash
 # masu_subu__map_own.sh
-#!/bin/bash
+
 # usage: sudo ./masu_subu__map_own.sh <masu> <subu> [--suid]
 set -euo pipefail
 

@@ -1,5 +1,6 @@
+#!/bin/env bash
 # masu__map_own_all.sh
-#!/bin/bash
+
 set -euo pipefail
 masu="${1:?Usage: $0 <masu> [--suid=subu1,subu2] }"
 suid_list="${2-}"  # optional: --suid=a,b,c

@@ -1,5 +1,6 @@
+#!/bin/env bash
 # masu__subu_dir_list.sh
-#!/bin/bash
+
 set -euo pipefail
 user="${1:?usage: $0 <masu>}"
 

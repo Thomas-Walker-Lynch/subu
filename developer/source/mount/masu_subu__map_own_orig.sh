@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 # Function to bind mount with UID/GID mapping
 subu_bind() {

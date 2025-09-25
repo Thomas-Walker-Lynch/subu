@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 # Function to bind mount a user's data to /home/<user>
 device_user_bind() {

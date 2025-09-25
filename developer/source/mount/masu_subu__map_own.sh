@@ -2,53 +2,36 @@
 # usage: sudo ./masu_subu__map_own.sh <masu> <subu> [--suid]
 set -euo pipefail
 
+masu="${1:?usage: $0 <masu> <subu> [--suid]}"
+subu="${2:?usage: $0 <masu> <subu> [--suid]}"
+want_suid=0; [[ "${3-}" == "--suid" ]] && want_suid=1
+
 need(){ command -v "$1" >/dev/null 2>&1 || { echo "missing: $1" >&2; exit 1; }; }
 need bindfs; need findmnt; need umount
 
-masu="${1:?usage: $0 <masu> <subu> [--suid] }"
-subu="${2:?usage: $0 <masu> <subu> [--suid] }"
-want_suid=0
-[[ "${3-}" == "--suid" ]] && want_suid=1
-
-master_user="$masu"
-master_group="$masu"
-subu_user="${masu}-${subu}"
-subu_group="${masu}-${subu}"
-
-id "$master_user" >/dev/null
-id "$subu_user"   >/dev/null
-
 src="/home/$masu/subu_data/$subu"
-tgt="/home/$masu/subu/$subu"
-[[ -d "$src" ]] || { echo "no source dir: $src" >&2; exit 1; }
-mkdir -p "$tgt"
+mp="/home/$masu/subu/$subu"
+[[ -d "$src" ]] || { echo "❌ source not found: $src" >&2; exit 1; }
+mkdir -p "$mp"
 
-# IMPORTANT: don’t stay inside the target tree while (un)mounting
-cd /
-
+# mount options
 base_opts="allow_other,default_permissions,exec"
-opts="$base_opts,nosuid"
-(( want_suid )) && opts="$base_opts,suid"
+opts="$base_opts,$([[ $want_suid -eq 1 ]] && echo suid || echo nosuid)"
 
-map_opt="--map=${subu_user}/${master_user}:@${subu_group}/@${master_group}"
-
-# Peel any existing mount at tgt (use -T to match covering mount)
-while findmnt -nr -T "$tgt" >/dev/null 2>&1; do
-  umount "$tgt" 2>/dev/null || umount -l "$tgt" || break
+# fully unstack any prior bindfs at the target
+while findmnt -rn -T "$mp" -t fuse.bindfs >/dev/null 2>&1; do
+  umount "$mp" 2>/dev/null || umount -l "$mp" || break
+  sleep 0.1
 done
 
-echo "mounting $src -> $tgt  (opts: $opts)"
-bindfs -o "$opts" $map_opt "$src" "$tgt"
+echo "mounting $src -> $mp  (opts: $opts)"
+bindfs -o "$opts" --map="${masu}-${subu}/${masu}:@${masu}-${subu}/@${masu}" "$src" "$mp"
 
-# Verify
-if findmnt -nr -T "$tgt" -o TARGET,SOURCE,FSTYPE,OPTIONS; then
-  echo "OK"
-  if (( want_suid )); then
-    echo "note: suid is ENABLED at $tgt"
-  else
-    echo "note: nosuid (default) — setuid will NOT take effect at $tgt"
-  fi
+# verify (single line, kernel-only)
+findmnt -rn -T "$mp" -S "$src" -o TARGET,SOURCE,FSTYPE,OPTIONS | head -n1
+echo "OK"
+if [[ $want_suid -eq 1 ]]; then
+  echo "note: suid enabled at $mp"
 else
-  echo "❌ bindfs did not mount at $tgt" >&2
-  exit 2
+  echo "note: nosuid (default) — setuid will NOT take effect at $mp"
 fi

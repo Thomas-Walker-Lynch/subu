@@ -1,23 +1,15 @@
+# masu__subu_dir_list.sh
 #!/bin/bash
+set -euo pipefail
+user="${1:?usage: $0 <masu>}"
 
-# Function to list sub-users in /home/<user>/subu
-subu_list() {
-  local user=$1
-  local subu_dir="/home/$user/subu"
+# Prefer the /home/<masu>/subu view; if empty/nonexistent, fall back to subu_data.
+list_from_dir() { local d="$1"; [[ -d "$d" ]] && find "$d" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' || true; }
 
-  if [ ! -d "/home/$user" ]; then
-    echo "Error: /home/$user does not exist!"
-    return 1
-  fi
+candidates="$(
+  list_from_dir "/home/$user/subu"
+  [[ -d "/home/$user/subu" && -n "$(ls -A /home/$user/subu 2>/dev/null || true)" ]] || list_from_dir "/home/$user/subu_data"
+)"
 
-  if [ ! -d "$subu_dir" ]; then
-    echo "Error: $subu_dir does not exist!"
-    return 1
-  fi
-
-  # List all sub-users in the subu directory
-  find "$subu_dir" -maxdepth 1 -mindepth 1 -type d -exec basename {} \;
-}
-
-# Run the function with the user as an argument
-subu_list "$1"
+# Unique, stable order
+printf '%s\n' "$candidates" | LC_ALL=C sort -u

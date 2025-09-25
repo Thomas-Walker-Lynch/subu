@@ -1,24 +1,27 @@
+# masu__map_own_all.sh
 #!/bin/bash
+set -euo pipefail
+masu="${1:?Usage: $0 <masu> [--suid=subu1,subu2] }"
+suid_list="${2-}"  # optional: --suid=a,b,c
 
-# Check if the correct number of arguments is passed
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <username>"
-  exit 1
-fi
+# Build a set for quick membership checks
+want_suid() {
+  [[ -n "$suid_list" ]] || return 1
+  [[ "$suid_list" =~ ^--suid= ]] || return 1
+  IFS=',' read -r -a arr <<< "${suid_list#--suid=}"
+  for n in "${arr[@]}"; do [[ "$n" == "$1" ]] && return 0; done
+  return 1
+}
 
-user=$1
+subus=$(./masu__subu_dir_list.sh "$masu")
+[[ -n "$subus" ]] || { echo "No sub-users found for $masu"; exit 1; }
 
-# Get the list of sub-users by calling the user_list_subu_home.sh script
-subu_list=$(./masu__subu_dir_list.sh "$user")
-
-# Check if we received any sub-users
-if [ -z "$subu_list" ]; then
-  echo "No sub-users found for $user."
-  exit 1
-fi
-
-# Loop through the sub-users and call user_open_subu.sh for each
-for subu in $subu_list; do
-  echo "Opening sub-user: $subu"
-  ./masu_subu__map_own.sh "$user" "$subu"
-done
+while IFS= read -r s; do
+  [[ -n "$s" ]] || continue
+  echo "Opening sub-user: $s"
+  if want_suid "$s"; then
+    sudo ./masu_subu__map_own.sh "$masu" "$s" --suid
+  else
+    sudo ./masu_subu__map_own.sh "$masu" "$s"
+  fi
+done <<< "$subus"

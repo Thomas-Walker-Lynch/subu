@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # Function to lookup the UID of the user and sub-user combination                                                                          
 get_subu_uid() {

@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # disable_linger_subu — turn off systemd --user lingering for all <masu>-* users
 # Usage: sudo disable_linger_subu --masu Thomas
 

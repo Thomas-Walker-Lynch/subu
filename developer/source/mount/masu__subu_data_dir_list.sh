@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # Function to list sub-users in /home/<user>/subu_data
 subu_home_dir_list() {

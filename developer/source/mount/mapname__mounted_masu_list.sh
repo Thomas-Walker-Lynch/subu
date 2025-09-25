@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # Function to list users in the /mnt/<device>/user_data directory
 device_user_list() {

@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 # masu__subu_dir_list.sh
 
 set -euo pipefail

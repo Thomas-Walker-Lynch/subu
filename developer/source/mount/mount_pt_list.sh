@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # Function to list available devices under /mnt, excluding /mnt itself
 mount_pt_list() {

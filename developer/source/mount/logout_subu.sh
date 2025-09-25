@@ -1,4 +1,4 @@
-#!#!/bin/env bash
+#!/usr/bin/env bash
 # logout_subu — cleanly stop subu users, tear down bindfs, unbind /home, unmount device, close LUKS
 # Usage:
 #   sudo logout_subu --masu Thomas --device Eagle [--aggressive] [--dry-run]

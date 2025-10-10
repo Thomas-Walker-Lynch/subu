@@ -11,7 +11,7 @@ want_suid_for() {
   return 1
 }
 
-subus="$(./masu__subu_dir_list.sh "$masu")"
+subus="$(./masu__subu_data_dir_list.sh "$masu")"
 [[ -n "$subus" ]] || { echo "No sub-users found for $masu"; exit 1; }
 
 while IFS= read -r s; do

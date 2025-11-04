@@ -1,146 +1,252 @@
 #!/usr/bin/env python3
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-CLI.py — thin command-line harness
-Version: 0.2.0
+1. CLI.py
+ dispatch.
+
+Role: parse argv, choose command, call
+CLI should not do any work beyond:
+
+  * figure out program_name (for example, manager/CLI.py or wrapper name)
+  * call the right function in dispatch
+  * print text from text.py when needed
+  * exit with the returned status code
 """
+
 import sys, argparse
-from text import USAGE, HELP, EXAMPLE, VERSION
-import core
+from text import make_text
+import dispatch
 
-def CLI(argv=None) -> int:
-  argv = argv or sys.argv[1:]
-  if not argv:
-    print(USAGE)
-    return 0
 
-  # simple verbs that bypass argparse (so `help/version/example` always work)
-  simple = {"help": HELP, "--help": HELP, "-h": HELP, "usage": USAGE, "example": EXAMPLE, "version": VERSION}
-  if argv[0] in simple:
-    out = simple[argv[0]]
-    print(out if isinstance(out, str) else out())
-    return 0
+def build_arg_parser(program_name):
+  """
+  Build the top level argument parser for the subu manager.
+  """
+  parser = argparse.ArgumentParser(prog=program_name, add_help=False)
+  parser.add_argument("-V","--Version", action="store_true", help="print version")
 
-  p = argparse.ArgumentParser(prog="subu", add_help=False)
-  p.add_argument("-V", "--Version", action="store_true", help="print version")
-  sub = p.add_subparsers(dest="verb")
+  subparsers = parser.add_subparsers(dest="verb")
 
+  register_subu_commands(subparsers)
+  register_wireguard_commands(subparsers)
+  register_attach_commands(subparsers)
+  register_network_commands(subparsers)
+  register_option_commands(subparsers)
+  register_exec_commands(subparsers)
+
+  return parser
+
+
+def register_subu_commands(subparsers):
+  """
+  Register subu related commands:
+    init, make, list, info, information, lo
+  """
   # init
-  ap = sub.add_parser("init")
+  ap = subparsers.add_parser("init")
   ap.add_argument("token", nargs="?")
 
-  # create/list/info
-  ap = sub.add_parser("create")
+  # make
+  ap = subparsers.add_parser("make")
   ap.add_argument("owner")
   ap.add_argument("name")
 
-  sub.add_parser("list")
-  ap = sub.add_parser("info"); ap.add_argument("subu_id")
-  ap = sub.add_parser("information"); ap.add_argument("subu_id")
+  # list
+  subparsers.add_parser("list")
+
+  # info / information
+  ap = subparsers.add_parser("info")
+  ap.add_argument("subu_id")
+  ap = subparsers.add_parser("information")
+  ap.add_argument("subu_id")
 
   # lo
-  ap = sub.add_parser("lo")
+  ap = subparsers.add_parser("lo")
   ap.add_argument("state", choices=["up","down"])
   ap.add_argument("subu_id")
 
-  # WG
-  ap = sub.add_parser("WG")
-  ap.add_argument("verb", choices=["global","create","server_provided_public_key","info","information","up","down"])
+
+def register_wireguard_commands(subparsers):
+  """
+  Register WireGuard related commands, grouped under 'WG':
+    WG global <BaseCIDR>
+    WG make <host:port>
+    WG server_provided_public_key <WG_ID> <Base64Key>
+    WG info|information <WG_ID>
+    WG up|down <WG_ID>
+  """
+  ap = subparsers.add_parser("WG")
+  ap.add_argument(
+    "wg_verb",
+    choices=[
+      "global",
+      "make",
+      "server_provided_public_key",
+      "info",
+      "information",
+      "up",
+      "down",
+    ],
+  )
   ap.add_argument("arg1", nargs="?")
   ap.add_argument("arg2", nargs="?")
 
-  # attach/detach
-  ap = sub.add_parser("attach")
+
+def register_attach_commands(subparsers):
+  """
+  Register attach and detach commands:
+    attach WG <Subu_ID> <WG_ID>
+    detach WG <Subu_ID>
+  """
+  ap = subparsers.add_parser("attach")
   ap.add_argument("what", choices=["WG"])
   ap.add_argument("subu_id")
   ap.add_argument("wg_id")
 
-  ap = sub.add_parser("detach")
+  ap = subparsers.add_parser("detach")
   ap.add_argument("what", choices=["WG"])
   ap.add_argument("subu_id")
 
-  # network
-  ap = sub.add_parser("network")
+
+def register_network_commands(subparsers):
+  """
+  Register network aggregate commands:
+    network up|down <Subu_ID>
+  """
+  ap = subparsers.add_parser("network")
   ap.add_argument("state", choices=["up","down"])
   ap.add_argument("subu_id")
 
-  # option
-  ap = sub.add_parser("option")
-  ap.add_argument("verb", choices=["set","get","list"])
+
+def register_option_commands(subparsers):
+  """
+  Register option commands:
+    option set|get|list ...
+  """
+  ap = subparsers.add_parser("option")
+  ap.add_argument("action", choices=["set","get","list"])
   ap.add_argument("subu_id")
   ap.add_argument("name", nargs="?")
   ap.add_argument("value", nargs="?")
 
-  # exec
-  ap = sub.add_parser("exec")
+
+def register_exec_commands(subparsers):
+  """
+  Register exec command:
+    exec <Subu_ID> -- <cmd> ...
+  """
+  ap = subparsers.add_parser("exec")
   ap.add_argument("subu_id")
+  # Use a dedicated "--" argument so that:
+  #   subu exec subu_7 -- curl -4v https://ifconfig.me
+  # works as before.
   ap.add_argument("--", dest="cmd", nargs=argparse.REMAINDER, default=[])
 
-  ns = p.parse_args(argv)
-  if ns.Version:
-    print(VERSION); return 0
+
+def CLI(argv=None) -> int:
+  """
+  Top level entry point for the subu manager CLI.
+  """
+  if argv is None:
+    argv = sys.argv[1:]
+
+  # For now we fix the program name to "subu".
+  # A release wrapper can later pass a different program name.
+  program_name = "subu"
+  text = make_text(program_name)
+
+  # No arguments is the same as "help".
+  if not argv:
+    print(text.help(), end="")
+    return 0
+
+  # Simple verbs that bypass argparse so they always work.
+  simple = {
+    "help": text.help,
+    "--help": text.help,
+    "-h": text.help,
+    "usage": text.usage,
+    "example": text.example,
+    "version": text.version,
+  }
+  if argv[0] in simple:
+    print(simple[argv[0]](), end="")
+    return 0
+
+  parser = build_arg_parser(program_name)
+  ns = parser.parse_args(argv)
+
+  if getattr(ns, "Version", False):
+    print(text.version(), end="")
+    return 0
 
   try:
     if ns.verb == "init":
-      return core.cmd_init(ns.token)
+      return dispatch.init(ns.token)
 
-    if ns.verb == "create":
-      core.create_subu(ns.owner, ns.name); return 0
+    if ns.verb == "make":
+      return dispatch.subu_make(ns.owner, ns.name)
+
     if ns.verb == "list":
-      core.list_subu(); return 0
+      return dispatch.subu_list()
+
     if ns.verb in ("info","information"):
-      core.info_subu(ns.subu_id); return 0
+      return dispatch.subu_info(ns.subu_id)
 
     if ns.verb == "lo":
-      core.lo_toggle(ns.subu_id, ns.state); return 0
+      return dispatch.lo_toggle(ns.subu_id, ns.state)
 
     if ns.verb == "WG":
-      v = ns.verb
-      if ns.arg1 is None and v in ("info","information"):
-        print("WG info requires WG_ID"); return 2
+      v = ns.wg_verb
+      if v in ("info","information") and ns.arg1 is None:
+        print("WG info requires WG_ID", file=sys.stderr)
+        return 2
       if v == "global":
-        core.wg_global(ns.arg1); return 0
-      if v == "create":
-        wid = core.wg_create(ns.arg1); print(wid); return 0
+        return dispatch.wg_global(ns.arg1)
+      if v == "make":
+        return dispatch.wg_make(ns.arg1)
       if v == "server_provided_public_key":
-        core.wg_set_pubkey(ns.arg1, ns.arg2); return 0
+        return dispatch.wg_server_public_key(ns.arg1, ns.arg2)
       if v in ("info","information"):
-        core.wg_info(ns.arg1); return 0
+        return dispatch.wg_info(ns.arg1)
       if v == "up":
-        core.wg_up(ns.arg1); return 0
+        return dispatch.wg_up(ns.arg1)
       if v == "down":
-        core.wg_down(ns.arg1); return 0
+        return dispatch.wg_down(ns.arg1)
 
     if ns.verb == "attach":
       if ns.what == "WG":
-        core.attach_wg(ns.subu_id, ns.wg_id); return 0
+        return dispatch.attach_wg(ns.subu_id, ns.wg_id)
 
     if ns.verb == "detach":
       if ns.what == "WG":
-        core.detach_wg(ns.subu_id); return 0
+        return dispatch.detach_wg(ns.subu_id)
 
     if ns.verb == "network":
-      core.network_toggle(ns.subu_id, ns.state); return 0
+      return dispatch.network_toggle(ns.subu_id, ns.state)
 
     if ns.verb == "option":
-      if ns.verb == "option" and ns.name is None and ns.value is None and ns.verb == "list":
-        core.option_list(ns.subu_id); return 0
-      if ns.verb == "set":
-        core.option_set(ns.subu_id, ns.name, ns.value); return 0
-      if ns.verb == "get":
-        core.option_get(ns.subu_id, ns.name); return 0
-      if ns.verb == "list":
-        core.option_list(ns.subu_id); return 0
+      if ns.action == "set":
+        return dispatch.option_set(ns.subu_id, ns.name, ns.value)
+      if ns.action == "get":
+        return dispatch.option_get(ns.subu_id, ns.name)
+      if ns.action == "list":
+        return dispatch.option_list(ns.subu_id)
 
     if ns.verb == "exec":
       if not ns.cmd:
-        print("subu exec <Subu_ID> -- <cmd> ..."); return 2
-      core.exec_in_subu(ns.subu_id, ns.cmd); return 0
+        print(f"{program_name} exec <Subu_ID> -- <cmd> ...", file=sys.stderr)
+        return 2
+      return dispatch.exec(ns.subu_id, ns.cmd)
 
-    print(USAGE); return 2
+    # If we reach here, the verb was not recognised.
+    print(text.usage(), end="")
+    return 2
+
   except Exception as e:
-    print(f"error: {e}")
+    print(f"error: {e}", file=sys.stderr)
     return 1
+
 
 if __name__ == "__main__":
   sys.exit(CLI())

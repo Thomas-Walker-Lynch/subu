@@ -1,0 +1,28 @@
+Domain modules
+
+subu.py
+
+wg.py
+
+network.py
+
+options.py
+
+exec.py (as in “execute command in subu”)
+
+
+Infrastructure modules
+
+db.py
+
+unix.py
+
+bpf.py
+
+bpf_worker.py
+
+bpf_force_egress.c
+
+schema.sql
+
+parser.py (either merged into CLI.py or deleted, see below)

@@ -1,7 +1,13 @@
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 """
-worker_bpf.py — create per-subu cgroups and load eBPF (MVP)
-Version: 0.2.0
+bpf_worker.py
+
+Cgroup + BPF orchestration for per-subu steering.
+
+5.4.1 ensure_mounts() -> None
+5.4.2 install_steering(subu: Subu, wg_iface: str) -> None
+5.4.3 remove_steering(subu: Subu) -> None
+5.4.4 class BpfError(Exception)
 """
 import os, subprocess, json
 from pathlib import Path

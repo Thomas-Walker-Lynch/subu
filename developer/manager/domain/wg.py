@@ -1,3 +1,15 @@
+"""
+4.2 domain/wg.py
+
+WireGuard objects, independent of subu.
+
+4.2.1 set_global_pool(base_cidr: str) -> None
+4.2.2 make_wg(endpoint: str) -> WG
+4.2.3 set_server_public_key(wg_id: str, key: str) -> None
+4.2.4 get_wg(wg_id: str) -> WG
+4.2.5 bring_up(wg_id: str) -> None
+4.2.6 bring_down(wg_id: str) -> None
+"""
 
 def wg_global(basecidr: str):
   WG_GLOBAL_FILE.write_text(basecidr.strip()+"\n")
@@ -9,7 +21,7 @@ def _alloc_ip(idx: int, base: str) -> str:
   host = 2 + idx
   return f"{prefix}.{host}/32"
 
-def wg_create(endpoint: str) -> str:
+def wg_make(endpoint: str) -> str:
   if not WG_GLOBAL_FILE.exists():
     raise RuntimeError("set WG base with `subu WG global <CIDR>` first")
   base = WG_GLOBAL_FILE.read_text().strip()

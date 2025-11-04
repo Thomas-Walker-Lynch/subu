@@ -5,7 +5,7 @@ verbs = [
     "version",
     "init",
     "make",
-    "create",
+    "make",
     "info",
     "information",
     "WG",

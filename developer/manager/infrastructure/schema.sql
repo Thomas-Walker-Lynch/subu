@@ -1,3 +1,9 @@
+-- schema.sql
+--
+-- 5.6.1 read and executed by db.ensure_schema
+
+
+
 CREATE TABLE subu (
   id            INTEGER PRIMARY KEY,
   owner         TEXT NOT NULL,           -- root user, e.g. 'Thomas'

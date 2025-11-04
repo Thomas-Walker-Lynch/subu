@@ -1,25 +1,75 @@
-# ------------- Subu ops -------------
-def create_subu(owner: str, name: str) -> str:
-  with closing(_db()) as db:
-    c = db.cursor()
-    subu_netns = f"ns-subu_tmp"  # temp; we rename after ID known
-    c.execute("INSERT INTO subu (owner, name, netns) VALUES (?, ?, ?)",
-              (owner, name, subu_netns))
-    sid = c.lastrowid
-    netns = f"ns-subu_{sid}"
-    c.execute("UPDATE subu SET netns=? WHERE id=?", (netns, sid))
-    db.commit()
+"""
+4.1 domain/subu.py
 
-  # create netns
-  run(["ip", "netns", "add", netns])
-  run(["ip", "-n", netns, "link", "set", "lo", "down"])
-  print(f"Created subu_{sid} ({owner}:{name}) with netns {netns}")
-  return f"subu_{sid}"
+Subu objects: creation, lookup, hierarchy, netns identity.
+
+4.1.1 make_subu(owner: str, name: str) -> Subu
+4.1.2 list_subu() -> list[Subu]
+4.1.3 get_subu(subu_id: str) -> Subu
+4.1.4 ensure_unix_identity(subu: Subu) -> None
+4.1.5 ensure_netns(subu: Subu) -> None
+
+(A Subu can be a dataclass or NamedTuple.)
+"""
+
+# domain/subu.py
+from dataclasses import dataclass
+from infrastructure.db import open_db, ensure_schema
+import sqlite3
+import time
+
+DB_PATH = "subu.db"
+
+
+@dataclass
+class Subu:
+  id: int
+  owner: str
+  name: str
+  username: str
+  made_at: str
+
+
+def _make_username(owner, name):
+  # simple deterministic username: owner_name -> owner_name (no spaces)
+  owner_s = owner.replace(" ", "_")
+  name_s = name.replace(" ", "_")
+  return f"{owner_s}_{name_s}"
+
+
+def make_subu(owner: str, name: str) -> Subu:
+  """
+  Create a subu row in subu.db and return the Subu dataclass.
+  """
+  conn = open_db(DB_PATH)
+  try:
+    ensure_schema(conn)
+    cur = conn.cursor()
+    username = _make_username(owner, name)
+    made_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    cur.execute(
+      "INSERT INTO subu (owner, name, username, made_at) VALUES (?, ?, ?, ?)",
+      (owner, name, username, made_at),
+    )
+    conn.commit()
+    rowid = cur.lastrowid
+    row = conn.execute("SELECT id, owner, name, username, made_at FROM subu WHERE id = ?", (rowid,)).fetchone()
+    return Subu(row["id"], row["owner"], row["name"], row["username"], row["made_at"])
+  finally:
+    conn.close()
+
 
 def list_subu():
-  with closing(_db()) as db:
-    for row in db.execute("SELECT id, owner, name, netns, lo_state, wg_id, network_state FROM subu"):
-      print(row)
+  """
+  Return a list of Subu objects currently in the DB.
+  """
+  conn = open_db(DB_PATH)
+  try:
+    ensure_schema(conn)
+    rows = conn.execute("SELECT id, owner, name, username, made_at FROM subu ORDER BY id").fetchall()
+    return [Subu(r["id"], r["owner"], r["name"], r["username"], r["made_at"]) for r in rows]
+  finally:
+    conn.close()
 
 def info_subu(subu_id: str):
   sid = int(subu_id.split("_")[1])
@@ -68,8 +118,8 @@ def make_subu(path_tokens: list[str]) -> str:
 
   Side effects:
     - DB row in 'subu' (id, owner, name, full_unix_name, path, netns_name, ...)
-    - netns ns-subu_<id> created with lo down
-    - Unix user created/ensured
+    - netns ns-subu_<id> made with lo down
+    - Unix user made/ensured
     - Unix groups ensured and membership updated
 
   Returns: textual Subu_ID, e.g. 'subu_7'.
@@ -120,7 +170,7 @@ def make_subu(path_tokens: list[str]) -> str:
     netns_name = f"ns-subu_{subu_id_num}"
 
     db.execute(
-      "INSERT INTO subu(id, owner, name, full_unix_name, path, netns_name, wg_id, created_at, updated_at) "
+      "INSERT INTO subu(id, owner, name, full_unix_name, path, netns_name, wg_id, made_at, updated_at) "
       "VALUES (?, ?, ?, ?, ?, ?, NULL, datetime('now'), datetime('now'))",
       (subu_id_num, masu, leaf, full_unix_name, path_str, netns_name)
     )
@@ -129,7 +179,7 @@ def make_subu(path_tokens: list[str]) -> str:
   subu_id = f"subu_{subu_id_num}"
 
   # 3) Create netns + lo down
-  _create_netns_for_subu(subu_id_num, netns_name)
+  _make_netns_for_subu(subu_id_num, netns_name)
 
   # 4) Ensure Unix user + groups
 

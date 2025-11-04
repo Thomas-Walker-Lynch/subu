@@ -1,4 +1,13 @@
+"""
+4.3 domain/network.py
 
+Netns + device wiring, including aggregate “network up/down”.
+
+4.3.1 lo_toggle(subu: Subu, state: str) -> None
+4.3.2 attach_wg(subu: Subu, wg: WG) -> None
+4.3.3 detach_wg(subu: Subu) -> None
+4.3.4 network_toggle(subu: Subu, state: str) -> None
+"""
 def network_toggle(subu_id: str, state: str):
   sid = int(subu_id.split("_")[1])
   with closing(_db()) as db:
@@ -14,7 +23,7 @@ def network_toggle(subu_id: str, state: str):
     db.commit()
   print(f"{subu_id}: network {state}")
 
-def _create_netns_for_subu(subu_id_num: int, netns_name: str):
+def _make_netns_for_subu(subu_id_num: int, netns_name: str):
   """
   Create the network namespace & bring lo down.
   """

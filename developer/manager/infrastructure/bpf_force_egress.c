@@ -1,9 +1,14 @@
 // -*- mode: c; c-basic-offset: 2; indent-tabs-mode: nil; tab-width: 8 -*-
 // bpf_force_egress.c — MVP scaffold to validate UID and prep metadata
-// Version 0.2.0
+/*
+  bpf_force_egress.c
+
+5.5.1 no callable Python API; compiled/used via bpf.py.
+*/
 #include <linux/bpf.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
+
 
 char LICENSE[] SEC("license") = "GPL";
 

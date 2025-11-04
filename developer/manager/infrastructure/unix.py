@@ -1,3 +1,16 @@
+"""
+unix.py
+
+Thin wrappers for OS commands.
+
+5.2.1 run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess
+5.2.2 ip(*args: str, check: bool = True)
+5.2.3 ip_netns(*args: str, check: bool = True)
+5.2.4 wg(*args: str, check: bool = True)
+
+Optional later: logging, dry-run, etc.
+"""
+
 # ---------------- Unix users & groups ----------------
 
 def _group_exists(name: str) -> bool:

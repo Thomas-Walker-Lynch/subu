@@ -1,3 +1,11 @@
+"""
+bpf.py
+
+Compile/load the BPF program.
+
+5.3.1 compile_bpf(source_path: str, output_path: str) -> None
+5.3.2 load_bpf(obj_path: str) -> BpfHandle
+"""
 
 def attach_wg(subu_id: str, wg_id: str):
   ensure_mounts()
@@ -11,14 +19,14 @@ def attach_wg(subu_id: str, wg_id: str):
     endpoint, local_ip, pubkey = w
 
   ifname = f"subu_{wid}"
-  # create WG link in init ns, move to netns
+  # make WG link in init ns, move to netns
   run(["ip", "link", "add", ifname, "type", "wireguard"])
   run(["ip", "link", "set", ifname, "netns", ns])
   run(["ip", "-n", ns, "addr", "add", local_ip, "dev", ifname], check=False)
   run(["ip", "-n", ns, "link", "set", "dev", ifname, "mtu", "1420"])
   run(["ip", "-n", ns, "link", "set", "dev", ifname, "down"])  # keep engine down until `network up`
 
-  # install steering (MVP: create cgroup + attach bpf program)
+  # install steering (MVP: make cgroup + attach bpf program)
   try:
     install_steering(subu_id, ns, ifname)
     print(f"{subu_id}: eBPF steering installed -> {ifname}")

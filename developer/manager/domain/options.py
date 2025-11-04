@@ -1,4 +1,12 @@
+"""
+4.4 domain/options.py
 
+Per-subu options, backed by DB.
+
+4.4.1 set_option(subu_id: str, name: str, value: str) -> None
+4.4.2 get_option(subu_id: str, name: str) -> str | None
+4.4.3 list_options(subu_id: str) -> dict[str, str]
+"""
 def option_set(subu_id: str, name: str, value: str):
   sid = int(subu_id.split("_")[1])
   with closing(_db()) as db:

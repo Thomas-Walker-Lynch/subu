@@ -78,31 +78,50 @@ Subu manager (v0.2.0)
 """
 
 EXAMPLE = """\
-# 0) Init
-subu init dzkq7b
+# 0) Initialise the subu database (once per directory)
+subu init
+# -> created ./subu.db
+# If ./subu.db already exists, init will fail with an error and do nothing.
 
-# 1) Create Subu
+# 1) Create a Subu “US” owned by user Thomas
 subu create Thomas US
-# -> subu_1
+# -> Subu_ID: subu_7
+# -> netns: ns-subu_7 with lo (down)
 
-# 2) WG pool once
+# 2) Define a global WireGuard address pool (once per host)
 subu WG global 192.168.112.0/24
+# -> base set; next free: 192.168.112.2/32
 
-# 3) Create WG object with endpoint
-subu WG create ReasoningTechnology.com:51820
-# -> WG_1
+# 3) Create a WG object with endpoint (ReasoningTechnology server)
+subu WG create 35.194.71.194:51820
+# or: subu WG create ReasoningTechnology.com:51820
+# -> WG_ID: WG_0
+# -> local IP: 192.168.112.2/32
+# -> AllowedIPs: 0.0.0.0/0
 
-# 4) Pubkey (placeholder)
-subu WG server_provided_public_key WG_1 ABCDEFG...xyz=
+# 4) Add server public key (example key)
+subu WG server_provided_public_key WG_0 ABCDEFG...xyz=
+# -> saved
 
-# 5) Attach device and install cgroup+BPF steering
-subu attach WG subu_1 WG_1
+# 5) Attach WG to the Subu
+subu attach WG subu_7 WG_0
+# -> creates device ns-subu_7/subu_0
+# -> assigns 192.168.112.2/32, MTU 1420, accept_local=1
+# -> enforces egress steering via cgroup/eBPF for UID(s) of subu_7
+# -> warns if lo is down in the netns
 
-# 6) Bring network up (lo + WG)
-subu network up subu_1
+# 6) Bring networking up for the Subu
+subu network up subu_7
+# -> brings lo up in ns-subu_7
+# -> brings subu_0 admin up
 
-# 7) Test inside ns
-subu exec subu_1 -- curl -4v https://ifconfig.me
+# 7) Start the WireGuard engine for this WG
+subu WG up WG_0
+# -> interface up; handshake should start if keys/endpoint are correct
+
+# 8) Run a command inside the Subu’s netns
+subu exec subu_7 -- curl -4v https://ifconfig.me
+# Traffic from this process should egress via subu_0/US tunnel.
 """
 
 def VERSION_string():

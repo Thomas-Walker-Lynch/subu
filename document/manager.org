@@ -1,0 +1,289 @@
+#+TITLE: Subu Manager Specification
+#+AUTHOR: Reasoning Technology / Thomas Walker Lynch
+#+DATE: 2025-11-03
+#+LANGUAGE: en
+#+STARTUP: overview
+#+PROPERTY: header-args :results output
+
+* Overview
+The *Subu Manager* is a command-line orchestration tool for creating and managing
+*lightweight user-containers* (“subus”) with isolated namespaces, private
+WireGuard interfaces, and enforced network routing rules.
+
+It unifies several Linux primitives:
+
+- Unix users and groups (for identity & filesystem isolation)
+- Network namespaces (for network isolation)
+- WireGuard interfaces (for VPN / tunnel endpoints)
+- eBPF cgroup programs (for routing enforcement)
+- SQLite database (for persistence and state tracking)
+
+The manager is designed to evolve toward a full *Subu Light Container System*,
+where each user has nested subordinate users, and each subu can have its own
+network, security policies, and forwarding rules.
+
+---
+
+* Architecture Summary
+** Components
+1. =CLI.py= :: command-line interface
+2. =core.py= :: high-level orchestration logic
+3. =db.py= (planned) :: schema definition and migration
+4. =userutil.py= (planned) :: Unix account and group management helpers
+5. =netutil.py= (planned) :: namespace and interface creation
+6. =bpfutil.py= (planned) :: cgroup/eBPF setup
+
+** Data persistence
+All persistent configuration lives in =subu.db= (SQLite).
+This file contains:
+- *meta* :: creation time, schema version
+- *subu* :: all subuser accounts and their namespace info
+- *wg* :: WireGuard endpoints
+- *links* :: relationships between subu and wg interfaces
+- *options* :: boolean or key/value runtime options
+
+---
+
+* Command Overview
+Each =CLI.py= command corresponds to a top-level operation.  The CLI delegates
+to core functions in =core.py=.
+
+| Command | Description | Implementation |
+|----------+--------------+----------------|
+| =init= | Create the SQLite DB and schema | `core.init_db()` |
+| =make= | Create a new subu hierarchy (user, netns, groups) | `core.make_subu(path_tokens)` |
+| =info= / =information= | Print full record of a subu | `core.get_subu_info()` |
+| =WG= | Manage WireGuard objects and their mapping | `core.create_wg()`, `core.attach_wg()` |
+| =attach= / =detach= | Link or unlink WG interface to subu namespace | `core.attach_wg_to_subu()` |
+| =network up/down= | Bring up or down all attached ifaces | `core.network_toggle()` |
+| =lo up/down= | Bring loopback up/down in subu netns | `core.lo_toggle()` |
+| =option add/remove/list= | Manage options | `core.option_add()` etc. |
+| =exec= | Run command inside subu netns | `core.exec_in_netns()` |
+| =help= / =usage= / =example= | Documentation commands | CLI only |
+| =version= | Print program version | constant in `core.VERSION` |
+
+---
+
+* Subu Creation Flow (=make=)
+
+** Syntax
+#+begin_example
+./CLI.py make Thomas new-subu Rabbit
+#+end_example
+
+** Behavior
+- Verifies that *parent path* (all but last token) exists.
+  - If two-level (e.g. =Thomas US=), requires Unix user =Thomas= exists.
+  - If deeper (e.g. =Thomas new-subu Rabbit=), requires DB entry for
+    =Thomas_new-subu=.
+- Allocates next available subu ID (first free integer).
+- Inserts row in DB with:
+  - =id=, =owner=, =name=, =full_unix_name=, =path=, =netns_name=
+- Creates network namespace =ns-subu_<id>=
+- Brings =lo= down inside that namespace.
+- Ensures Unix groups:
+  - =<masu>=
+  - =<masu>-incommon=
+- Ensures Unix user:
+  - =<masu>_<subu>...= (underscores for hierarchy)
+- Adds new user to both groups.
+
+** Implementation
+#+begin_src python
+def make_subu(path_tokens: list[str]) -> str:
+    # 1. Validate hierarchy, check parent
+    # 2. Allocate ID (via _first_free_id)
+    # 3. Insert into DB (open_db)
+    # 4. Create netns (ip netns add ...)
+    # 5. Ensure groups/users (useradd, groupadd)
+    # 6. Return subu_X identifier
+#+end_src
+
+---
+
+* User and Group Management
+
+** Goals
+Each subu is a Linux user; hierarchy is mirrored in usernames:
+#+begin_example
+Thomas_US
+Thomas_US_Rabbit
+Thomas_local
+#+end_example
+
+Each subu belongs to:
+- group =Thomas=
+- group =Thomas-incommon=
+
+** Implementation Functions
+#+begin_src python
+def _group_exists(name): ...
+def _user_exists(name): ...
+def _ensure_group(name): ...
+def _ensure_user(name, primary_group): ...
+def _add_user_to_group(user, group): ...
+#+end_src
+
+---
+
+* Database Schema (summary)
+
+#+begin_src sql
+CREATE TABLE meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE subu (
+  id INTEGER PRIMARY KEY,
+  owner TEXT NOT NULL,
+  name TEXT NOT NULL,
+  full_unix_name TEXT NOT NULL UNIQUE,
+  path TEXT NOT NULL,
+  netns_name TEXT NOT NULL,
+  wg_id INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE wg (
+  id INTEGER PRIMARY KEY,
+  endpoint TEXT,
+  local_ip TEXT,
+  server_pubkey TEXT,
+  created_at TEXT,
+  updated_at TEXT
+);
+
+CREATE TABLE links (
+  subu_id INTEGER,
+  wg_id INTEGER,
+  FOREIGN KEY(subu_id) REFERENCES subu(id),
+  FOREIGN KEY(wg_id) REFERENCES wg(id)
+);
+
+CREATE TABLE options (
+  subu_id INTEGER,
+  name TEXT,
+  value TEXT,
+  FOREIGN KEY(subu_id) REFERENCES subu(id)
+);
+#+end_src
+
+---
+
+* Networking and Namespaces
+Each subu has a private namespace.
+
+** Steps
+1. =ip netns add ns-subu_<id>=
+2. =ip netns exec ns-subu_<id> ip link set lo down=
+3. Optionally attach WG interfaces (later).
+
+** Implementation
+#+begin_src python
+def _create_netns_for_subu(subu_id_num, netns_name):
+    run(["ip", "netns", "add", netns_name])
+    run(["ip", "netns", "exec", netns_name, "ip", "link", "set", "lo", "down"])
+#+end_src
+
+---
+
+* WireGuard Integration
+Each subu may have exactly one WG interface.
+
+** Workflow
+1. Allocate new WG object via =subu WG create <endpoint>=
+2. Record server-provided key via =subu WG server_provided_public_key=
+3. Attach interface via =subu attach WG <Subu_ID> <WG_ID>=
+4. Bring network up (includes WG admin up).
+
+** Implementation (planned)
+#+begin_src python
+def create_wg(endpoint): ...
+def attach_wg_to_subu(subu_id, wg_id): ...
+def wg_up(wg_id): ...
+def wg_down(wg_id): ...
+#+end_src
+
+---
+
+* eBPF Steering (Planned)
+The manager will attach an eBPF program to the subu’s cgroup that:
+
+- Hooks =connect()=, =bind()=, =sendmsg()=
+- Forces =SO_BINDTOIFINDEX=subu_<M>= for all sockets created by the subu
+- Guarantees all UID traffic egresses through its WG interface
+- Reuses kernel routing for MTU/GSO logic, but overrides device binding
+
+** Implementation Sketch
+#+begin_src python
+def attach_egress_bpf(subu_id, ifindex):
+    # load compiled eBPF ELF (bpf_prog_load)
+    # attach to cgroup of the subu user (BPF_PROG_ATTACH)
+    pass
+#+end_src
+
+---
+
+* Options and Policies
+
+Options are persisted flags controlling runtime behavior.
+
+| Option Name | Purpose | Default |
+|--------------+----------+----------|
+| =local_forwarding= | Enable 127/8 forwarding to WG peer | off |
+| =steer_enabled= | Enable cgroup eBPF steering | on |
+
+** Implementation
+#+begin_src python
+def option_add(subu_id, name):
+    set_option(subu_id, name, "1")
+
+def option_remove(subu_id, name):
+    db.execute("DELETE FROM options WHERE subu_id=? AND name=?", ...)
+#+end_src
+
+---
+
+* Command Examples
+
+#+begin_example
+# 0) Initialize
+CLI.py init
+# -> creates ./subu.db
+
+# 1) Create first subu
+CLI.py make Thomas US
+# -> user Thomas_US, netns ns-subu_0
+
+# 2) Create hierarchical subu
+CLI.py make Thomas new-subu Rabbit
+# -> requires Thomas_new-subu exists
+
+# 3) Bring network up
+CLI.py network up subu_0
+
+# 4) Create WireGuard pool and object
+CLI.py WG global 192.168.112.0/24
+CLI.py WG create ReasoningTechnology.com:51820
+
+# 5) Attach and activate
+CLI.py attach WG subu_0 WG_0
+CLI.py WG up WG_0
+
+# 6) Inspect
+CLI.py info subu_0
+CLI.py option list subu_0
+#+end_example
+
+---
+
+* Future Work
+1. 127/8 forwarding rewrite & mapping
+2. Server-side sifter for mapped local addresses
+3. GUI configuration (subu-light control panel)
+4. BPF loader / verifier integration
+5. Persistent daemon mode for live control
+6. Automated namespace cleanup and audit
+7. JSON-RPC or REST management API

@@ -1,11 +1,6 @@
+#!/usr/bin/env bash
+
+{ . test_0_driver.sh 2> >(tee /dev/stderr >&3); } 3>test_0_out.sh 1>&3
 set -x
-./subu.py                 # -> USAGE (exit 0)
-./subu.py usage           # -> USAGE
-./subu.py -h              # -> HELP
-./subu.py --help          # -> HELP
-./subu.py help            # -> HELP
-./subu.py help WG         # -> WG topic help (or full HELP if topic unknown)
-./subu.py example         # -> EXAMPLE
-./subu.py version         # -> 0.1.4
-./subu.py -V              # -> 0.1.4
+diff -qr test_0_out.sh test_0_expected.sh
 set +x

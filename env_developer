@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# toolsmith owned developer environment file
-# see developer/tool/env for the developer's customizations
+# env_developer — enter the project developer environment
+# (must be sourced)
 
 script_afp=$(realpath "${BASH_SOURCE[0]}")
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
@@ -8,25 +8,37 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   exit 1
 fi
 
-# environment shared by all roles
-source tool_shared/bespoke/env
+# enter project environment
+#
+  source tool_shared/bespoke/env
 
-export ROLE=developer
-export ENV=$ROLE
-if [[ -n "${ROLE:-}" ]] && [[ -d "$REPO_HOME/$ROLE/tool" ]]; then
-  PATH="$REPO_HOME/$ROLE/tool:$PATH"
-fi
+# setup tools
+#
+  export PYTHON_HOME="$REPO_HOME/tool_shared/third_party/Python"
+  if [[ ":$PATH:" != *":$PYTHON_HOME/bin:"* ]]; then
+    export PATH="$PYTHON_HOME/bin:$PATH"
+  fi
 
-# shared tools
-# if [[ ":$PATH:" != *":$PYTHON_HOME/bin:"* ]]; then
-#   export PATH="$PYTHON_HOME/bin:$PATH"
-# fi
+  RT_gcc="$REPO_HOME/tool_shared/third_party/RT_gcc/release"
+  if [[ ":$PATH:" != *":$RT_gcc:"* ]]; then
+    export PATH="$RT_gcc:$PATH"
+  fi
 
-export PATH="$REPO_HOME/tool_shared/third_party/Man_In_Grey/release/shell":"$PATH"
+# enter the role environment
+#
+  export ROLE=developer
 
-cd $ROLE
+  tool="$REPO_HOME/$ROLE/tool"
+  if [[ ":$PATH:" != *":$tool:"* ]]; then
+    export PATH="$tool:$PATH"
+  fi
 
-# pull in developer's customization
-# source tool/env $@
+  export ENV=$ROLE/tool/env
 
-echo "in environment: $ENV"
+  cd "$ROLE"
+  if [[ -f "tool/env" ]]; then
+    source "tool/env"
+    echo "in environment: $ENV"
+  else
+    echo "not found: $ENV"
+  fi

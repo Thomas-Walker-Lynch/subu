@@ -1,4 +1,8 @@
+# Ignore all files
 *
+
+# But don't ignore the .gitignore file itself
 !/.gitignore
-# upstream has a .gitignore file in it, edit to keep anything precious
+
+# keep the upstream directory
 !/upstream

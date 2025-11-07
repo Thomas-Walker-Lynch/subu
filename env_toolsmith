@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# env_tester — enter the project tester environment
+# env_toolsmith — enter the project toolsmith environment
 # (must be sourced)
 
 script_afp=$(realpath "${BASH_SOURCE[0]}")
@@ -13,6 +13,7 @@ fi
   source tool_shared/bespoke/env
 
 # setup tools
+# initially these will not exist, as the toolsmith installs them
 #
   export PYTHON_HOME="$REPO_HOME/tool_shared/third_party/Python"
   if [[ ":$PATH:" != *":$PYTHON_HOME/bin:"* ]]; then
@@ -26,16 +27,16 @@ fi
 
 # enter the role environment
 #
-  export ROLE=tester
+  export ROLE=toolsmith
 
-  tool="$REPO_HOME/$ROLE/tool"
-  if [[ ":$PATH:" != *":$tool:"* ]]; then
-    export PATH="$tool:$PATH"
+  TOOL_DIR="$REPO_HOME/tool"
+  if [[ ":$PATH:" != *":$TOOL_DIR:"* ]]; then
+    export PATH="$TOOL_DIR:$PATH"
   fi
 
-  export ENV=$ROLE/tool/env
+  export ENV="tool/env"
 
-  cd "$ROLE"
+  cd "$REPO_HOME"
   if [[ -f "tool/env" ]]; then
     source "tool/env"
     echo "in environment: $ENV"

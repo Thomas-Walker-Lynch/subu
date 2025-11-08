@@ -8,7 +8,7 @@ from infrastructure.unix import (
 )
 
 
-def _validate_token(label: str, token: str):
+def _validate_token(label: str, token: str) -> str:
   """
   Validate a single path token (masu or subu).
 
@@ -39,7 +39,7 @@ def subu_username(masu: str, path_components: list[str]) -> str:
     masu subu subu ...
   """
   masu_s = _validate_token("masu", masu).replace(" ", "_")
-  subu_parts = []
+  subu_parts: list[str] = []
   for s in path_components:
     subu_parts.append(_validate_token("subu", s).replace(" ", "_"))
   parts = [masu_s] + subu_parts
@@ -51,7 +51,7 @@ def _parent_username(masu: str, path_components: list[str]) -> str | None:
   Return the Unix username of the parent subu, or None if this is top-level.
 
   Examples:
-    masu="Thomas", path=["S0"]    -> None (parent is just the masu)
+    masu="Thomas", path=["S0"]      -> None (parent is just the masu)
     masu="Thomas", path=["S0","S1"] -> "Thomas_S0"
   """
   if len(path_components) <= 1:
@@ -73,7 +73,7 @@ def make_subu(masu: str, path_components: list[str]) -> str:
     - tokens must not contain '_'
     - parent must exist:
         * for first-level subu: Unix user 'masu' must exist
-        * for deeper subu: parent subu unix user must exist
+        * for deeper subu: parent subu Unix user must exist
 
   Returns:
     Unix username, for example 'Thomas_S0' or 'Thomas_S0_S1'.
@@ -82,7 +82,6 @@ def make_subu(masu: str, path_components: list[str]) -> str:
     raise SystemExit("subu: make requires at least one subu component")
 
   # Normalize and validate tokens (this will raise SystemExit on error).
-  # subu_username will call _validate_token internally.
   username = subu_username(masu, path_components)
 
   # Enforce parent existence
@@ -92,13 +91,15 @@ def make_subu(masu: str, path_components: list[str]) -> str:
     masu_name = _validate_token("masu", masu)
     if not user_exists(masu_name):
       raise SystemExit(
-        f"subu: cannot make '{username}': masu Unix user '{masu_name}' does not exist"
+        f"subu: cannot make '{username}': "
+        f"masu Unix user '{masu_name}' does not exist"
       )
   else:
     # Deeper subu: require parent subu Unix user to exist
     if not user_exists(parent_uname):
       raise SystemExit(
-        f"subu: cannot make '{username}': parent subu unix user '{parent_uname}' does not exist"
+        f"subu: cannot make '{username}': "
+        f"parent subu unix user '{parent_uname}' does not exist"
       )
 
   # For now, group and user share the same name.

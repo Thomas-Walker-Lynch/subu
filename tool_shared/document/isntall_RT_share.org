@@ -1,0 +1,4 @@
+
+RT-share is used by a number of RT project.  So I usually install RT-share in the projects directory along side of other projects, then symlink it into third_party.
+
+An alternative is to git clone RT-share under third_party.

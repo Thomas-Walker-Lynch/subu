@@ -28,7 +28,7 @@ Usage:
   {program_name} example           # example workflow
   {program_name} version           # print version
 
-  {program_name} init <TOKEN>
+  {program_name} init
   {program_name} make <masu> <subu> [_<subu>]*
   {program_name} list
   {program_name} info <Subu_ID> | {program_name} information <Subu_ID>
@@ -59,8 +59,9 @@ Usage:
     return f"""Subu manager (v{current_version()})
 
 1) Init
-  {program_name} init <TOKEN>
-    Makes ./subu.db. Refuses to run if db exists.
+  {program_name} init
+    Gives an error if the db file already exits, otherwise creates it. The db file
+    path is set in env.py.
 
 2) Subu
   {program_name} make <masu> <subu> [_<subu>]*
@@ -99,7 +100,7 @@ Usage:
   def example(self):
     program_name = self.program_name
     return f"""# 0) Initialise the subu database (once per directory)
-{program_name} init dzkq7b
+{program_name} init
 
 # 1) Make Subu
 {program_name} make Thomas US

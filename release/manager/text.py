@@ -60,7 +60,8 @@ Usage:
 
 1) Init
   {program_name} init <TOKEN>
-    Makes ./subu.db. Refuses to run if db exists.
+    Gives an error if the db file already exits, otherwise creates it. The db file
+    path is set in env.py.
 
 2) Subu
   {program_name} make <masu> <subu> [_<subu>]*

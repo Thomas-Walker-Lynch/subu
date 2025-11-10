@@ -56,6 +56,26 @@ def ensure_unix_user(name: str, primary_group: str):
     run(["useradd", "-m", "-g", primary_group, "-s", "/bin/bash", name])
 
 
+def ensure_user_in_group(user: str, group: str):
+  """
+  Ensure 'user' is a member of supplementary group 'group'.
+
+  - Raises if either user or group does not exist.
+  - No-op if the membership is already present.
+  """
+  if not user_exists(user):
+    raise RuntimeError(f"ensure_user_in_group: user '{user}' does not exist")
+  if not group_exists(group):
+    raise RuntimeError(f"ensure_user_in_group: group '{group}' does not exist")
+
+  g = grp.getgrnam(group)
+  if user in g.gr_mem:
+    return
+
+  # usermod -a -G adds the group, preserving existing ones.
+  run(["usermod", "-a", "-G", group, user])
+
+
 def remove_unix_user_and_group(name: str):
   """
   Remove a Unix user and group that match this name, if they exist.

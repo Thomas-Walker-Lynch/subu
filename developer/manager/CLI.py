@@ -51,7 +51,6 @@ def register_subu_commands(subparsers):
   """
   # init
   ap = subparsers.add_parser("init")
-  ap.add_argument("token", nargs ="?")
 
   # make: path[0] is masu, remaining elements are the subu chain
   ap = subparsers.add_parser("make")
@@ -72,7 +71,7 @@ def register_subu_commands(subparsers):
 
   # lo
   ap = subparsers.add_parser("lo")
-  ap.add_argument("state", choices =["up","down"])
+<  ap.add_argument("state", choices =["up","down"])
   ap.add_argument("subu_id")
 
 def register_wireguard_commands(subparsers):
@@ -203,7 +202,7 @@ def CLI(argv=None) -> int:
 
   try:
     if ns.verb == "init":
-      return dispatch.init(ns.token)
+      return dispatch.init()
 
     if ns.verb == "make":
       # ns.path is ['masu', 'subu', ...]

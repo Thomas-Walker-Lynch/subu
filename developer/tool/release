@@ -1,7 +1,7 @@
 #!/usr/bin/env -S python3 -B
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 
-import os, sys, shutil, stat, pwd, grp, glob, tempfile
+import os, sys, shutil, stat, pwd, grp, glob, tempfile, datetime
 
 HELP = """usage: release {write|clean|ls|help|dry write} [DIR]
   write [DIR]   Write released files.
@@ -10,7 +10,7 @@ HELP = """usage: release {write|clean|ls|help|dry write} [DIR]
   clean [DIR]   Remove the contents of the release directories.
                - For DIR=manager: clean $REPO_HOME/release/manager.
                - For other DIR values: clean only that subdirectory under the release root.
-  ls            List $REPO_HOME/release as an indented tree: PERMS  OWNER  NAME.
+  ls            List $REPO_HOME/release as an indented tree: PERMS  OWNER  DATE  NAME.
   help          Show this message.
   dry write [DIR]
                 Preview what write would do without modifying the filesystem.
@@ -19,11 +19,13 @@ HELP = """usage: release {write|clean|ls|help|dry write} [DIR]
 ENV_MUST_BE = "developer/tool/env"
 DEFAULT_DIR_MODE = 0o700  # 077-congruent dirs
 
-
 def exit_with_status(msg, code=1):
   print(f"release: {msg}", file=sys.stderr)
   sys.exit(code)
 
+def format_mtime_utc(ts: float) -> str:
+  dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+  return dt.strftime("%Y-%m-%d_%H:%M:%S_Z")
 
 def assert_env():
   env = os.environ.get("ENV", "")
@@ -101,21 +103,23 @@ def ensure_dir(path, mode=DEFAULT_DIR_MODE, dry=False):
   os.makedirs(path, exist_ok=True)
   ensure_mode(path, mode)
 
-
 def filemode(m):
   try:
     return stat.filemode(m)
   except Exception:
     return oct(m & 0o777)
 
-
 def owner_group(st):
   try:
-    return f"{pwd.getpwuid(st.st_uid).pw_name}:{grp.getgrgid(st.st_gid).gr_name}"
+    user = pwd.getpwuid(st.st_uid).pw_name
+    group = grp.getgrgid(st.st_gid).gr_name
   except Exception:
-    return f"{st.st_uid}:{st.st_gid}"
+    user = str(st.st_uid)
+    group = str(st.st_gid)
+  return user if user == group else f"{user}:{group}"
 
 
+# ---------- LS (two-pass owner:group width) ----------
 # ---------- LS (two-pass owner:group width) ----------
 def list_tree(root):
   if not os.path.isdir(root):
@@ -133,38 +137,56 @@ def list_tree(root):
     files.sort(key=lambda e: e.name)
 
     if is_root:
+      # dotfiles at root first
       for f in (e for e in files if e.name.startswith(".")):
         st = os.lstat(f.path)
-        entries.append((False, depth, filemode(st.st_mode), owner_group(st), f.name))
+        perms = filemode(st.st_mode)
+        og = owner_group(st)
+        mtime = format_mtime_utc(st.st_mtime)
+        entries.append((False, depth, perms, og, mtime, f.name))
+      # dirs
       for d in dirs:
         st = os.lstat(d.path)
-        entries.append((True, depth, filemode(st.st_mode), owner_group(st), d.name + "/"))
+        perms = filemode(st.st_mode)
+        og = owner_group(st)
+        mtime = format_mtime_utc(st.st_mtime)
+        entries.append((True, depth, perms, og, mtime, d.name + "/"))
         gather(d.path, depth + 1, False)
+      # other files
       for f in (e for e in files if not e.name.startswith(".")):
         st = os.lstat(f.path)
-        entries.append((False, depth, filemode(st.st_mode), owner_group(st), f.name))
+        perms = filemode(st.st_mode)
+        og = owner_group(st)
+        mtime = format_mtime_utc(st.st_mtime)
+        entries.append((False, depth, perms, og, mtime, f.name))
     else:
+      # normal subdirs: dirs then files
       for d in dirs:
         st = os.lstat(d.path)
-        entries.append((True, depth, filemode(st.st_mode), owner_group(st), d.name + "/"))
+        perms = filemode(st.st_mode)
+        og = owner_group(st)
+        mtime = format_mtime_utc(st.st_mtime)
+        entries.append((True, depth, perms, og, mtime, d.name + "/"))
         gather(d.path, depth + 1, False)
       for f in files:
         st = os.lstat(f.path)
-        entries.append((False, depth, filemode(st.st_mode), owner_group(st), f.name))
+        perms = filemode(st.st_mode)
+        og = owner_group(st)
+        mtime = format_mtime_utc(st.st_mtime)
+        entries.append((False, depth, perms, og, mtime, f.name))
 
   gather(root, depth=1, is_root=True)
 
   ogw = 0
-  for (_isdir, _depth, _perms, ownergrp, _name) in entries:
+  for (_isdir, _depth, _perms, ownergrp, _mtime, _name) in entries:
     if len(ownergrp) > ogw:
       ogw = len(ownergrp)
 
   print("release/")
-  for (_isdir, depth, perms, ownergrp, name) in entries:
+  for (_isdir, depth, perms, ownergrp, mtime, name) in entries:
     indent = "  " * depth
-    print(f"{perms}  {ownergrp:<{ogw}}  {indent}{name}")
+    print(f"{perms}  {ownergrp:<{ogw}}  {mtime}  {indent}{name}")
 # ---------- end LS ----------
-
 
 def iter_src_files(topdir, src_root):
   """

@@ -8,7 +8,7 @@ from infrastructure.db import open_db, ensure_schema
 from infrastructure.options_store import set_option
 
 
-def init(token =None):
+def init():
   """
   Handle: subu init <TOKEN>
 

@@ -1,0 +1,36 @@
+I propose these commands for the tester:
+
+```
+> checkout core  # 'normal mode of work'
+
+> checkout release [majgor] [.minor]  If versions are not listed, the largest number versions are choosen
+
+> where # prints the current branch name
+
+> ensure test branch # if the current branch is not one of the test branches, runs `checkout core`.
+
+> list other release updates # lists names of files that are on the developer or release branch release directory that have been updated since the version on the tester branch release directory were made.  Also issues errors for those on the tester branch release directory that are newer than those on the developer/release branch release directory.
+
+> other release merge   # for core_tester_branch, merges from core_developer_branch. Before the merge, publishes message if any file under the `$REPO_HOME/tester` would be changed, and asks the tester really wants to do the merge.
+
+> push  # pushes changes to upstream repo, gives errors if files were changed anywhere except under $REPO_HOME/tester, and refuses to push.  This can be gotten around by using manual git commands, but in the future, there might be permission problems.
+
+> pull # pulls from upstream repo
+
+> publish minor  # creates a new release_branch_<version major>.<version minor> If there was no minor version before, the next minor version becomes `1`.  Otherwise, the minor version is incremented. A release_branch_<version major>  branch must exist.  Version numbers are consequitive numbers.
+
+> publish  major [<major version>] [minor version]  # if no `release_branch_<version major>[.<version minor>]` exists, then it creates a branch with major number 0, and minor number 1. If the version is specified, and it does not exist, it is made.
+
+```
+
+How they are used:
+
+1. The tester normally works on the core_tester_branch. He starts there after entering the project with `. env_tester`.  He merges changes from the core_developer_branch when ready to accept the next batch of changes from the developer.
+
+2. When the tester is feels a release is "done" he publishes it using `publish`. One would imagine the tester is in communication with the team before doing this. It is also interesting in that it gives the tester the last word on whether something gets published.
+
+Then later, perhaps due to bug fixes, the tester might have to do work testing already published work again.  We hope not, but it could happen.  To do this:
+
+3.the tester runs a `checkout` command. He might then run `checkout core` to get back to testing the core product.
+
+Remember to always create a separate CLI for parsing commands, and then to call a function that does the work.  That way the various commands can include each other as modules, and they call each other's functions.  No loops please ;-)

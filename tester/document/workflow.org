@@ -1,0 +1,479 @@
+#+TITLE: Core Branches, Tester Policies, and Workflows
+#+AUTHOR: Reasoning Technology
+#+OPTIONS: num:t
+
+Branches and naming
+
+1.1. Developer branch
+
+=core_developer_branch=
+
+Single canonical development branch.
+
+Developer commits source changes and updated release artifacts here.
+
+1.2. Tester branches
+
+=core_tester_branch=
+
+Main testing branch.
+
+Must correspond to =core_developer_branch=.
+
+Tester does normal day-to-day work here.
+
+=release_tester_<major>[.<minor>]=
+
+Testing branches tied to specific releases.
+
+Each must correspond to an existing =release_<major>[.<minor>]= branch.
+
+1.3. Release branches
+
+=release_<major>[.<minor>]=
+
+Branches representing published releases.
+
+There is never a =release_<major>.0=; that case is named =release_<major>=.
+
+=release_<3>= is treated as version =(3,0)= for ordering.
+
+1.4. Version ordering
+
+Versions are ordered as integer pairs =(major, minor)=.
+
+Minor is treated as =0= when absent.
+
+For two versions:
+
+=(M1, m1) > (M2, m2)= if:
+
+=M1 > M2=, or
+
+=M1 == M2= and =m1 > m2=.
+
+Examples:
+
+=3.10 > 3.2= (minor 10 vs minor 2).
+
+=4.0 > 3.999= (any major 4 > any major 3).
+
+=release_3.2 > release_3= because =(3,2) > (3,0)=.
+
+Directory layout and roles
+
+2.1. Fixed directories
+
+=$REPO_HOME= :: Absolute project root.
+
+Always exists (Harmony skeleton):
+
+=$REPO_HOME/developer=
+
+=$REPO_HOME/tester=
+
+=$REPO_HOME/release=
+
+2.2. Role responsibilities
+
+Developer
+
+Works under =$REPO_HOME/developer= (e.g. after ~. ./env_developer~).
+
+Updates code and runs =release= to populate =$REPO_HOME/release=.
+
+Commits and pushes changes on =core_developer_branch=.
+
+Tester
+
+Works under =$REPO_HOME/tester= (after ~. ./env_tester~).
+
+Writes tests and runs them against artifacts in =$REPO_HOME/release=.
+
+Commits tests on =core_tester_branch= or =release_tester_*=.
+
+Toolsmith
+
+Works on shared code under =tool_shared/= (not the git-ignored =tool_shared/third_party/=).
+
+Commits shared tool changes on =core_developer_branch=.
+
+Developer gets these via ~git pull~ on =core_developer_branch=.
+
+Tester gets them when merging from =core_developer_branch= into tester branches.
+
+2.3. third_party tools
+
+=tool_shared/third_party/= is git-ignored.
+
+Each user is responsible for their own copies there.
+
+Shared, version-controlled tools live elsewhere in the tree (e.g. under =tool_shared/= but not in =third_party/=).
+
+Policies
+
+3.1. Tester write policy
+
+Tester may only write under:
+
+=$REPO_HOME/tester/**=
+
+It is against policy for tester-side pushes to include changes outside =$REPO_HOME/tester/**=.
+
+Current tools enforce this softly:
+
+They list such paths and ask “these are against policy, are you sure?”.
+
+The tester may still proceed, but is expected to do so consciously.
+
+3.2. Developer vs tester domains
+
+Developer owns:
+
+=developer/
+
+=release/
+
+Shared code (e.g. under =tool_shared/=, except git-ignored areas).
+
+Tester owns:
+
+=tester/= and its subtrees.
+
+Toolsmith changes to shared code are made on =core_developer_branch= and flow to testers via merges.
+
+3.3. Executable files
+
+For any merge/pull helper that changes files:
+
+Executable files (based on mode bits) are always listed explicitly before confirmation.
+
+This applies to:
+
+Merges from developer branches.
+
+Pulls/merges from tester’s own remote branches.
+
+3.4. Soft enforcement
+
+For now, tools do not hard-fail on policy violations.
+
+Instead:
+
+They list affected files (especially outside =$REPO_HOME/tester/**=).
+
+They prompt for confirmation:
+
+“These paths are against policy, are you sure you want to proceed?”
+
+Future enforcement via permissions is possible, but not assumed.
+
+Workflows
+
+4.1. Developer workflow (core_developer_branch)
+
+Normal cycle:
+
+Work on code under =developer/=
+
+Build and run tests locally.
+
+Run =release= to update =$REPO_HOME/release= artifacts.
+
+Commit changes (code + release artifacts + any shared tools).
+
+Push to =origin/core_developer_branch=.
+
+The state of =release/= on =core_developer_branch= defines “what the tester will see next time they merge”.
+
+4.2. Tester workflow on core_tester_branch
+
+Enter environment:
+
+~. ./env_tester~
+
+Ensure branch is =core_tester_branch= (via =checkout core=).
+
+Normal cycle:
+
+Run tests against current =$REPO_HOME/release=.
+
+Edit tests under =tester/=
+
+Commit tests as needed.
+
+Optionally push to =origin/core_tester_branch= using the policy-aware =push= command.
+
+Accepting a new core release from developer:
+
+Run a “list updates” / “merge core” helper:
+
+It compares =core_tester_branch= with =core_developer_branch=, restricted to =release/= (and possibly shared tools).
+
+Lists changed files and executable files.
+
+If acceptable:
+
+Merge =origin/core_developer_branch= into =core_tester_branch=.
+
+Commit/resolve as needed.
+
+Push updated =core_tester_branch=.
+
+4.3. Tester workflow on release_tester_<major>[.<minor>]
+
+When a published release needs regression or bug-fix testing:
+
+Identify target release branch =release_<major>[.<minor>]=.
+
+Checkout corresponding tester branch:
+
+=release_tester_<major>[.<minor>]=
+
+Testing cycle:
+
+Run tests against =$REPO_HOME/release= as it exists on this branch.
+
+Update/re-run tests under =tester/= if necessary.
+
+Commit to the =release_tester_* branch.
+
+Optionally push that branch for collaboration.
+
+When hotfixes or updated releases appear:
+
+Corresponding =release_<major>[.<minor>]= is updated on =core_developer_branch= side.
+
+The tester’s “release merge” helper can bring those changes into =release_tester_<major>[.<minor>]= in a controlled way (listing affected paths first).
+
+4.4. Toolsmith workflow
+
+Toolsmith edits shared code (not =third_party/=) on =core_developer_branch=.
+
+Normal steps:
+
+~. ./env_developer~ (or a dedicated toolsmith env that still uses =core_developer_branch=).
+
+Modify shared code (e.g. under =tool_shared/=).
+
+Commit changes on =core_developer_branch=.
+
+Push to =origin/core_developer_branch=.
+
+Developer picks up these changes with their usual pulls.
+
+Tester gets these changes when merging from =core_developer_branch= into tester branches.
+
+Tools can highlight such changes (and executables) before merges so the tester knows when shared infrastructure has shifted.
+
+Tester commands (conceptual)
+
+5.1. General
+
+Commands live under =$REPO_HOME/tester/tool/= and are on =PATH= after ~. ./env_tester~.
+
+Each command:
+
+Has its own CLI parser.
+
+Calls worker functions (in shared modules) to do the real work.
+
+Does not call other commands via their CLIs (no loops).
+
+5.2. Branch introspection
+
+=where=
+
+Prints current branch name.
+
+Returns an error if current branch is not a testing branch:
+
+=core_tester_branch=, or
+
+Any =release_tester_<major>[.<minor>]=.
+
+=checkout core=
+
+Switches to =core_tester_branch=.
+
+This is the “normal mode of work” for new testing.
+
+=checkout release [<major>] [.<minor>]=
+
+Without arguments:
+
+Finds all =release_tester_<major>[.<minor>]= branches.
+
+Parses their versions as integer pairs.
+
+Selects the highest =(major, minor)= (with minor =0 when absent).
+
+With arguments:
+
+Attempts to checkout the specific =release_tester_<major>[.<minor>]= branch.
+
+Errors if that branch does not exist.
+
+5.3. Release updates and merges
+
+=list other release updates=
+
+Compares the current tester branch with the corresponding developer branch:
+
+=core_tester_branch= ↔ =core_developer_branch=
+
+=release_tester_<N[.M]> ↔ release_<N[.M]>=
+
+Restricts comparison to =$REPO_HOME/release/**=.
+
+Lists:
+
+Files that are newer on developer (tester is behind).
+
+Files that are newer on tester (unexpected; highlighted as against policy).
+
+Prints a summary and may ask for confirmation before any merge operation.
+
+=other release merge= (name subject to refinement)
+
+For =core_tester_branch=:
+
+Merges from =core_developer_branch=.
+
+For =release_tester_<N[.M]>=:
+
+Merges from =release_<N[.M]>=.
+
+Before merging, it:
+
+Lists any files under =$REPO_HOME/tester/**= that would change.
+
+Lists all executable files that would change anywhere.
+
+Prompts:
+
+“These paths are against policy (or shared infrastructure changes), are you sure?”
+
+5.4. Push and pull
+
+=push=
+
+Pre-flight:
+
+Diff current branch vs its upstream.
+
+Identify files outside =$REPO_HOME/tester/**=.
+
+If such files exist:
+
+List them, with executables highlighted.
+
+Prompt: “These are against policy, are you sure you want to push?”
+
+If confirmed:
+
+Runs =git push= to the branch’s upstream.
+
+=pull=
+
+Used to pull updates from the same tester branch on the remote (e.g. shared testing).
+
+Behavior:
+
+Lists files that will be changed, especially executables and non-tester paths.
+
+Prompts for confirmation before performing any merge or fast-forward.
+
+Developer changes are not brought in via =pull=; they come through the dedicated “merge from developer” commands.
+
+Publishing and versioning
+
+6.1. Publishing a new release (tester-driven)
+
+When tester deems core testing “done” and the team agrees:
+
+From =core_tester_branch=:
+
+Use =publish major [<major>] [<minor>]= or =publish minor= to create / bump the appropriate =release_<major>[.<minor>]= branch.
+
+Each publish:
+
+Creates a new =release_<major>[.<minor>]= branch if needed.
+
+Ensures that for a given major:
+
+First minor is =1= (no =.0= names).
+
+The corresponding =release_tester_<major>[.<minor>]= branch is used for any additional testing of that specific release.
+
+6.2. Minor and major increments
+
+=publish minor=
+
+For an existing major version:
+
+Examines all existing =release_<major>[.<minor>]= branches.
+
+Treats absent minor as =0= for ordering.
+
+Creates the next minor as =minor_last + 1=.
+
+Names it =release_<major>.<next_minor>=.
+
+=publish major [<major>] [<minor>]=
+
+Creates a new major version branch when a significant release is ready.
+
+If no major specified:
+
+Uses the next integer after the highest existing major.
+
+Starts with either:
+
+=release_<new_major>= (implicit .0), or
+
+=release_<new_major>.1= depending on the chosen policy for that project.
+
+If version specified and does not yet exist:
+
+Creates =release_<major>[.<minor>]= and corresponding tester branch.
+
+Summary
+
+7.1. Core ideas
+
+The project has a clear branch topology:
+
+=core_developer_branch= for development + releases.
+
+=core_tester_branch= for ongoing testing.
+
+=release_<major>[.<minor>]= and =release_tester_<major>[.<minor>]= for published releases and their tests.
+
+The filesystem is partitioned by role:
+
+Developer owns =developer/= and =release/= and shared code.
+
+Tester owns =tester/=.
+
+Shared code is edited on =core_developer_branch= and flows to testers via merges.
+
+Versioning is numeric and explicit:
+
+Major/minor pairs with implicit minor 0 when absent.
+
+No =.0= suffix in branch names; =release_3= is the =3.0= level.
+
+Tools (per-command CLIs) enforce policies softly:
+
+They detect and list out-of-policy changes.
+
+They always highlight executable changes.
+
+They ask for confirmation instead of silently permitting or hard-failing.
+
+Publishing is tester-driven:
+
+Tester (in coordination with the team) decides when a release is ready.
+
+Publishing creates or advances =release_* and =release_tester_* branches so that future testing and regression work can target exact versions.

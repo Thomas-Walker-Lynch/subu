@@ -1,134 +1,122 @@
 # text.py
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 
-from env import version as current_version
+"""
+text.py — user-facing text for the subu manager CLI.
+"""
 
 
-class Text:
-  """
-  Program text bound to a specific command name.
-
-  Usage:
-    text_1 = Text("subu")
-    text_2 = Text("manager")
-
-    print(text_1.usage())
-    print(text_2.help())
-  """
-
-  def __init__(self, program_name ="subu"):
+class _Text:
+  def __init__(self, program_name: str):
     self.program_name = program_name
+    # Keep version string in one place here for now.
+    self._version = "0.3.4"
 
-  def usage(self):
-    program_name = self.program_name
-    return f"""{program_name} — Subu manager (v{current_version()})
+  # ---- Public API expected by CLI.py ---------------------------------------
 
-Usage:
-  {program_name}                   # usage
-  {program_name} help              # detailed help
-  {program_name} example           # example workflow
-  {program_name} version           # print version
+  def version(self) -> str:
+    """
+    Return a short version string suitable for 'PROG version'.
+    """
+    return f"{self._version}\n"
 
-  {program_name} init
-  {program_name} make <masu> <subu> [_<subu>]*
-  {program_name} list
-  {program_name} info <Subu_ID> | {program_name} information <Subu_ID>
+  def usage(self) -> str:
+    """
+    Return a short usage summary including the command surface.
+    """
+    p = self.program_name
+    v = self._version
+    return (
+      f"{p} — Subu manager (v{v})\n"
+      "\n"
+      "Usage:\n"
+      f"  {p}                   # usage\n"
+      f"  {p} help              # detailed help\n"
+      f"  {p} example           # example workflow\n"
+      f"  {p} version           # print version\n"
+      "\n"
+      f"  {p} db load schema\n"
+      "\n"
+      f"  {p} subu make <masu> <subu> [<subu> ...]\n"
+      f"  {p} subu list\n"
+      f"  {p} subu info subu_<id>\n"
+      f"  {p} subu info <masu> <subu> [<subu> ...]\n"
+      f"  {p} subu remove subu_<id>\n"
+      f"  {p} subu remove <masu> <subu> [<subu> ...]\n"
+      "\n"
+      f"  {p} lo up|down <Subu_ID>\n"
+      "\n"
+      f"  {p} WG global <BaseCIDR>\n"
+      f"  {p} WG make <host:port>\n"
+      f"  {p} WG server_provided_public_key <WG_ID> <Base64Key>\n"
+      f"  {p} WG info|information <WG_ID>\n"
+      f"  {p} WG up <WG_ID>\n"
+      f"  {p} WG down <WG_ID>\n"
+      "\n"
+      f"  {p} attach WG <Subu_ID> <WG_ID>\n"
+      f"  {p} detach WG <Subu_ID>\n"
+      "\n"
+      f"  {p} network up|down <Subu_ID>\n"
+      "\n"
+      f"  {p} option set <Subu_ID> <name> <value>\n"
+      f"  {p} option get <Subu_ID> <name>\n"
+      f"  {p} option list <Subu_ID>\n"
+      "\n"
+      f"  {p} exec <Subu_ID> -- <cmd> ...\n"
+    )
 
-  {program_name} lo up|down <Subu_ID>
+  def help(self) -> str:
+    """
+    Return a more detailed help text.
 
-  {program_name} WG global <BaseCIDR>
-  {program_name} WG make <host:port>
-  {program_name} WG server_provided_public_key <WG_ID> <Base64Key>
-  {program_name} WG info|information <WG_ID>
-  {program_name} WG up <WG_ID>
-  {program_name} WG down <WG_ID>
+    For now this is usage plus a short explanatory block.
+    """
+    p = self.program_name
+    return (
+      self.usage()
+      + "\n"
+      "Notes:\n"
+      f"  * '{p} db load schema' must be run as root and will create/update the\n"
+      "    manager's SQLite database (schema only).\n"
+      "  * 'subu' commands manage subu records and their corresponding Unix users.\n"
+      "    They accept either a numeric Subu_ID (e.g. 'subu_3') or a path\n"
+      "    (<masu> <subu> [<subu> ...]) where noted.\n"
+      "  * WireGuard, attach/detach, network, option, and exec commands are\n"
+      "    reserved for managing networking and runtime behavior of existing subu.\n"
+      "\n"
+    )
 
-  {program_name} attach WG <Subu_ID> <WG_ID>
-  {program_name} detach WG <Subu_ID>
-
-  {program_name} network up|down <Subu_ID>
-
-  {program_name} option set <Subu_ID> <subu> <value>
-  {program_name} option get <Subu_ID> <subu>
-  {program_name} option list <Subu_ID>
-
-  {program_name} exec <Subu_ID> -- <cmd> ...
-"""
-
-  def help(self, verbose =False):
-    program_name = self.program_name
-    return f"""Subu manager (v{current_version()})
-
-1) Init
-  {program_name} init
-    Gives an error if the db file already exits, otherwise creates it. The db file
-    path is set in env.py.
-
-2) Subu
-  {program_name} make <masu> <subu> [_<subu>]*
-  {program_name} list
-  {program_name} info <Subu_ID>
-
-3) Loopback
-  {program_name} lo up|down <Subu_ID>
-
-4) WireGuard objects (independent of subu)
-  {program_name} WG global <BaseCIDR>                 # for example, 192.168.112.0/24
-  {program_name} WG make <host:port>                # allocates next /32
-  {program_name} WG server_provided_public_key <WG_ID> <Base64Key>
-  {program_name} WG info <WG_ID>
-  {program_name} WG up <WG_ID> / {program_name} WG down <WG_ID> # administrative toggle after attached
-
-5) Attach or detach and eBPF steering
-  {program_name} attach WG <Subu_ID> <WG_ID>
-    - Makes WireGuard device as subu_<M> inside ns-subu_<N>, assigns /32, MTU 1420
-    - Installs per-subu cgroup and loads eBPF scaffold (user identifier check, metadata map)
-    - Keeps device administrative-down until `{program_name} network up`
-  {program_name} detach WG <Subu_ID>
-    - Deletes device, removes cgroup and eBPF program
-
-6) Network aggregate
-  {program_name} network up|down <Subu_ID>
-    - Ensures loopback is up on 'up', toggles attached WireGuard interfaces
-
-7) Options
-  {program_name} option set|get|list ...
-
-8) Exec
-  {program_name} exec <Subu_ID> -- <cmd> ...
-"""
-
-  def example(self):
-    program_name = self.program_name
-    return f"""# 0) Initialise the subu database (once per directory)
-{program_name} init
-
-# 1) Make Subu
-{program_name} make Thomas US
-# -> subu_1
-
-# 2) WireGuard pool once
-{program_name} WG global 192.168.112.0/24
-
-# 3) Make WireGuard object with endpoint
-{program_name} WG make ReasoningTechnology.com:51820
-# -> WG_1
-
-# 4) Server public key (placeholder)
-{program_name} WG server_provided_public_key WG_1 ABCDEFG...xyz=
-
-# 5) Attach device and install cgroup and eBPF steering
-{program_name} attach WG subu_1 WG_1
-
-# 6) Bring network up (loopback and WireGuard)
-{program_name} network up subu_1
-
-# 7) Test inside namespace
-{program_name} exec subu_1 -- curl -4v https://ifconfig.me
-"""
-
-  def version(self):
-    return current_version()
+  def example(self) -> str:
+    """
+    Return an example workflow.
+    """
+    p = self.program_name
+    return (
+      f"Example workflow:\n"
+      "\n"
+      f"  # 1. As root, create or update the manager database schema\n"
+      f"  sudo {p} db load schema\n"
+      "\n"
+      f"  # 2. As root, create a developer subu for Thomas\n"
+      f"  sudo {p} subu make Thomas developer\n"
+      "\n"
+      f"  # 3. As root, create a nested subu 'bolt' under Thomas/developer\n"
+      f"  sudo {p} subu make Thomas developer bolt\n"
+      "\n"
+      f"  # 4. As any user, list all known subu\n"
+      f"  {p} subu list\n"
+      "\n"
+      f"  # 5. Show detailed info by path\n"
+      f"  {p} subu info Thomas developer bolt\n"
+      "\n"
+      f"  # 6. Later, remove the nested subu by ID\n"
+      f"  sudo {p} subu remove subu_3\n"
+      "\n"
+    )
 
 
-def make_text(program_name ="subu"):
-  return Text(program_name)
+def make_text(program_name: str) -> _Text:
+  """
+  Factory used by CLI.py to get a text provider for the given program name.
+  """
+  return _Text(program_name)

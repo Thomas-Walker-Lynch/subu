@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
-"""
-1. CLI.py
- dispatch.
+"""CLI.py — subu manager front-end.
 
-Role: parse argv, choose command, call
+Role: parse argv, choose command, call dispatch.
+
 CLI should not do any work beyond:
 
   * figure out program_name (for example, manager/CLI.py or wrapper name)
@@ -18,65 +17,50 @@ from text import make_text
 import dispatch
 
 
-def build_arg_parser(program_name):
+def register_db_commands(subparsers):
+  """Register DB-related commands under 'db'.
+
+  db load schema
   """
-  Build the top level argument parser for the subu manager.
-  """
-  parser = argparse.ArgumentParser(prog=program_name, add_help=False)
-  parser.add_argument("-V","--Version", action="store_true", help="print version")
+  ap_db = subparsers.add_parser("db")
+  db_sub = ap_db.add_subparsers(dest="db_verb")
 
-  subparsers = parser.add_subparsers(dest="verb")
+  ap = db_sub.add_parser("load")
+  ap.add_argument("what", choices=["schema"])
 
-  register_subu_commands(subparsers)
-  register_wireguard_commands(subparsers)
-  register_attach_commands(subparsers)
-  register_network_commands(subparsers)
-  register_option_commands(subparsers)
-  register_exec_commands(subparsers)
-
-  return parser
 
 def register_subu_commands(subparsers):
+  """Register subu related commands under 'subu':
+
+    subu make <masu> <subu> [<subu>]*
+    subu remove <Subu_ID> | <masu> <subu> [<subu>]*
+    subu list
+    subu info <Subu_ID> | <masu> <subu> [<subu>]*
   """
-  Register subu related commands:
-    init, make, remove, list, info, information, lo
-
-  The subu path is:
-
-    masu subu subu ...
-
-  For example:
-    subu make Thomas S0
-    subu make Thomas S0 S1
-  """
-  # init
-  ap = subparsers.add_parser("init")
+  ap_subu = subparsers.add_parser("subu")
+  subu_sub = ap_subu.add_subparsers(dest="subu_verb")
 
   # make: path[0] is masu, remaining elements are the subu chain
-  ap = subparsers.add_parser("make")
-  ap.add_argument("path", nargs ="+")  # [masu, subu, subu, ...]
+  ap = subu_sub.add_parser("make")
+  ap.add_argument("path", nargs="+")
 
-  # remove: same path structure
-  ap = subparsers.add_parser("remove")
-  ap.add_argument("path", nargs ="+")  # [masu, subu, subu, ...]
+  # remove: either ID or path
+  ap = subu_sub.add_parser("remove")
+  ap.add_argument("target")
+  ap.add_argument("rest", nargs="*")
 
   # list
-  subparsers.add_parser("list")
+  subu_sub.add_parser("list")
 
-  # info / information
-  ap = subparsers.add_parser("info")
-  ap.add_argument("subu_id")
-  ap = subparsers.add_parser("information")
-  ap.add_argument("subu_id")
+  # info
+  ap = subu_sub.add_parser("info")
+  ap.add_argument("target")
+  ap.add_argument("rest", nargs="*")
 
-  # lo
-  ap = subparsers.add_parser("lo")
-<  ap.add_argument("state", choices =["up","down"])
-  ap.add_argument("subu_id")
 
 def register_wireguard_commands(subparsers):
-  """
-  Register WireGuard related commands, grouped under 'WG':
+  """Register WireGuard related commands, grouped under 'WG':
+
     WG global <BaseCIDR>
     WG make <host:port>
     WG server_provided_public_key <WG_ID> <Base64Key>
@@ -101,8 +85,8 @@ def register_wireguard_commands(subparsers):
 
 
 def register_attach_commands(subparsers):
-  """
-  Register attach and detach commands:
+  """Register attach and detach commands:
+
     attach WG <Subu_ID> <WG_ID>
     detach WG <Subu_ID>
   """
@@ -117,44 +101,90 @@ def register_attach_commands(subparsers):
 
 
 def register_network_commands(subparsers):
-  """
-  Register network aggregate commands:
+  """Register network aggregate commands:
+
     network up|down <Subu_ID>
   """
   ap = subparsers.add_parser("network")
-  ap.add_argument("state", choices=["up","down"])
+  ap.add_argument("state", choices=["up", "down"])
   ap.add_argument("subu_id")
 
 
 def register_option_commands(subparsers):
-  """
-  Register option commands:
-    option set|get|list ...
+  """Register option commands.
+
+  Current surface:
+    option Unix <mode>       # e.g. dry|run
   """
   ap = subparsers.add_parser("option")
-  ap.add_argument("action", choices=["set","get","list"])
-  ap.add_argument("subu_id")
-  ap.add_argument("name", nargs="?")
-  ap.add_argument("value", nargs="?")
+  ap.add_argument("area", choices=["Unix"])
+  ap.add_argument("mode")
 
 
 def register_exec_commands(subparsers):
-  """
-  Register exec command:
+  """Register exec command:
+
     exec <Subu_ID> -- <cmd> ...
   """
   ap = subparsers.add_parser("exec")
   ap.add_argument("subu_id")
   # Use a dedicated "--" argument so that:
-  #   subu exec subu_7 -- curl -4v https://ifconfig.me
+  #   CLI.py exec subu_7 -- curl -4v https://ifconfig.me
   # works as before.
   ap.add_argument("--", dest="cmd", nargs=argparse.REMAINDER, default=[])
 
 
+def build_arg_parser(program_name: str) -> argparse.ArgumentParser:
+  """Build the top level argument parser for the subu manager."""
+  parser = argparse.ArgumentParser(prog=program_name, add_help=False)
+  parser.add_argument("-V", "--Version", action="store_true", help="print version")
+
+  subparsers = parser.add_subparsers(dest="verb")
+
+  register_db_commands(subparsers)
+  register_subu_commands(subparsers)
+  register_wireguard_commands(subparsers)
+  register_attach_commands(subparsers)
+  register_network_commands(subparsers)
+  register_option_commands(subparsers)
+  register_exec_commands(subparsers)
+
+  return parser
+
+
+def _collect_parse_errors(ns, program_name: str) -> list[str]:
+  """Check for semantic argument problems and collect error strings.
+
+  We keep this lightweight and focused on things we can know without
+  touching the filesystem or the database.
+  """
+  errors: list[str] = []
+
+  if ns.verb == "subu":
+    sv = getattr(ns, "subu_verb", None)
+    if sv == "make":
+      if not ns.path or len(ns.path) < 2:
+        errors.append(
+          "subu make requires at least <masu> and one <subu> component"
+        )
+    elif sv in ("remove", "info"):
+      # Either ID or path. For path we need at least 2 tokens.
+      if ns.target.startswith("subu_"):
+        if ns.verb == "subu" and sv in ("remove", "info") and ns.rest:
+          errors.append(
+            f"{program_name} subu {sv} with an ID form must not have extra path tokens"
+          )
+      else:
+        if len([ns.target] + list(ns.rest)) < 2:
+          errors.append(
+            f"{program_name} subu {sv} <masu> <subu> [<subu> ...] requires at least two tokens"
+          )
+
+  return errors
+
+
 def CLI(argv=None) -> int:
-  """
-  Top level entry point for the subu manager CLI.
-  """
+  """Top level entry point for the subu manager CLI."""
   if argv is None:
     argv = sys.argv[1:]
 
@@ -162,10 +192,6 @@ def CLI(argv=None) -> int:
   #
   # 1. If SUBU_PROGNAME is set in the environment, use that.
   # 2. Otherwise, derive it from sys.argv[0] (basename).
-  #
-  # This way:
-  #   - tester calling "CLI.py" sees "CLI.py" in help/usage.
-  #   - a future wrapper called "subu" will show "subu".
   prog_override = os.environ.get("SUBU_PROGNAME")
   if prog_override:
     program_name = prog_override
@@ -177,7 +203,7 @@ def CLI(argv=None) -> int:
 
   # No arguments is the same as "help".
   if not argv:
-    print(text.help(), end ="")
+    print(text.usage(), end="")
     return 0
 
   # Simple verbs that bypass argparse so they always work.
@@ -190,40 +216,43 @@ def CLI(argv=None) -> int:
     "version": text.version,
   }
   if argv[0] in simple:
-    print(simple[argv[0]](), end ="")
+    print(simple[argv[0]](), end="")
     return 0
 
   parser = build_arg_parser(program_name)
   ns = parser.parse_args(argv)
 
   if getattr(ns, "Version", False):
-    print(text.version(), end ="")
+    print(text.version(), end="")
     return 0
 
+  # Collect semantic parse errors before we call dispatch.
+  errors = _collect_parse_errors(ns, program_name)
+  if errors:
+    for msg in errors:
+      print(f"error: {msg}", file=sys.stderr)
+    return 2
+
   try:
-    if ns.verb == "init":
-      return dispatch.init()
+    if ns.verb == "db":
+      if ns.db_verb == "load" and ns.what == "schema":
+        return dispatch.db_load_schema()
 
-    if ns.verb == "make":
-      # ns.path is ['masu', 'subu', ...]
-      return dispatch.subu_make(ns.path)
-
-    if ns.verb == "remove":
-      return dispatch.subu_remove(ns.path)
-
-    if ns.verb == "list":
-      return dispatch.subu_list()
-
-    if ns.verb in ("info","information"):
-      return dispatch.subu_info(ns.subu_id)
-
-    if ns.verb == "lo":
-      return dispatch.lo_toggle(ns.subu_id, ns.state)
+    if ns.verb == "subu":
+      sv = ns.subu_verb
+      if sv == "make":
+        return dispatch.subu_make(ns.path)
+      if sv == "list":
+        return dispatch.subu_list()
+      if sv == "info":
+        return dispatch.subu_info(ns.target, ns.rest)
+      if sv == "remove":
+        return dispatch.subu_remove(ns.target, ns.rest)
 
     if ns.verb == "WG":
       v = ns.wg_verb
-      if v in ("info","information") and ns.arg1 is None:
-        print("WG info requires WG_ID", file =sys.stderr)
+      if v in ("info", "information") and ns.arg1 is None:
+        print("WG info requires WG_ID", file=sys.stderr)
         return 2
       if v == "global":
         return dispatch.wg_global(ns.arg1)
@@ -231,7 +260,7 @@ def CLI(argv=None) -> int:
         return dispatch.wg_make(ns.arg1)
       if v == "server_provided_public_key":
         return dispatch.wg_server_public_key(ns.arg1, ns.arg2)
-      if v in ("info","information"):
+      if v in ("info", "information"):
         return dispatch.wg_info(ns.arg1)
       if v == "up":
         return dispatch.wg_up(ns.arg1)
@@ -255,17 +284,18 @@ def CLI(argv=None) -> int:
 
     if ns.verb == "exec":
       if not ns.cmd:
-        print(f"{program_name} exec <Subu_ID> -- <cmd> ...", file =sys.stderr)
+        print(f"{program_name} exec <Subu_ID> -- <cmd> ...", file=sys.stderr)
         return 2
       return dispatch.exec(ns.subu_id, ns.cmd)
 
     # If we reach here, the verb was not recognised.
-    print(text.usage(), end ="")
+    print(text.usage(), end="")
     return 2
 
   except Exception as e:
-    print(f"error: {e}", file =sys.stderr)
+    print(f"error: {e}", file=sys.stderr)
     return 1
+
 
 if __name__ == "__main__":
   sys.exit(CLI())

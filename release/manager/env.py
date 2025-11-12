@@ -8,7 +8,7 @@ def version() -> str:
   """
   Software / CLI version.
   """
-  return "0.3.4"
+  return "0.3.5"
 
 
 def db_schema_version() -> str:

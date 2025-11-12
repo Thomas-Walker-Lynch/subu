@@ -1,0 +1,138 @@
+#!/usr/bin/env -S python3 -B
+# developer — operations that compare/merge against developer/release branches:
+#   developer branch list-new
+#   developer branch pull
+
+import sys, subprocess
+from tester_lib import (
+  chdir_repo_root,
+  ensure_on_testing_branch_or_die,
+  get_developer_ref_for_merge,
+  git_diff_name_status,
+  print_changes_with_exec_marker,
+  fetch_remote,
+  changes_outside_tester,
+  prompt_yes_no,
+  RELEASE_ROOT_REL,
+  TESTER_ROOT_REL,
+)
+
+
+def _run_git(args):
+  return subprocess.run(["git"] + list(args), check=True)
+
+
+def usage() -> int:
+  print("""developer — tester-side view of developer/release branches
+
+Usage:
+  developer help
+    Show this message.
+
+  developer branch list-new
+    List changes under release/ between the current tester branch (HEAD)
+    and its corresponding developer/release branch.
+
+  developer branch pull
+    Merge from the corresponding developer/release branch into the current
+    tester branch, listing:
+      - changes in release/
+      - any changes under tester/ (policy warning)
+      - any other changed paths and executables
+    and asking for confirmation before the merge.
+""".rstrip())
+  return 0
+
+
+def cmd_branch_list_new() -> int:
+  repo_root = chdir_repo_root()
+  info = ensure_on_testing_branch_or_die()
+  dev_ref = get_developer_ref_for_merge(info.name)
+  if not dev_ref:
+    print(f"developer branch list-new: no corresponding developer branch for '{info.name}'.", file=sys.stderr)
+    return 1
+
+  fetch_remote("origin")
+  changes = git_diff_name_status("HEAD", dev_ref, paths=[RELEASE_ROOT_REL])
+
+  if not changes:
+    print(f"release/ is up to date with {dev_ref}.")
+    return 0
+
+  print(f"Changes in release/ between HEAD ({info.name}) and {dev_ref}:")
+  print_changes_with_exec_marker(changes, repo_root)
+  return 0
+
+
+def cmd_branch_pull() -> int:
+  repo_root = chdir_repo_root()
+  info = ensure_on_testing_branch_or_die()
+  dev_ref = get_developer_ref_for_merge(info.name)
+  if not dev_ref:
+    print(f"developer branch pull: no corresponding developer branch for '{info.name}'.", file=sys.stderr)
+    return 1
+
+  fetch_remote("origin")
+
+  # release/ changes
+  rel_changes = git_diff_name_status("HEAD", dev_ref, paths=[RELEASE_ROOT_REL])
+  print(f"Planned release/ changes from {info.name} -> {dev_ref}:")
+  print_changes_with_exec_marker(rel_changes, repo_root)
+
+  # tester/ changes (should be rare)
+  tester_changes = git_diff_name_status("HEAD", dev_ref, paths=[TESTER_ROOT_REL])
+  if tester_changes:
+    print("\nWARNING: these files under tester/ would change when merging from developer:")
+    print_changes_with_exec_marker(tester_changes, repo_root)
+    if not prompt_yes_no("These changes are against the usual policy. Proceed with merge?", default=False):
+      print("Aborting merge.")
+      return 1
+
+  # all other paths (shared tools etc.)
+  all_changes = git_diff_name_status("HEAD", dev_ref, paths=None)
+  non_tester = changes_outside_tester(all_changes)
+  other_non_release = [(s, p) for (s, p) in non_tester if not p.startswith(RELEASE_ROOT_REL + "/")]
+  if other_non_release:
+    print("\nOther files outside tester/ that will change (shared tools, etc.):")
+    print_changes_with_exec_marker(other_non_release, repo_root)
+
+  if not prompt_yes_no(f"Proceed with merge from {dev_ref} into {info.name}?", default=False):
+    print("Aborting merge.")
+    return 1
+
+  _run_git(["merge", dev_ref])
+  print(f"Merged {dev_ref} into {info.name}.")
+  return 0
+
+
+def CLI(argv=None) -> int:
+  if argv is None:
+    argv = sys.argv[1:]
+
+  if not argv or argv[0] in ("help", "-h", "--help"):
+    return usage()
+
+  if argv[0] != "branch":
+    print(f"developer: unknown top-level command '{argv[0]}' (expected 'branch' or 'help').", file=sys.stderr)
+    return 1
+
+  subargs = argv[1:]
+  if not subargs or subargs[0] in ("help", "-h", "--help"):
+    print("developer branch commands:")
+    print("  developer branch list-new")
+    print("  developer branch pull")
+    return 0
+
+  action = subargs[0]
+
+  if action == "list-new":
+    return cmd_branch_list_new()
+  if action == "pull":
+    return cmd_branch_pull()
+
+  print(f"developer branch: unknown action '{action}'.", file=sys.stderr)
+  return 1
+
+
+if __name__ == "__main__":
+  raise SystemExit(CLI())

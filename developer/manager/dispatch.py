@@ -1,19 +1,30 @@
 # dispatch.py
 # -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
 
-import os, sys, sqlite3
+import os, sys
 import env
 from domain import subu as subu_domain
+from domain import device as device_domain
 from infrastructure.db import open_db, ensure_schema
 from infrastructure.options_store import set_option
 
+from infrastructure.unix import (
+  ensure_unix_group,
+  ensure_unix_user,
+  ensure_user_in_group,
+  remove_user_from_group,
+  user_exists,
+)
+
+
+
+# lo_toggle, WG, attach, network, exec stubs remain below.
+
 
 def _require_root(action: str) -> bool:
-  """Return True if running as root, else print error and return False."""
   try:
     euid = os.geteuid()
   except AttributeError:
-    # Non-POSIX; be permissive.
     return True
   if euid != 0:
     print(f"{action}: must be run as root", file=sys.stderr)
@@ -26,11 +37,6 @@ def _db_path() -> str:
 
 
 def _open_existing_db() -> sqlite3.Connection | None:
-  """Open the existing manager DB or print an error and return None.
-
-  This does *not* create the DB; callers should ensure that
-  'db load schema' has been run first.
-  """
   path = _db_path()
   if not os.path.exists(path):
     print(
@@ -45,16 +51,11 @@ def _open_existing_db() -> sqlite3.Connection | None:
     print(f"subu: unable to open database '{path}': {e}", file=sys.stderr)
     return None
 
-  # Use row objects so we can access columns by name.
   conn.row_factory = sqlite3.Row
   return conn
 
 
 def db_load_schema() -> int:
-  """Handle: CLI.py db load schema
-
-  Ensure the DB directory exists, open the DB, and apply schema.sql.
-  """
   if not _require_root("db load schema"):
     return 1
 
@@ -82,51 +83,51 @@ def db_load_schema() -> int:
   return 0
 
 
-def subu_make(path_tokens: list[str]) -> int:
-  """Handle: CLI.py subu make <masu> <subu> [<subu> ...]
-
-  path_tokens is:
-    [masu, subu, subu, ...]
-
-  Example:
-    CLI.py subu make Thomas developer
-    CLI.py subu make Thomas developer bolt
+def device_scan(base_dir: str ="/mnt") -> int:
   """
-  if not path_tokens or len(path_tokens) < 2:
-    print(
-      "subu: make requires at least <masu> and one <subu> component",
-      file=sys.stderr,
-    )
-    return 2
+  Handle:
 
-  if not _require_root("subu make"):
-    return 1
+    CLI.py device scan [--base-dir /mnt]
 
-  masu = path_tokens[0]
-  subu_path = path_tokens[1:]
+  Behavior:
+    * Open the subu SQLite database.
+    * Scan all directories under base_dir that contain 'user_data'.
+    * For each such device:
+        - Upsert a row in 'device'.
+        - Reconcile all subu under user_data into 'subu', marking
+          them as online and associating them with the device.
+        - Mark any previously-known subu on that device that are not
+          seen in this scan as offline.
 
-  # 1) Create Unix user + groups.
+  This function does NOT perform any cryptsetup, mount, or bindfs work.
+  It assumes devices are already mounted at /mnt/<mapname>.
+  """
   try:
-    username = subu_domain.make_subu(masu, subu_path)
-  except SystemExit as e:
-    # Domain layer uses SystemExit for validation errors.
-    print(f"subu: {e}", file=sys.stderr)
-    return 2
+    conn = open_db()
   except Exception as e:
-    print(f"subu: error creating Unix user for {path_tokens}: {e}", file=sys.stderr)
+    print(
+      f"subu: cannot open database at '{env.db_path()}': {e}",
+      file =sys.stderr,
+    )
     return 1
 
-  # 2) Record in SQLite.
-  conn = _open_existing_db()
-  if conn is None:
-    # Unix side succeeded but DB is missing; report and stop.
-    return 1
+  try:
+    count = device_domain.scan_and_reconcile(conn, base_dir)
+    if count == 0:
+      print(f"no user_data devices found under {base_dir}")
+    else:
+      print(f"scanned {count} device(s) under {base_dir}")
+    return 0
+  finally:
+    conn.close()
 
-  owner = masu
+
+def _insert_subu_row(conn, owner: str, subu_path: list[str], username: str) -> int | None:
+  """Insert a row into subu table and return its id."""
   leaf_name = subu_path[-1]
   full_unix_name = username
-  path_str = " ".join([masu] + subu_path)
-  netns_name = full_unix_name  # simple deterministic choice for now
+  path_str = " ".join([owner] + subu_path)
+  netns_name = full_unix_name
 
   from datetime import datetime, timezone
 
@@ -140,32 +141,151 @@ def subu_make(path_tokens: list[str]) -> int:
       (owner, leaf_name, full_unix_name, path_str, netns_name, now, now),
     )
     conn.commit()
-    subu_id = cur.lastrowid
+    return cur.lastrowid
   except sqlite3.IntegrityError as e:
-    print(f"subu: database already has an entry for '{full_unix_name}': {e}", file=sys.stderr)
-    conn.close()
-    return 1
+    print(
+      f"subu: database already has an entry for '{full_unix_name}': {e}",
+      file=sys.stderr,
+    )
+    return None
   except Exception as e:
     print(f"subu: error recording subu in database: {e}", file=sys.stderr)
+    return None
+
+
+def _maybe_add_to_incommon(conn, owner: str, new_username: str) -> None:
+  """If owner has an incommon subu configured, add new_username to that group."""
+  key = f"incommon.{owner}"
+  spec = get_option(key, None)
+  if not spec:
+    return
+  if not isinstance(spec, str) or not spec.startswith("subu_"):
+    print(
+      f"subu: warning: option {key} has unexpected value '{spec}', "
+      "expected 'subu_<id>'",
+      file=sys.stderr,
+    )
+    return
+  try:
+    subu_numeric_id = int(spec.split("_", 1)[1])
+  except ValueError:
+    print(
+      f"subu: warning: option {key} has invalid Subu_ID '{spec}'",
+      file=sys.stderr,
+    )
+    return
+
+  row = conn.execute(
+    "SELECT full_unix_name FROM subu WHERE id = ? AND owner = ?",
+    (subu_numeric_id, owner),
+  ).fetchone()
+  if row is None:
+    print(
+      f"subu: warning: option {key} refers to missing subu id {subu_numeric_id}",
+      file=sys.stderr,
+    )
+    return
+
+  incommon_unix = row["full_unix_name"]
+  ensure_user_in_group(new_username, incommon_unix)
+
+
+def subu_make(path_tokens: list[str]) -> int:
+  if not path_tokens or len(path_tokens) < 2:
+    print(
+      "subu: make requires at least <masu> and one <subu> component",
+      file=sys.stderr,
+    )
+    return 2
+
+  if not _require_root("subu make"):
+    return 1
+
+  masu = path_tokens[0]
+  subu_path = path_tokens[1:]
+
+  try:
+    username = subu_domain.make_subu(masu, subu_path)
+  except SystemExit as e:
+    print(f"subu: {e}", file=sys.stderr)
+    return 2
+  except Exception as e:
+    print(f"subu: error creating Unix user for {path_tokens}: {e}", file=sys.stderr)
+    return 1
+
+  conn = _open_existing_db()
+  if conn is None:
+    return 1
+
+  subu_id = _insert_subu_row(conn, masu, subu_path, username)
+  if subu_id is None:
     conn.close()
     return 1
 
-  conn.close()
+  # If this owner has an incommon subu, join that group.
+  _maybe_add_to_incommon(conn, masu, username)
 
+  conn.close()
+  print(f"subu_{subu_id}")
+  return 0
+
+
+def subu_capture(path_tokens: list[str]) -> int:
+  """Handle: subu capture <masu> <subu> [<subu> ...]
+
+  Capture an existing Unix user into the database and fix its groups.
+  """
+  if not path_tokens or len(path_tokens) < 2:
+    print(
+      "subu: capture requires at least <masu> and one <subu> component",
+      file=sys.stderr,
+    )
+    return 2
+
+  if not _require_root("subu capture"):
+    return 1
+
+  masu = path_tokens[0]
+  subu_path = path_tokens[1:]
+
+  # Compute expected Unix username.
+  try:
+    username = subu_domain.subu_username(masu, subu_path)
+  except SystemExit as e:
+    print(f"subu: {e}", file=sys.stderr)
+    return 2
+
+  if not user_exists(username):
+    print(f"subu: capture: Unix user '{username}' does not exist", file=sys.stderr)
+    return 1
+
+  # Ensure the primary group exists (legacy systems should already have it).
+  ensure_unix_group(username)
+
+  # Ensure membership in ancestor groups for traversal.
+  ancestor_groups = subu_domain._ancestor_group_names(masu, subu_path)
+  for gname in ancestor_groups:
+    ensure_user_in_group(username, gname)
+
+  conn = _open_existing_db()
+  if conn is None:
+    return 1
+
+  subu_id = _insert_subu_row(conn, masu, subu_path, username)
+  if subu_id is None:
+    conn.close()
+    return 1
+
+  # Honor any incommon config for this owner.
+  _maybe_add_to_incommon(conn, masu, username)
+
+  conn.close()
   print(f"subu_{subu_id}")
   return 0
 
 
 def _resolve_subu(conn: sqlite3.Connection, target: str, rest: list[str]) -> sqlite3.Row | None:
-  """Resolve a subu either by ID (subu_7) or by path.
-
-  ID form:
-    target = 'subu_7', rest = []
-
-  Path form:
-    target = masu, rest = [subu, subu, ...]
-  """
-  # ID form: subu_7
+  """Resolve a subu either by ID (subu_7) or by path."""
   if target.startswith("subu_") and not rest:
     try:
       subu_numeric_id = int(target.split("_", 1)[1])
@@ -178,7 +298,6 @@ def _resolve_subu(conn: sqlite3.Connection, target: str, rest: list[str]) -> sql
       print(f"subu: no such subu with id {subu_numeric_id}", file=sys.stderr)
     return row
 
-  # Path form
   path_tokens = [target] + list(rest)
   if len(path_tokens) < 2:
     print(
@@ -201,7 +320,6 @@ def _resolve_subu(conn: sqlite3.Connection, target: str, rest: list[str]) -> sql
 
 
 def subu_list() -> int:
-  """Handle: CLI.py subu list"""
   conn = _open_existing_db()
   if conn is None:
     return 1
@@ -209,7 +327,6 @@ def subu_list() -> int:
   cur = conn.execute(
     "SELECT id, owner, path, full_unix_name, netns_name, wg_id FROM subu ORDER BY id"
   )
-
   rows = cur.fetchall()
   conn.close()
 
@@ -231,12 +348,6 @@ def subu_list() -> int:
 
 
 def subu_info(target: str, rest: list[str]) -> int:
-  """Handle: CLI.py subu info <Subu_ID>|<masu> <subu> [<subu> ...]
-
-  Examples:
-    CLI.py subu info subu_3
-    CLI.py subu info Thomas developer bolt
-  """
   conn = _open_existing_db()
   if conn is None:
     return 1
@@ -271,12 +382,6 @@ def subu_info(target: str, rest: list[str]) -> int:
 
 
 def subu_remove(target: str, rest: list[str]) -> int:
-  """Handle: CLI.py subu remove <Subu_ID>|<masu> <subu> [<subu> ...]
-
-  This removes both:
-    - the Unix user/group associated with the subu, and
-    - the corresponding row from the database.
-  """
   if not _require_root("subu remove"):
     return 1
 
@@ -290,10 +395,9 @@ def subu_remove(target: str, rest: list[str]) -> int:
     return 1
 
   subu_id = row["id"]
-  owner = row["owner"]
   path_str = row["path"]
   path_tokens = path_str.split(" ")
-  if not path_tokens or len(path_tokens) < 2:
+  if len(path_tokens) < 2:
     print(f"subu: stored path is invalid for id {subu_id}: '{path_str}'", file=sys.stderr)
     conn.close()
     return 1
@@ -301,7 +405,6 @@ def subu_remove(target: str, rest: list[str]) -> int:
   masu = path_tokens[0]
   subu_path = path_tokens[1:]
 
-  # 1) Remove Unix user + group.
   try:
     username = subu_domain.remove_subu(masu, subu_path)
   except SystemExit as e:
@@ -313,7 +416,6 @@ def subu_remove(target: str, rest: list[str]) -> int:
     conn.close()
     return 1
 
-  # 2) Remove from DB.
   try:
     conn.execute("DELETE FROM subu WHERE id = ?", (subu_id,))
     conn.commit()
@@ -323,13 +425,133 @@ def subu_remove(target: str, rest: list[str]) -> int:
     return 1
 
   conn.close()
-
   print(f"removed subu_{subu_id} {username}")
   return 0
 
 
-# Placeholder stubs for existing option / WG / network / exec wiring.
-# These keep the module importable while we focus on subu + db.
+def _subu_home_path(owner: str, path_str: str) -> str:
+  """Compute subu home dir from owner and path string."""
+  tokens = path_str.split(" ")
+  if not tokens or tokens[0] != owner:
+    return ""
+  subu_tokens = tokens[1:]
+  path = os.path.join("/home", owner)
+  for t in subu_tokens:
+    path = os.path.join(path, "subu_data", t)
+  return path
+
+
+def _chmod_incommon(home: str) -> None:
+  try:
+    st = os.stat(home)
+  except FileNotFoundError:
+    print(f"subu: warning: incommon home '{home}' does not exist", file=sys.stderr)
+    return
+
+  mode = st.st_mode
+  mode |= (stat.S_IRGRP | stat.S_IXGRP)
+  mode &= ~(stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
+  os.chmod(home, mode)
+
+
+def _chmod_private(home: str) -> None:
+  try:
+    st = os.stat(home)
+  except FileNotFoundError:
+    print(f"subu: warning: home '{home}' does not exist for clear incommon", file=sys.stderr)
+    return
+
+  mode = st.st_mode
+  mode &= ~(stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
+  os.chmod(home, mode)
+
+
+def subu_option_incommon(action: str, target: str, rest: list[str]) -> int:
+  """Handle:
+
+    subu option set   incommon <Subu_ID>|<masu> <subu> [<subu> ...]
+    subu option clear incommon <Subu_ID>|<masu> <subu> [<subu> ...]
+  """
+  if not _require_root(f"subu option {action} incommon"):
+    return 1
+
+  conn = _open_existing_db()
+  if conn is None:
+    return 1
+
+  row = _resolve_subu(conn, target, rest)
+  if row is None:
+    conn.close()
+    return 1
+
+  subu_id = row["id"]
+  owner = row["owner"]
+  full_unix_name = row["full_unix_name"]
+  path_str = row["path"]
+
+  key = f"incommon.{owner}"
+  spec = f"subu_{subu_id}"
+
+  if action == "set":
+    # Record mapping.
+    set_option(key, spec)
+
+    # Make all subu of this owner members of this group.
+    cur = conn.execute(
+      "SELECT full_unix_name FROM subu WHERE owner = ?",
+      (owner,),
+    )
+    rows = cur.fetchall()
+    for r in rows:
+      uname = r["full_unix_name"]
+      if uname == full_unix_name:
+        continue
+      ensure_user_in_group(uname, full_unix_name)
+
+    # Adjust directory permissions on incommon home.
+    home = _subu_home_path(owner, path_str)
+    if home:
+      _chmod_incommon(home)
+
+    conn.close()
+    print(f"incommon for {owner} set to subu_{subu_id}")
+    return 0
+
+  # clear
+  current = get_option(key, "")
+  if current and current != spec:
+    print(
+      f"subu: incommon for owner '{owner}' is currently {current}, not {spec}",
+      file=sys.stderr,
+    )
+    conn.close()
+    return 1
+
+  # Clear mapping.
+  set_option(key, "")
+
+  # Remove other subu from this group.
+  cur = conn.execute(
+    "SELECT full_unix_name FROM subu WHERE owner = ?",
+    (owner,),
+  )
+  rows = cur.fetchall()
+  for r in rows:
+    uname = r["full_unix_name"]
+    if uname == full_unix_name:
+      continue
+    remove_user_from_group(uname, full_unix_name)
+
+  home = _subu_home_path(owner, path_str)
+  if home:
+    _chmod_private(home)
+
+  conn.close()
+  print(f"incommon for {owner} cleared from subu_{subu_id}")
+  return 0
+
+
+# --- existing stubs (unchanged) -------------------------------------------
 
 def wg_global(arg1: str | None) -> int:
   print("WG global: not yet implemented", file=sys.stderr)
@@ -376,11 +598,9 @@ def network_toggle(subu_id: str, state: str) -> int:
   return 1
 
 
-def option_unix(mode: str) -> int:
-  # example: store a Unix handling mode into options_store
-  set_option("Unix.mode", mode)
-  print(f"Unix mode set to {mode}")
-  return 0
+def lo_toggle(subu_id: str, state: str) -> int:
+  print("lo up/down: not yet implemented", file=sys.stderr)
+  return 1
 
 
 def exec(subu_id: str, cmd_argv: list[str]) -> int:

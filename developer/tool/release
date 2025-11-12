@@ -10,6 +10,7 @@ HELP = """usage: release {write|clean|ls|help|dry write} [DIR]
   clean [DIR]   Remove the contents of the release directories.
                - For DIR=manager: clean $REPO_HOME/release/manager.
                - For other DIR values: clean only that subdirectory under the release root.
+  list          List $REPO_HOME/release as an indented tree: PERMS  OWNER  DATE  NAME.
   ls            List $REPO_HOME/release as an indented tree: PERMS  OWNER  DATE  NAME.
   help          Show this message.
   dry write [DIR]
@@ -395,6 +396,8 @@ def CLI():
   elif cmd == "clean":
     cmd_clean(args[0] if args else None)
   elif cmd == "ls":
+    list_tree(rpath())
+  elif cmd == "list":
     list_tree(rpath())
   elif cmd == "help":
     print(HELP)

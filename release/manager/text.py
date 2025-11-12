@@ -30,22 +30,32 @@ class _Text:
       f"{p} — Subu manager (v{v})\n"
       "\n"
       "Usage:\n"
+
       f"  {p}                   # usage\n"
       f"  {p} help              # detailed help\n"
       f"  {p} example           # example workflow\n"
       f"  {p} version           # print version\n"
       "\n"
+
       f"  {p} db load schema\n"
       "\n"
+
       f"  {p} subu make <masu> <subu> [<subu> ...]\n"
+      f"  {p} subu capture <masu> <subu> [<subu> ...]\n"
       f"  {p} subu list\n"
       f"  {p} subu info subu_<id>\n"
       f"  {p} subu info <masu> <subu> [<subu> ...]\n"
       f"  {p} subu remove subu_<id>\n"
       f"  {p} subu remove <masu> <subu> [<subu> ...]\n"
+      f"  {p} subu option set   incommon subu_<id>\n"
+      f"  {p} subu option set   incommon <masu> <subu> [<subu> ...]\n"
+      f"  {p} subu option clear incommon subu_<id>\n"
+      f"  {p} subu option clear incommon <masu> <subu> [<subu> ...]\n"
       "\n"
+
       f"  {p} lo up|down <Subu_ID>\n"
       "\n"
+
       f"  {p} WG global <BaseCIDR>\n"
       f"  {p} WG make <host:port>\n"
       f"  {p} WG server_provided_public_key <WG_ID> <Base64Key>\n"
@@ -53,15 +63,19 @@ class _Text:
       f"  {p} WG up <WG_ID>\n"
       f"  {p} WG down <WG_ID>\n"
       "\n"
+
       f"  {p} attach WG <Subu_ID> <WG_ID>\n"
       f"  {p} detach WG <Subu_ID>\n"
       "\n"
+
       f"  {p} network up|down <Subu_ID>\n"
       "\n"
+
       f"  {p} option set <Subu_ID> <name> <value>\n"
       f"  {p} option get <Subu_ID> <name>\n"
       f"  {p} option list <Subu_ID>\n"
       "\n"
+
       f"  {p} exec <Subu_ID> -- <cmd> ...\n"
     )
 

@@ -1,0 +1,13 @@
+
+
+checkout -> tester branch select
+where -> tester branch show name
+pull -> tester branch pull
+push -> tester branch push
+
+other-release-merge -> developer branch pull
+list-other-release-updates -> developer branch list new
+
+publish
+
+For each command, giving no arguments prints a short description of what it does and a usage message. The 'help' command does the same.

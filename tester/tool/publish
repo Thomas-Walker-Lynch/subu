@@ -1,0 +1,163 @@
+#!/usr/bin/env -S python3 -B
+# publish — create / bump release_<major>[.<minor>] branches
+#
+# Usage:
+#   publish help
+#   publish minor
+#   publish major [<major>] [<minor>]
+
+import sys, subprocess
+from typing import List, Tuple
+from tester_lib import (
+  chdir_repo_root,
+  ensure_on_testing_branch_or_die,
+  RELEASE_PREFIX,
+  RELEASE_TEST_PREFIX,  # kept if you later want to auto-create tester branches
+  get_release_branches,
+  choose_latest_release,
+)
+
+
+def _run_git(args):
+  return subprocess.run(["git"] + list(args), check=True)
+
+
+def usage() -> int:
+  print("""publish — create or bump release_<major>[.<minor>] branches
+
+Usage:
+  publish help
+    Show this message.
+
+  publish minor
+    Create a new minor release branch for the highest existing major.
+    - Finds all release_<major>[.<minor>] branches.
+    - Picks the highest major M.
+    - Computes next minor as (max_minor_for_M + 1) (minor=0 when absent).
+    - Creates release_<M>.<next_minor> from the current tester branch.
+    - Checks out the new release_<...> branch.
+
+  publish major [<major>] [<minor>]
+    Create a new major release branch.
+    - If no major is given:
+        use next integer after the highest existing major (or 0 if none).
+    - If no minor is given:
+        start at minor 1 → release_<major>.1
+    - If minor==0 is explicitly given:
+        create release_<major> (no .0 in the name).
+    - Branch is created from the current tester branch.
+    - Checks out the new release_<...> branch.
+""".rstrip())
+  return 0
+
+
+def _list_release_branches() -> List[Tuple[str, int, int]]:
+  branches = get_release_branches()
+  out: List[Tuple[str, int, int]] = []
+  for b in branches:
+    if b.major is None:
+      continue
+    out.append((b.name, b.major, b.minor or 0))
+  return out
+
+
+def _next_minor_for_major(major: int) -> int:
+  branches = _list_release_branches()
+  max_minor = 0
+  found = False
+  for _name, maj, minor in branches:
+    if maj == major:
+      found = True
+      if minor > max_minor:
+        max_minor = minor
+  if not found:
+    return 1  # first minor is 1
+  return max_minor + 1
+
+
+def publish_minor() -> int:
+  info = ensure_on_testing_branch_or_die()
+  branches = _list_release_branches()
+  if not branches:
+    print("publish minor: no existing release_<major> branches. Use 'publish major' first.", file=sys.stderr)
+    return 1
+
+  branches_sorted = sorted(branches, key=lambda t: (t[1], t[2]))
+  highest_major = branches_sorted[-1][1]
+  next_minor = _next_minor_for_major(highest_major)
+
+  rel_name = f"{RELEASE_PREFIX}{highest_major}.{next_minor}"
+
+  print(f"Creating new minor release branch {rel_name} from {info.name}...")
+  _run_git(["branch", rel_name])
+  print(f"Checking out {rel_name}...")
+  _run_git(["checkout", rel_name])
+  return 0
+
+
+def publish_major(major_arg: str = None, minor_arg: str = None) -> int:
+  info = ensure_on_testing_branch_or_die()
+  branches = _list_release_branches()
+
+  if major_arg is None:
+    if branches:
+      highest_major = max(maj for (_n, maj, _m) in branches)
+      new_major = highest_major + 1
+    else:
+      new_major = 0
+  else:
+    new_major = int(major_arg)
+
+  if minor_arg is None:
+    new_minor = 1
+  else:
+    new_minor = int(minor_arg)
+
+  if new_minor == 0:
+    rel_name = f"{RELEASE_PREFIX}{new_major}"
+  else:
+    rel_name = f"{RELEASE_PREFIX}{new_major}.{new_minor}"
+
+  cp = subprocess.run(["git", "branch", "--list", rel_name], text=True, stdout=subprocess.PIPE, check=True)
+  if cp.stdout.strip():
+    print(f"publish major: branch {rel_name} already exists.", file=sys.stderr)
+  else:
+    print(f"Creating new major release branch {rel_name} from {info.name}...")
+    _run_git(["branch", rel_name])
+
+  print(f"Checking out {rel_name}...")
+  _run_git(["checkout", rel_name])
+  return 0
+
+
+def CLI(argv=None) -> int:
+  chdir_repo_root()
+  if argv is None:
+    argv = sys.argv[1:]
+
+  if not argv or argv[0] in ("help", "-h", "--help"):
+    return usage()
+
+  sub = argv[0]
+  rest = argv[1:]
+
+  if sub == "minor":
+    if rest:
+      print("publish minor: unexpected extra arguments.", file=sys.stderr)
+      return 1
+    return publish_minor()
+
+  if sub == "major":
+    major = rest[0] if len(rest) >= 1 else None
+    minor = rest[1] if len(rest) >= 2 else None
+    if len(rest) > 2:
+      print("publish major: too many arguments.", file=sys.stderr)
+      return 1
+    return publish_major(major, minor)
+
+  print(f"publish: unknown subcommand '{sub}' (expected 'help', 'minor', or 'major').", file=sys.stderr)
+  return 1
+
+
+if __name__ == "__main__":
+  raise SystemExit(CLI())

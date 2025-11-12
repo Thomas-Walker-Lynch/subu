@@ -7,7 +7,69 @@ from infrastructure.unix import (
   remove_unix_user_and_group,
   user_exists,
 )
+from typing import Iterable
+import sqlite3, datetime
 
+def _now(): return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def subu_username(owner: str, parts: list[str]) -> str:
+  return "_".join([owner] + parts)
+
+def ensure_chain(conn, owner: str, parts: list[str], device_id: int|None, online: bool):
+  """
+  Ensure that owner/parts[...] exists as a chain; return leaf row (dict).
+  """
+  conn.row_factory = sqlite3.Row
+  parent_id = None
+  chain: list[str] = []
+  now = _now()
+  for seg in parts:
+    row = conn.execute(
+      "SELECT * FROM subu_node WHERE owner=? AND name=? AND parent_id IS ?",
+      (owner, seg, parent_id)
+    ).fetchone()
+    if row:
+      parent_id = row["id"]
+      chain.append(seg)
+      continue
+    chain.append(seg)
+    full_path = " ".join([owner] + chain)
+    full_unix = subu_username(owner, chain)
+    netns = full_unix
+    conn.execute(
+      """INSERT INTO subu_node(owner,name,parent_id,full_unix_name,full_path,netns_name,
+                               device_id,is_online,created_at,updated_at)
+         VALUES(?,?,?,?,?,?,?, ?,?,?)""",
+      (owner, seg, parent_id, full_unix, full_path, netns,
+       device_id, 1 if online else 0, now, now)
+    )
+    parent_id = conn.execute("SELECT last_insert_rowid() id").fetchone()["id"]
+  leaf = conn.execute("SELECT * FROM subu_node WHERE id=?", (parent_id,)).fetchone()
+  return dict(leaf)
+
+def find_by_path(conn, owner: str, parts: list[str]):
+  conn.row_factory = sqlite3.Row
+  parent_id = None
+  for seg in parts:
+    row = conn.execute(
+      "SELECT * FROM subu_node WHERE owner=? AND name=? AND parent_id IS ?",
+      (owner, seg, parent_id)
+    ).fetchone()
+    if not row:
+      return None
+    parent_id = row["id"]
+  return dict(row)
+
+def list_children(conn, node_id: int|None, owner: str):
+  """
+  node_id=None lists top-level subu of owner; otherwise children of node_id.
+  """
+  conn.row_factory = sqlite3.Row
+  if node_id is None:
+    cur = conn.execute("SELECT * FROM subu_node WHERE owner=? AND parent_id IS NULL ORDER BY name", (owner,))
+  else:
+    cur = conn.execute("SELECT * FROM subu_node WHERE owner=? AND parent_id=? ORDER BY name", (owner, node_id))
+  return [dict(r) for r in cur.fetchall()]
 
 def _validate_token(label: str, token: str) -> str:
   """
@@ -26,25 +88,6 @@ def _validate_token(label: str, token: str) -> str:
     )
   # dashes are fine; acronyms and proper nouns are fine.
   return token_stripped
-
-
-def subu_username(masu: str, path_components: list[str]) -> str:
-  """
-  Build the Unix username for a subu.
-
-  Examples:
-    masu = "Thomas", path = ["S0"]        -> "Thomas_S0"
-    masu = "Thomas", path = ["S0","S1"]   -> "Thomas_S0_S1"
-
-  The path is:
-    masu subu subu ...
-  """
-  masu_s = _validate_token("masu", masu).replace(" ", "_")
-  subu_parts: list[str] = []
-  for s in path_components:
-    subu_parts.append(_validate_token("subu", s).replace(" ", "_"))
-  parts = [masu_s] + subu_parts
-  return "_".join(parts)
 
 
 def _parent_username(masu: str, path_components: list[str]) -> str | None:
@@ -145,7 +188,6 @@ def make_subu(masu: str, path_components: list[str]) -> str:
     ensure_user_in_group(username, gname)
 
   return username
-
 
 def remove_subu(masu: str, path_components: list[str]) -> str:
   """

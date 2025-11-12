@@ -1,0 +1,247 @@
+#!/usr/bin/env -S python3 -B
+# tester — tester branch utilities:
+#   tester branch select core
+#   tester branch select release [<major>[.<minor>]]
+#   tester branch show-name
+#   tester branch pull
+#   tester branch push
+
+import sys, subprocess
+from tester_lib import (
+  chdir_repo_root,
+  TEST_CORE_BRANCH,
+  get_current_branch,
+  is_testing_branch,
+  get_upstream_ref_for_current_branch,
+  git_diff_name_status,
+  print_changes_with_exec_marker,
+  changes_outside_tester,
+  prompt_yes_no,
+  get_release_branches,
+  choose_latest_release,
+  RELEASE_PREFIX,
+  RELEASE_TEST_PREFIX,
+)
+
+
+def _run_git(args):
+  return subprocess.run(["git"] + list(args), check=True)
+
+
+def usage() -> int:
+  print("""tester — tester-side branch commands
+
+Usage:
+  tester help
+    Show this message.
+
+  tester branch show-name
+    Print current branch and error if not a tester branch.
+
+  tester branch select core
+    Checkout core_tester_branch.
+
+  tester branch select release [<major>[.<minor>]]
+    Select a release_tester_<major>[.<minor>] branch.
+    - If no version is given: pick the highest existing release_<major>[.<minor>] by version.
+    - If the corresponding release_tester_* branch does not exist yet:
+      it is created from release_<major>[.<minor>] and checked out.
+
+  tester branch pull
+    Pull from the current branch's upstream (same tester branch on remote),
+    listing incoming changes and executables and asking for confirmation.
+
+  tester branch push
+    Push the current tester branch to its upstream, listing outgoing changes.
+    If any changes are outside $REPO_HOME/tester/, a policy warning and
+    confirmation prompt is shown.
+""".rstrip())
+  return 0
+
+
+# ----- branch show-name -----
+
+def cmd_branch_show_name() -> int:
+  chdir_repo_root()
+  name = get_current_branch()
+  print(name)
+  if not is_testing_branch(name):
+    print(f"tester: '{name}' is not a tester branch (core_tester_branch or release_tester_*).", file=sys.stderr)
+    return 1
+  return 0
+
+
+# ----- branch select -----
+
+def _parse_version_arg(version: str):
+  if "." in version:
+    major_s, minor_s = version.split(".", 1)
+  else:
+    major_s, minor_s = version, None
+  return major_s, minor_s
+
+
+def _select_release_specific(major_s: str, minor_s: str) -> int:
+  # construct release_<...> name
+  if minor_s is None:
+    rel_name = f"{RELEASE_PREFIX}{major_s}"
+    tester_name = f"{RELEASE_TEST_PREFIX}{major_s}"
+  else:
+    rel_name = f"{RELEASE_PREFIX}{major_s}.{minor_s}"
+    tester_name = f"{RELEASE_TEST_PREFIX}{major_s}.{minor_s}"
+
+  # ensure base release branch exists
+  cp = subprocess.run(
+    ["git", "branch", "--list", rel_name],
+    text=True, stdout=subprocess.PIPE, check=True
+  )
+  if not cp.stdout.strip():
+    print(f"tester: release branch '{rel_name}' does not exist.", file=sys.stderr)
+    return 1
+
+  # if release_tester branch does not exist, create it from release_<...>
+  cp2 = subprocess.run(
+    ["git", "branch", "--list", tester_name],
+    text=True, stdout=subprocess.PIPE, check=True
+  )
+  if not cp2.stdout.strip():
+    print(f"Creating tester branch {tester_name} from {rel_name}...")
+    _run_git(["branch", tester_name, rel_name])
+
+  # checkout tester branch
+  _run_git(["checkout", tester_name])
+  return 0
+
+
+def cmd_branch_select(args: list[str]) -> int:
+  chdir_repo_root()
+  if not args:
+    print("tester branch select: missing sub-argument (core|release).", file=sys.stderr)
+    return 1
+  sub = args[0]
+  if sub == "core":
+    _run_git(["checkout", TEST_CORE_BRANCH])
+    return 0
+  if sub == "release":
+    if len(args) == 1:
+      # pick latest release_<...> by version
+      rel_branches = get_release_branches()
+      info = choose_latest_release(rel_branches)
+      if info is None:
+        print("tester: no release_<major>[.<minor>] branches found.", file=sys.stderr)
+        return 1
+      major = info.major
+      minor = info.minor
+      major_s = str(major)
+      minor_s = None if minor is None or minor == 0 else str(minor)
+      return _select_release_specific(major_s, minor_s)
+    else:
+      major_s, minor_s = _parse_version_arg(args[1])
+      return _select_release_specific(major_s, minor_s or None)
+
+  print(f"tester branch select: unknown mode '{sub}' (expected 'core' or 'release').", file=sys.stderr)
+  return 1
+
+
+# ----- branch pull -----
+
+def cmd_branch_pull() -> int:
+  repo_root = chdir_repo_root()
+  branch = get_current_branch()
+  upstream = get_upstream_ref_for_current_branch()
+  if not upstream:
+    print(f"tester pull: no upstream configured for branch '{branch}'.", file=sys.stderr)
+    return 1
+
+  # HEAD..upstream
+  changes = git_diff_name_status("HEAD", upstream, paths=None)
+  if not changes:
+    print(f"{branch} is up to date with {upstream}.")
+    return 0
+
+  print(f"Incoming changes from {upstream} into {branch}:")
+  print_changes_with_exec_marker(changes, repo_root)
+
+  if not prompt_yes_no("Apply these changes with git pull?", default=False):
+    print("Aborting pull.")
+    return 1
+
+  _run_git(["pull"])
+  return 0
+
+
+# ----- branch push -----
+
+def cmd_branch_push() -> int:
+  repo_root = chdir_repo_root()
+  branch = get_current_branch()
+  upstream = get_upstream_ref_for_current_branch()
+  if not upstream:
+    print(f"tester push: no upstream configured for branch '{branch}'.", file=sys.stderr)
+    print("You may want to set it with: git branch --set-upstream-to origin/<branch>", file=sys.stderr)
+    return 1
+
+  # upstream..HEAD
+  changes = git_diff_name_status(upstream, "HEAD", paths=None)
+  if not changes:
+    print(f"Nothing to push (HEAD is same as {upstream}).")
+    return 0
+
+  print(f"Changes to be pushed from {branch} to {upstream}:")
+  print_changes_with_exec_marker(changes, repo_root)
+
+  outside = changes_outside_tester(changes)
+  if outside:
+    print("\nWARNING: the following paths are outside $REPO_HOME/tester/ and are against policy:")
+    print_changes_with_exec_marker(outside, repo_root)
+    if not prompt_yes_no("These are against policy. Are you sure you want to push?", default=False):
+      print("Aborting push.")
+      return 1
+
+  if not prompt_yes_no(f"Proceed with git push to {upstream}?", default=True):
+    print("Aborting push.")
+    return 1
+
+  _run_git(["push"])
+  return 0
+
+
+def CLI(argv=None) -> int:
+  if argv is None:
+    argv = sys.argv[1:]
+
+  if not argv or argv[0] in ("help", "-h", "--help"):
+    return usage()
+
+  if argv[0] != "branch":
+    print(f"tester: unknown top-level command '{argv[0]}' (expected 'branch' or 'help').", file=sys.stderr)
+    return 1
+
+  subargs = argv[1:]
+  if not subargs or subargs[0] in ("help", "-h", "--help"):
+    print("tester branch commands:")
+    print("  tester branch show-name")
+    print("  tester branch select core")
+    print("  tester branch select release [<major>[.<minor>]]")
+    print("  tester branch pull")
+    print("  tester branch push")
+    return 0
+
+  action = subargs[0]
+  rest = subargs[1:]
+
+  if action == "show-name":
+    return cmd_branch_show_name()
+  if action == "select":
+    return cmd_branch_select(rest)
+  if action == "pull":
+    return cmd_branch_pull()
+  if action == "push":
+    return cmd_branch_push()
+
+  print(f"tester branch: unknown action '{action}'.", file=sys.stderr)
+  return 1
+
+
+if __name__ == "__main__":
+  raise SystemExit(CLI())

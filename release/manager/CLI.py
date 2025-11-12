@@ -33,15 +33,21 @@ def register_subu_commands(subparsers):
   """Register subu related commands under 'subu':
 
     subu make <masu> <subu> [<subu>]*
+    subu capture <masu> <subu> [<subu>]*
     subu remove <Subu_ID> | <masu> <subu> [<subu>]*
     subu list
     subu info <Subu_ID> | <masu> <subu> [<subu>]*
+    subu option set|clear incommon <Subu_ID> | <masu> <subu> [<subu>]*
   """
   ap_subu = subparsers.add_parser("subu")
   subu_sub = ap_subu.add_subparsers(dest="subu_verb")
 
   # make: path[0] is masu, remaining elements are the subu chain
   ap = subu_sub.add_parser("make")
+  ap.add_argument("path", nargs="+")
+
+  # capture: path[0] is masu, remaining elements are the subu chain
+  ap = subu_sub.add_parser("capture")
   ap.add_argument("path", nargs="+")
 
   # remove: either ID or path
@@ -57,16 +63,16 @@ def register_subu_commands(subparsers):
   ap.add_argument("target")
   ap.add_argument("rest", nargs="*")
 
+  # option incommon
+  ap = subu_sub.add_parser("option")
+  ap.add_argument("opt_action", choices=["set", "clear"])
+  ap.add_argument("opt_name", choices=["incommon"])
+  ap.add_argument("target")
+  ap.add_argument("rest", nargs="*")
+
 
 def register_wireguard_commands(subparsers):
-  """Register WireGuard related commands, grouped under 'WG':
-
-    WG global <BaseCIDR>
-    WG make <host:port>
-    WG server_provided_public_key <WG_ID> <Base64Key>
-    WG info|information <WG_ID>
-    WG up|down <WG_ID>
-  """
+  """Register WireGuard related commands, grouped under 'WG'."""
   ap = subparsers.add_parser("WG")
   ap.add_argument(
     "wg_verb",
@@ -111,14 +117,15 @@ def register_network_commands(subparsers):
 
 
 def register_option_commands(subparsers):
-  """Register option commands.
+  """Register global option commands (non-subu-specific for now):
 
-  Current surface:
-    option Unix <mode>       # e.g. dry|run
+    option set|get|list ...
   """
   ap = subparsers.add_parser("option")
-  ap.add_argument("area", choices=["Unix"])
-  ap.add_argument("mode")
+  ap.add_argument("action", choices=["set", "get", "list"])
+  ap.add_argument("subu_id")
+  ap.add_argument("name", nargs="?")
+  ap.add_argument("value", nargs="?")
 
 
 def register_exec_commands(subparsers):
@@ -128,10 +135,17 @@ def register_exec_commands(subparsers):
   """
   ap = subparsers.add_parser("exec")
   ap.add_argument("subu_id")
-  # Use a dedicated "--" argument so that:
-  #   CLI.py exec subu_7 -- curl -4v https://ifconfig.me
-  # works as before.
   ap.add_argument("--", dest="cmd", nargs=argparse.REMAINDER, default=[])
+
+
+def register_lo_commands(subparsers):
+  """Register lo command:
+
+    lo up|down <Subu_ID>
+  """
+  ap = subparsers.add_parser("lo")
+  ap.add_argument("state", choices=["up", "down"])
+  ap.add_argument("subu_id")
 
 
 def build_arg_parser(program_name: str) -> argparse.ArgumentParser:
@@ -143,6 +157,7 @@ def build_arg_parser(program_name: str) -> argparse.ArgumentParser:
 
   register_db_commands(subparsers)
   register_subu_commands(subparsers)
+  register_lo_commands(subparsers)
   register_wireguard_commands(subparsers)
   register_attach_commands(subparsers)
   register_network_commands(subparsers)
@@ -153,24 +168,19 @@ def build_arg_parser(program_name: str) -> argparse.ArgumentParser:
 
 
 def _collect_parse_errors(ns, program_name: str) -> list[str]:
-  """Check for semantic argument problems and collect error strings.
-
-  We keep this lightweight and focused on things we can know without
-  touching the filesystem or the database.
-  """
+  """Check for semantic argument problems and collect error strings."""
   errors: list[str] = []
 
   if ns.verb == "subu":
     sv = getattr(ns, "subu_verb", None)
-    if sv == "make":
+    if sv in ("make", "capture"):
       if not ns.path or len(ns.path) < 2:
         errors.append(
-          "subu make requires at least <masu> and one <subu> component"
+          f"subu {sv} requires at least <masu> and one <subu> component"
         )
     elif sv in ("remove", "info"):
-      # Either ID or path. For path we need at least 2 tokens.
       if ns.target.startswith("subu_"):
-        if ns.verb == "subu" and sv in ("remove", "info") and ns.rest:
+        if ns.rest:
           errors.append(
             f"{program_name} subu {sv} with an ID form must not have extra path tokens"
           )
@@ -179,6 +189,21 @@ def _collect_parse_errors(ns, program_name: str) -> list[str]:
           errors.append(
             f"{program_name} subu {sv} <masu> <subu> [<subu> ...] requires at least two tokens"
           )
+    elif sv == "option":
+      # For incommon, same ID vs path rules as info/remove.
+      if ns.opt_name == "incommon":
+        if ns.target.startswith("subu_"):
+          if ns.rest:
+            errors.append(
+              f"{program_name} subu option {ns.opt_action} incommon with an ID form "
+              "must not have extra path tokens"
+            )
+        else:
+          if len([ns.target] + list(ns.rest)) < 2:
+            errors.append(
+              f"{program_name} subu option {ns.opt_action} incommon "
+              "<masu> <subu> [<subu> ...] requires at least two tokens"
+            )
 
   return errors
 
@@ -188,10 +213,6 @@ def CLI(argv=None) -> int:
   if argv is None:
     argv = sys.argv[1:]
 
-  # Determine the program name for text/help:
-  #
-  # 1. If SUBU_PROGNAME is set in the environment, use that.
-  # 2. Otherwise, derive it from sys.argv[0] (basename).
   prog_override = os.environ.get("SUBU_PROGNAME")
   if prog_override:
     program_name = prog_override
@@ -201,12 +222,11 @@ def CLI(argv=None) -> int:
 
   text = make_text(program_name)
 
-  # No arguments is the same as "help".
+  # No arguments is the same as "usage".
   if not argv:
     print(text.usage(), end="")
     return 0
 
-  # Simple verbs that bypass argparse so they always work.
   simple = {
     "help": text.help,
     "--help": text.help,
@@ -226,7 +246,6 @@ def CLI(argv=None) -> int:
     print(text.version(), end="")
     return 0
 
-  # Collect semantic parse errors before we call dispatch.
   errors = _collect_parse_errors(ns, program_name)
   if errors:
     for msg in errors:
@@ -242,12 +261,20 @@ def CLI(argv=None) -> int:
       sv = ns.subu_verb
       if sv == "make":
         return dispatch.subu_make(ns.path)
+      if sv == "capture":
+        return dispatch.subu_capture(ns.path)
       if sv == "list":
         return dispatch.subu_list()
       if sv == "info":
         return dispatch.subu_info(ns.target, ns.rest)
       if sv == "remove":
         return dispatch.subu_remove(ns.target, ns.rest)
+      if sv == "option":
+        # For now only 'incommon' is supported.
+        return dispatch.subu_option_incommon(ns.opt_action, ns.target, ns.rest)
+
+    if ns.verb == "lo":
+      return dispatch.lo_toggle(ns.subu_id, ns.state)
 
     if ns.verb == "WG":
       v = ns.wg_verb
@@ -279,8 +306,9 @@ def CLI(argv=None) -> int:
       return dispatch.network_toggle(ns.subu_id, ns.state)
 
     if ns.verb == "option":
-      if ns.area == "Unix":
-        return dispatch.option_unix(ns.mode)
+      # global options still placeholder
+      print("option: not yet implemented", file=sys.stderr)
+      return 1
 
     if ns.verb == "exec":
       if not ns.cmd:
@@ -288,7 +316,6 @@ def CLI(argv=None) -> int:
         return 2
       return dispatch.exec(ns.subu_id, ns.cmd)
 
-    # If we reach here, the verb was not recognised.
     print(text.usage(), end="")
     return 2
 

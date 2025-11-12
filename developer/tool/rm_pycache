@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
+
+"""
+Remove all Python cache directories under the current working directory.
+
+Specifically:
+  * __pycache__
+  * __psycache__  (included in case of typo'd cache dirs)
+
+Usage:
+  python3 clean_pycache.py
+  ./clean_pycache.py
+"""
+
+import os, shutil, sys
+
+
+def is_cache_dir(name: str) -> bool:
+  """
+  Return True if the directory name should be treated as a cache directory.
+  """
+  return name in ("__pycache__", "__psycache__")
+
+
+def remove_cache_dir(path: str) -> None:
+  """
+  Remove a cache directory and print what we did.
+  """
+  try:
+    shutil.rmtree(path)
+    print(f"removed: {path}")
+  except FileNotFoundError:
+    # Someone else removed it; ignore.
+    pass
+  except PermissionError as e:
+    print(f"warning: cannot remove {path}: {e}", file =sys.stderr)
+  except OSError as e:
+    print(f"warning: error removing {path}: {e}", file =sys.stderr)
+
+
+def walk_and_clean(start: str) -> None:
+  """
+  Walk the tree from 'start' downward and remove all cache dirs.
+  """
+  for root, dirs, files in os.walk(start, topdown =True):
+    # Work on a copy so we can safely modify 'dirs' while iterating.
+    for d in list(dirs):
+      if is_cache_dir(d):
+        full = os.path.join(root, d)
+        remove_cache_dir(full)
+        # Prevent os.walk from descending into it.
+        try:
+          dirs.remove(d)
+        except ValueError:
+          pass
+
+
+def main(argv=None) -> int:
+  if argv is None:
+    argv = sys.argv[1:]
+
+  start_dir = os.getcwd()
+  walk_and_clean(start_dir)
+  return 0
+
+
+if __name__ == "__main__":
+  raise SystemExit(main())

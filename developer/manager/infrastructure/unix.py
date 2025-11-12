@@ -60,8 +60,7 @@ def ensure_user_in_group(user: str, group: str):
   """
   Ensure 'user' is a member of supplementary group 'group'.
 
-  - Raises if either user or group does not exist.
-  - No-op if the membership is already present.
+  No-op if already present.
   """
   if not user_exists(user):
     raise RuntimeError(f"ensure_user_in_group: user '{user}' does not exist")
@@ -72,8 +71,27 @@ def ensure_user_in_group(user: str, group: str):
   if user in g.gr_mem:
     return
 
-  # usermod -a -G adds the group, preserving existing ones.
   run(["usermod", "-a", "-G", group, user])
+
+
+def remove_user_from_group(user: str, group: str):
+  """
+  Ensure 'user' is NOT a member of supplementary group 'group'.
+
+  No-op if user or group is missing, or if user is not a member.
+  """
+  if not user_exists(user):
+    return
+  if not group_exists(group):
+    return
+
+  g = grp.getgrnam(group)
+  if user not in g.gr_mem:
+    return
+
+  # gpasswd -d user group is the standard way on Debian/Ubuntu.
+  # We treat failures as non-fatal.
+  run(["gpasswd", "-d", user, group], check =False)
 
 
 def remove_unix_user_and_group(name: str):
@@ -83,7 +101,6 @@ def remove_unix_user_and_group(name: str):
   The user is removed first, then the group.
   """
   if user_exists(name):
-    # userdel returns non-zero if, for example, the user is logged in.
     run(["userdel", name])
   if group_exists(name):
     run(["groupdel", name])

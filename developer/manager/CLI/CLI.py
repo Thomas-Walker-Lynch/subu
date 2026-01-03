@@ -26,15 +26,9 @@ def register_device_commands(subparsers):
   For v1, we only support scanning already-mounted devices under /mnt.
   """
   ap = subparsers.add_parser("device")
-  ap.add_argument(
-    "action",
-    choices =["scan"],
-  )
-  ap.add_argument(
-    "--base-dir",
-    default ="/mnt",
-    help ="root under which to scan for <mapname>/user_data (default: /mnt)",
-  )
+  ap.add_argument("action", choices=["scan","attach","detach"])
+  ap.add_argument("mapname", nargs="?")
+  ap.add_argument("--base-dir", default="/mnt")
 
 
 def register_db_commands(subparsers):
@@ -90,6 +84,11 @@ def register_subu_commands(subparsers):
   ap.add_argument("target")
   ap.add_argument("rest", nargs="*")
 
+def register_subu_option_commands(subparsers):
+  ap = subparsers.add_parser("subu")
+  ap.add_argument("subverb", choices=["make","remove","list","info","capture","option"])
+  ap.add_argument("args", nargs=argparse.REMAINDER)
+
 
 def register_wireguard_commands(subparsers):
   """Register WireGuard related commands, grouped under 'WG'."""
@@ -134,6 +133,7 @@ def register_network_commands(subparsers):
   ap = subparsers.add_parser("network")
   ap.add_argument("state", choices=["up", "down"])
   ap.add_argument("subu_id")
+
 
 
 def register_option_commands(subparsers):
@@ -282,12 +282,27 @@ def CLI(argv=None) -> int:
       if ns.db_verb == "load" and ns.what == "schema":
         return dispatch.db_load_schema()
 
+    if ns.verb == "device":
+      if ns.action == "scan": return dispatch.device_scan(ns.base_dir)
+      if ns.action == "attach": return dispatch.device_attach(ns.mapname)
+      if ns.action == "detach": return dispatch.device_detach(ns.mapname)
+
     if ns.verb == "subu":
+      if ns.subverb == "capture":
+        # args: <masu> <subu> [.<subu>]*
+        return dispatch.subu_capture(ns.args)
+      if ns.subverb == "option":
+        # expected: set|clear incommon <masu> <subu> [.<subu>]*
+        if len(ns.args) < 3: ...
+        action, which, *rest = ns.args
+        owner, *parts = rest
+        if action == "set" and which == "incommon":
+          return dispatch.subu_option_incommon_set(owner, parts)
+        if action == "clear" and which == "incommon":
+          return dispatch.subu_option_incommon_clear(owner, parts)
       sv = ns.subu_verb
       if sv == "make":
         return dispatch.subu_make(ns.path)
-      if sv == "capture":
-        return dispatch.subu_capture(ns.path)
       if sv == "list":
         return dispatch.subu_list()
       if sv == "info":

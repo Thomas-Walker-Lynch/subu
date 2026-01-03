@@ -1,0 +1,11 @@
+[Unit]
+Description=Re-attach subu homes after suspend/resume
+After=suspend.target
+Wants=suspend.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl start subu-boot-attach.service
+
+[Install]
+WantedBy=suspend.target

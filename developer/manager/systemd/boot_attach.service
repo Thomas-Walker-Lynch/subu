@@ -1,0 +1,12 @@
+[Unit]
+Description=Attach /home/<masu> from mounted devices and reconcile subu DB
+After=local-fs.target network-online.target
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env python3 /usr/local/lib/subu/boot_attach.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

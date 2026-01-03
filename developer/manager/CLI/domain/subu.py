@@ -13,12 +13,21 @@ import sqlite3, datetime
 def _now(): return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def subu_username(owner: str, parts: list[str]) -> str:
-  return "_".join([owner] + parts)
+  """
+  Build the Unix login name, enforcing 'no underscore in tokens'.
+  """
+  owner_ok = _validate_token("masu", owner)
+  parts_ok = [_validate_token("subu", p) for p in parts]
+  return "_".join([owner_ok] + parts_ok)
 
 def ensure_chain(conn, owner: str, parts: list[str], device_id: int|None, online: bool):
   """
   Ensure that owner/parts[...] exists as a chain; return leaf row (dict).
   """
+  # Validate once up-front
+  owner = _validate_token("masu", owner)
+  parts = [_validate_token("subu", p) for p in parts]
+
   conn.row_factory = sqlite3.Row
   parent_id = None
   chain: list[str] = []

@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
+import os, subprocess, sys
+from pathlib import Path
+
+BASE = Path("/mnt")
+SM = os.environ.get("SUBU_CLI", "/usr/local/bin/sm")  # your wrapper; fallback to sm
+MAP_OWN_ALL = "/root/mount/masu__map_own_all.sh"      # your existing script
+
+def sh(*args) -> int:
+  return subprocess.run(list(args), check=False).returncode
+
+def mounted(target: Path) -> bool:
+  try:
+    out = subprocess.check_output(["findmnt", "-T", str(target), "-n"], stderr=subprocess.DEVNULL)
+    return bool(out.strip())
+  except subprocess.CalledProcessError:
+    return False
+
+def ensure_bind_home(mapname: str, masu: str) -> None:
+  src = BASE / mapname / "user_data" / masu
+  dst = Path("/home") / masu
+  dst.mkdir(parents=True, exist_ok=True)
+  if mounted(dst):
+    return
+  # transient automount bind via systemd
+  # (automount improves UX on resume; bind is idempotent)
+  subprocess.run([
+    "systemd-mount",
+    "--quiet",
+    "--no-block",
+    "--type", "none",
+    "--automount",
+    "--options", "bind",
+    str(src), str(dst)
+  ], check=False)
+
+def main():
+  # 1) attach each /mnt/<mapname>/user_data/<masu> as /home/<masu>
+  for mp in sorted(p for p in BASE.iterdir() if p.is_dir()):
+    user_data = mp / "user_data"
+    if not user_data.is_dir():
+      continue
+    for masu_dir in sorted(p for p in user_data.iterdir() if p.is_dir()):
+      ensure_bind_home(mp.name, masu_dir.name)
+
+  # 2) reconcile DB (safe if DB absent: service ordering should run after schema load)
+  sh(SM, "device", "scan")
+
+  # 3) optional: reopen bindfs subu mounts for each mounted <masu>
+  if os.path.exists(MAP_OWN_ALL):
+    for home in sorted(Path("/home").iterdir()):
+      if not home.is_dir():
+        continue
+      # heuristics: only run when this /home/<masu> is a bind from /mnt/*/user_data/<masu>
+      try:
+        src = subprocess.check_output(["findmnt", "-no", "SOURCE", "-T", str(home)], text=True).strip()
+      except subprocess.CalledProcessError:
+        continue
+      if "/user_data/" in src:
+        subprocess.run([MAP_OWN_ALL, home.name], check=False)
+
+if __name__ == "__main__":
+  sys.exit(main())

@@ -10,7 +10,7 @@ if [ -z "$subu" ]; then
   exit 1
 fi
 
-subu_user="Thomas-$subu"
+subu_user="Thomas_$subu"
 if ! id "$subu_user" &>/dev/null; then
   echo "❌ User $subu_user does not exist"
   exit 1

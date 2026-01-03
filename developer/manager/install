@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8; python-indent-offset: 2; indent-tabs-mode: nil -*-
+"""
+install/subu_install.py — one-shot installer for subu boot wiring
+
+What it does:
+  1) Copies usr_local_bin/boot_attach -> /usr/local/bin/subu-boot-attach (0755)
+  2) Installs systemd units:
+       systemd/boot_attach.service -> /etc/systemd/system/subu-boot-attach.service
+       systemd/subu_resume.service -> /etc/systemd/system/subu-resume.service
+     and enables them (boot + resume).
+  3) Ensures SQLite schema exists by importing env/db and executing schema.sql.
+     (No CLI parsing; direct function calls.)
+"""
+
+import os, sys, shutil, stat, subprocess, pathlib, sqlite3
+from pathlib import Path
+
+# --- utils -------------------------------------------------------------------
+
+def must_root():
+  if os.geteuid() != 0:
+    print("error: must run as root (sudo)", file=sys.stderr)
+    sys.exit(1)
+
+def run(*args):
+  return subprocess.run(args, check=False)
+
+def die(msg: str):
+  print(f"error: {msg}", file=sys.stderr); sys.exit(1)
+
+def install_file(src: Path, dst: Path, mode: int):
+  dst.parent.mkdir(parents=True, exist_ok=True)
+  shutil.copy2(src, dst)
+  os.chmod(dst, mode)
+
+def install_text(src: Path, dst: Path, mode: int, substitutions: dict[str,str]|None=None):
+  dst.parent.mkdir(parents=True, exist_ok=True)
+  text = src.read_text(encoding="utf-8")
+  if substitutions:
+    for k,v in substitutions.items():
+      text = text.replace(k, v)
+  dst.write_text(text, encoding="utf-8")
+  os.chmod(dst, mode)
+
+# --- schema loader (direct, no CLI) ------------------------------------------
+
+def ensure_schema(repo_root: Path):
+  # import from the repo directly
+  cli_dir = repo_root / "CLI"
+  infra_dir = cli_dir / "infrastructure"
+  schema_sql = infra_dir / "schema.sql"
+
+  if not schema_sql.is_file():
+    die(f"schema.sql not found at {schema_sql}")
+
+  # make repo modules importable
+  sys.path.insert(0, str(cli_dir))
+
+  try:
+    import env                      # CLI/env.py
+    from infrastructure import db as dbmod  # CLI/infrastructure/db.py
+  except Exception as e:
+    die(f"failed to import env/db from {cli_dir}: {e}")
+
+  db_path = Path(env.db_path())
+  db_dir = db_path.parent
+  db_dir.mkdir(parents=True, exist_ok=True)
+  # lock down dir for root
+  os.chmod(db_dir, 0o700)
+
+  # open and apply schema idempotently
+  conn = dbmod.open_db()
+  try:
+    sql = schema_sql.read_text(encoding="utf-8")
+    conn.executescript(sql)
+    conn.commit()
+  finally:
+    conn.close()
+  print(f"✅ schema ensured at {db_path}")
+
+# --- main --------------------------------------------------------------------
+
+def main():
+  must_root()
+  repo_root = Path(__file__).resolve().parents[1]
+
+  # 1) install helper
+  src_boot = repo_root / "usr_local_bin" / "boot_attach"
+  dst_boot = Path("/usr/local/bin/subu-boot-attach")
+  if not src_boot.is_file():
+    die(f"missing helper: {src_boot}")
+  install_file(src_boot, dst_boot, 0o755)
+  print(f"✅ installed helper -> {dst_boot}")
+
+  # 2) install systemd units (with light substitution if needed)
+  sysd_src_attach = repo_root / "systemd" / "boot_attach.service"
+  sysd_src_resume = repo_root / "systemd" / "subu_resume.service"
+  sysd_dst_attach = Path("/etc/systemd/system/subu-boot-attach.service")
+  sysd_dst_resume = Path("/etc/systemd/system/subu-resume.service")
+
+  if not sysd_src_attach.is_file():
+    die(f"missing unit: {sysd_src_attach}")
+  if not sysd_src_resume.is_file():
+    die(f"missing unit: {sysd_src_resume}")
+
+  # Allow service templates to reference {{BOOT_ATTACH}} if they want
+  subs = {"{{BOOT_ATTACH}}": str(dst_boot)}
+  install_text(sysd_src_attach, sysd_dst_attach, 0o644, substitutions=subs)
+  install_text(sysd_src_resume, sysd_dst_resume, 0o644, substitutions=subs)
+  print(f"✅ installed units -> {sysd_dst_attach}, {sysd_dst_resume}")
+
+  # 3) ensure schema exists (direct call)
+  ensure_schema(repo_root)
+
+  # 4) reload + enable
+  run("systemctl", "daemon-reload")
+  run("systemctl", "enable", "--now", "subu-boot-attach.service")
+  run("systemctl", "enable", "subu-resume.service")
+
+  print("✅ systemd units enabled (boot attach now active)")
+  print("All set.\n"
+        "- On next boot (or now via: systemctl start subu-boot-attach.service),\n"
+        "  homes under /mnt/*/user_data/<masu> will be bound to /home/<masu>,\n"
+        "  the DB will be reconciled, and subu bindfs mounts reopened.")
+
+if __name__ == "__main__":
+  main()

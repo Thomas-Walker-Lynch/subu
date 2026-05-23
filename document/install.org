@@ -1,0 +1,13 @@
+
+1. edit these files:
+
+  /etc/crypttab
+    <mapname>-crypt  UUID=<UUID-of-partition>  none  luks
+
+
+  /etc/fstab
+    /dev/mapper/<mapname>-crypt  /mnt/<mapname>  ext4  noatime,nofail,x-systemd.device-timeout=30  0 2
+
+
+2. Unlock + mount the device at boot
+  

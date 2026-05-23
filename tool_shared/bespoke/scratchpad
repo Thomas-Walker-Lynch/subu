@@ -4,7 +4,7 @@
 import os, sys, shutil, stat, pwd, grp, subprocess
 
 HELP = """usage: scratchpad {ls|clear|help|make|write|size|find|lock|unlock} [ARGS]
-  ls               List scratchpad in an indented tree with perms and owner (quiet if missing).
+  ls| list         List scratchpad in an indented tree with perms and owner (quiet if missing).
   clear            Remove all contents of scratchpad/ except top-level .gitignore.
   clear NAME       Remove scratchpad/NAME only.
   make [NAME]      Ensure scratchpad/ exists with .gitignore; with NAME, mkdir scratchpad/NAME.
@@ -198,7 +198,7 @@ def CLI():
   if len(sys.argv) < 2:
     print(HELP); return
   cmd, *args = sys.argv[1:]
-  if cmd == "ls":
+  if cmd == "ls" or cmd =="list":
     if have_sp(): ls_tree(SP)
     else: return
   elif cmd == "clear":
